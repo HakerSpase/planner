@@ -1,15 +1,6 @@
 'use client'
 
-import {
-	CalendarCheck,
-	CheckCircle2,
-	GanttChartSquare,
-	Loader2,
-	Lock,
-	ShieldCheck,
-	Sparkles,
-	Timer
-} from 'lucide-react'
+import { Check, GanttChartSquare, Loader2, ShieldCheck, Sparkles, Timer } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -41,7 +32,10 @@ export function Auth() {
 
 			if (error) {
 				console.error('OAuth error:', error)
-				toast.error(error.message || 'Ошибка входа через Google. Проверьте настройки в Supabase.')
+				toast.error(
+					error.message ||
+						'Ошибка входа через Google. Убедитесь, что провайдер Google включен в панели Supabase.'
+				)
 				setIsLoading(false)
 				return
 			}
@@ -62,114 +56,144 @@ export function Auth() {
 	}
 
 	return (
-		<div className='relative min-h-screen w-full flex items-center justify-center p-4 bg-[#08090C] overflow-hidden select-none'>
-			{/* Неоновый градиентный фон (Аура) */}
-			<div className='absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-indigo-600/30 via-purple-600/25 to-pink-500/15 blur-[140px] pointer-events-none rounded-full' />
-			<div className='absolute -bottom-40 right-10 w-[500px] h-[400px] bg-cyan-500/10 blur-[130px] pointer-events-none rounded-full' />
-			<div className='absolute top-1/2 -left-40 w-[400px] h-[400px] bg-purple-700/15 blur-[120px] pointer-events-none rounded-full' />
+		<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30 select-none'>
+			{/* Левая сторона: Минималистичная презентация в стиле Planner */}
+			<div className='hidden lg:flex flex-col justify-between p-12 lg:p-16 bg-[#141515] border-r border-white/[0.08] relative overflow-hidden'>
+				{/* Фоновый легкий градиент без навязчивости */}
+				<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-[#7551FF]/10 blur-[130px] pointer-events-none rounded-full' />
+				<div className='absolute bottom-0 left-0 w-[350px] h-[350px] bg-white/[0.02] blur-[100px] pointer-events-none rounded-full' />
 
-			{/* Сетка на фоне с плавным радиальным затуханием */}
-			<div
-				className='absolute inset-0 pointer-events-none opacity-40'
-				style={{
-					backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)`,
-					backgroundSize: '28px 28px',
-					maskImage: 'radial-gradient(ellipse 65% 55% at 50% 50%, #000 50%, transparent 100%)',
-					WebkitMaskImage: 'radial-gradient(ellipse 65% 55% at 50% 50%, #000 50%, transparent 100%)'
-				}}
-			/>
-
-			{/* Главная карточка авторизации */}
-			<div className='relative w-full max-w-[440px] z-10'>
-				{/* Эффект свечения границы */}
-				<div className='absolute -inset-[1px] bg-gradient-to-b from-white/20 via-white/5 to-transparent rounded-3xl blur-[1px] pointer-events-none' />
-
-				<div className='relative bg-[#0F1015]/80 backdrop-blur-2xl rounded-3xl p-8 sm:p-10 border border-white/10 shadow-[0_0_80px_-20px_rgba(117,81,255,0.35)] flex flex-col items-center text-center'>
-					{/* Верхний световой акцент */}
-					<div className='absolute top-0 left-1/2 -translate-x-1/2 w-40 h-[1.5px] bg-gradient-to-r from-transparent via-indigo-400/90 to-transparent' />
-
-					{/* Иконка приложения с неоновым ореолом */}
-					<div className='relative mb-5'>
-						<div className='absolute -inset-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-lg opacity-40 animate-pulse' />
-						<div className='relative w-16 h-16 rounded-2xl bg-gradient-to-b from-white/10 to-white/[0.03] border border-white/20 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]'>
-							<GanttChartSquare
-								className='text-indigo-400 drop-shadow-[0_0_12px_rgba(129,140,248,0.8)]'
-								size={34}
-							/>
-						</div>
-					</div>
-
-					{/* Бейдж версии */}
-					<div className='inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-white/[0.05] border border-white/10 text-[0.8rem] text-indigo-300 font-medium mb-3'>
-						<Sparkles size={13} className='text-indigo-400' />
-						<span>Умный рабочий планировщик</span>
-					</div>
-
-					{/* Заголовок */}
-					<h1 className='text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text text-transparent'>
+				{/* Верхняя часть: Логотип точно как в сайдбаре дашборда */}
+				<div className='relative z-10 flex items-center gap-3'>
+					<GanttChartSquare color='#7551FF' size={36} />
+					<div className='text-2xl font-bold tracking-tight relative'>
 						Planner
-					</h1>
+						<span className='absolute -top-1 -right-6 text-xs text-[#7551FF] opacity-70 rotate-[18deg] font-mono font-normal'>
+							beta
+						</span>
+					</div>
+				</div>
 
-					<p className='text-sm text-white/55 mb-6 leading-relaxed max-w-xs'>
-						Единое пространство для задач, канбан-доски и сессий глубокой концентрации
-					</p>
-
-					{/* Список преимуществ / фич */}
-					<div className='grid grid-cols-3 gap-2 w-full mb-6'>
-						<div className='flex flex-col items-center p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors'>
-							<CheckCircle2 size={16} className='text-indigo-400 mb-1' />
-							<span className='text-[0.75rem] text-white/70 font-medium'>Канбан</span>
-						</div>
-						<div className='flex flex-col items-center p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors'>
-							<Timer size={16} className='text-purple-400 mb-1' />
-							<span className='text-[0.75rem] text-white/70 font-medium'>Pomodoro</span>
-						</div>
-						<div className='flex flex-col items-center p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors'>
-							<CalendarCheck size={16} className='text-emerald-400 mb-1' />
-							<span className='text-[0.75rem] text-white/70 font-medium'>Тайм-блоки</span>
-						</div>
+				{/* Центральная часть: Реалистичный минималистичный интерфейс Planner */}
+				<div className='relative z-10 max-w-lg my-auto space-y-6'>
+					<div>
+						<h2 className='text-2xl font-semibold text-white tracking-tight mb-2'>
+							Пространство фокуса и продуктивности
+						</h2>
+						<p className='text-sm text-white/50 leading-relaxed'>
+							Канбан-доска, тайм-блокинг и таймер Pomodoro, объединенные в строгом и чистом интерфейсе.
+						</p>
 					</div>
 
-					{/* Блок Cloudflare Turnstile */}
-					<div
-						id='cloudflare-turnstile-container'
-						className='w-full my-2 flex items-center justify-center'
-					>
+					{/* Интерактивное превью задач Planner */}
+					<div className='rounded-xl border border-white/[0.08] bg-[#0E0F0F]/90 p-5 backdrop-blur space-y-4'>
+						<div className='flex items-center justify-between pb-3 border-b border-white/[0.06] text-xs text-white/40 font-mono'>
+							<span>ЗАДАЧИ НА СЕГОДНЯ</span>
+							<span className='text-[#7551FF] font-medium'>2 ИЗ 3</span>
+						</div>
+
+						{/* Строка 1: Выполненная */}
+						<div className='flex items-center justify-between text-sm py-1.5 opacity-50'>
+							<div className='flex items-center gap-3'>
+								<div className='w-4 h-4 rounded bg-[#7551FF] flex items-center justify-center text-white'>
+									<Check size={12} strokeWidth={3} />
+								</div>
+								<span className='line-through italic text-white/80'>
+									Настроить архитектуру Supabase
+								</span>
+							</div>
+							<span className='text-xs text-white/40 font-mono'>Готово</span>
+						</div>
+
+						{/* Строка 2: В фокусе */}
+						<div className='flex items-center justify-between text-sm py-1.5'>
+							<div className='flex items-center gap-3'>
+								<div className='w-4 h-4 rounded border border-[#7551FF] bg-[#7551FF]/10' />
+								<span className='text-white font-medium'>Фокус-сессия: разработка проекта</span>
+							</div>
+							<span className='text-xs px-2 py-0.5 rounded bg-[#7551FF]/15 text-[#8b6eff] font-medium font-mono'>
+								Высокий
+							</span>
+						</div>
+
+						{/* Строка 3: Обычная */}
+						<div className='flex items-center justify-between text-sm py-1.5'>
+							<div className='flex items-center gap-3'>
+								<div className='w-4 h-4 rounded border border-white/20' />
+								<span className='text-white/70'>Обзор спринта и синхронизация</span>
+							</div>
+							<span className='text-xs text-white/40 font-mono'>18:00</span>
+						</div>
+
+						{/* Мини-таймер Pomodoro */}
+						<div className='pt-3 border-t border-white/[0.06] flex items-center justify-between'>
+							<div className='flex items-center gap-2 text-xs text-white/50'>
+								<Timer size={14} className='text-[#7551FF]' />
+								<span>Pomodoro таймер</span>
+							</div>
+							<div className='flex items-center gap-2'>
+								<span className='text-xs font-mono text-white/40'>25:00</span>
+								<span className='w-2 h-2 rounded-full bg-[#7551FF] animate-pulse' />
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Нижняя часть левой панели */}
+				<div className='relative z-10 text-xs text-white/30 font-normal'>
+					&copy; 2024 Planner. Все права защищены.
+				</div>
+			</div>
+
+			{/* Правая сторона: Минималистичная форма входа */}
+			<div className='flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-[#0E0F0F] relative'>
+				{/* Мобильный логотип */}
+				<div className='lg:hidden flex items-center gap-2.5 mb-10'>
+					<GanttChartSquare color='#7551FF' size={30} />
+					<span className='text-xl font-bold tracking-tight'>Planner</span>
+				</div>
+
+				{/* Центрированный блок входа */}
+				<div className='w-full max-w-[380px] mx-auto my-auto'>
+					<div className='mb-8'>
+						<h1 className='text-3xl font-semibold tracking-tight text-white mb-2.5'>
+							Вход в систему
+						</h1>
+						<p className='text-sm text-white/50 leading-relaxed'>
+							Используйте единую учетную запись Google для быстрого и безопасного входа.
+						</p>
+					</div>
+
+					{/* Виджет Turnstile (если настроен) или статус */}
+					<div id='cloudflare-turnstile-container' className='w-full mb-4'>
 						{process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
 							<div
-								className='cf-turnstile'
+								className='cf-turnstile flex justify-center'
 								data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 								data-theme='dark'
-								data-callback='onTurnstileSuccess'
 							/>
 						) : (
-							<div className='w-full flex items-center justify-between py-2 px-3.5 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 text-xs text-emerald-300/90'>
-								<div className='flex items-center gap-2'>
-									<div className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse' />
-									<span>Защита Cloudflare Turnstile</span>
-								</div>
-								<ShieldCheck size={15} className='text-emerald-400' />
+							<div className='flex items-center gap-2 text-xs text-white/40 py-1'>
+								<ShieldCheck size={14} className='text-[#7551FF]' />
+								<span>Защита сессий Cloudflare Turnstile</span>
 							</div>
 						)}
 					</div>
 
-					{/* Кнопка входа через Google */}
+					{/* Премиальная кнопка Google */}
 					<button
 						onClick={handleGoogleLogin}
 						disabled={isLoading}
-						className='group relative w-full mt-4 flex items-center justify-center gap-3 py-3.5 px-6 rounded-2xl bg-white text-gray-900 font-semibold text-[1.05rem] hover:bg-gray-100 transition-all duration-300 active:scale-[0.98] shadow-[0_10px_30px_-10px_rgba(255,255,255,0.3)] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
+						className='w-full py-3.5 px-5 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
 					>
 						{isLoading ? (
 							<>
-								<Loader2 size={19} className='animate-spin text-gray-800' />
-								<span>Перенаправление...</span>
+								<Loader2 size={18} className='animate-spin text-neutral-800' />
+								<span>Перенаправление в Google...</span>
 							</>
 						) : (
 							<>
-								<svg
-									className='w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 duration-200'
-									viewBox='0 0 24 24'
-								>
+								<svg className='w-4 h-4 flex-shrink-0' viewBox='0 0 24 24'>
 									<path
 										fill='#4285F4'
 										d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z'
@@ -192,11 +216,15 @@ export function Auth() {
 						)}
 					</button>
 
-					{/* Футер с безопасностью */}
-					<div className='flex items-center gap-1.5 text-[0.78rem] text-white/35 mt-6'>
-						<Lock size={12} className='text-white/40' />
-						<span>Сквозная безопасность сессий Google OAuth 2.0</span>
-					</div>
+					{/* Мелкий текст согласия */}
+					<p className='mt-6 text-xs text-white/35 text-center leading-relaxed'>
+						Авторизуясь в сервисе, вы соглашаетесь с условиями использования и политикой конфиденциальности.
+					</p>
+				</div>
+
+				{/* Подвал правой панели */}
+				<div className='text-xs text-white/20 text-center lg:text-left mt-8 font-mono'>
+					Google OAuth 2.0 • Supabase Auth
 				</div>
 			</div>
 		</div>
