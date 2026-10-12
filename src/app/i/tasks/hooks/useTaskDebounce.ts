@@ -45,8 +45,8 @@ export function useTaskDebounce({ watch, itemId }: IUseTaskDebounce) {
 
 		return () => {
 			unsubscribe()
-			debouncedUpdateTask.cancel()
-			debouncedCreateTask.cancel()
+			debouncedUpdateTask.flush()
+			debouncedCreateTask.flush()
 		}
 	}, [watch, itemId, debouncedUpdateTask, debouncedCreateTask])
 }
