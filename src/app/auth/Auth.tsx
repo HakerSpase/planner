@@ -17,7 +17,6 @@ export function Auth() {
 
 	// Инициализация виджета Cloudflare Turnstile
 	useEffect(() => {
-		// Глобальный коллбэк для Turnstile
 		;(window as any).onTurnstileSuccess = (token: string) => {
 			setTurnstileToken(token)
 		}
@@ -95,7 +94,7 @@ export function Auth() {
 
 	return (
 		<>
-			{/* Загрузка скрипта Cloudflare Turnstile */}
+			{/* Скрипт Cloudflare Turnstile */}
 			<Script
 				src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 				strategy='afterInteractive'
@@ -108,7 +107,7 @@ export function Auth() {
 					<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-[#7551FF]/10 blur-[130px] pointer-events-none rounded-full' />
 					<div className='absolute bottom-0 left-0 w-[350px] h-[350px] bg-white/[0.02] blur-[100px] pointer-events-none rounded-full' />
 
-					{/* Логотип точно как в сайдбаре дашборда */}
+					{/* Логотип Planner beta */}
 					<div className='relative z-10 flex items-center gap-3'>
 						<GanttChartSquare color='#7551FF' size={36} />
 						<div className='text-2xl font-bold tracking-tight relative'>
@@ -198,60 +197,73 @@ export function Auth() {
 						<span className='text-xl font-bold tracking-tight'>Planner</span>
 					</div>
 
-					{/* Центрированный блок входа */}
-					<div className='w-full max-w-[380px] mx-auto my-auto'>
-						<div className='mb-8'>
+					{/* Центрированный аккуратный блок входа */}
+					<div className='w-full max-w-[340px] mx-auto my-auto flex flex-col items-center text-center'>
+						<div className='mb-6'>
 							<h1 className='text-3xl font-semibold tracking-tight text-white mb-2.5'>
 								Вход в систему
 							</h1>
-							<p className='text-sm text-white/50 leading-relaxed'>
-								Используйте единую учетную запись Google для быстрого и безопасного входа.
+							<p className='text-sm text-white/50 leading-relaxed max-w-[300px]'>
+								Используйте аккаунт Google для быстрого входа в Planner
 							</p>
 						</div>
 
 						{/* Виджет Cloudflare Turnstile */}
-						<div className='w-full mb-5 flex justify-center min-h-[65px] items-center'>
+						<div className='w-full mb-6 flex justify-center min-h-[65px] items-center'>
 							<div ref={turnstileContainerRef} id='turnstile-widget' />
 						</div>
 
-						{/* Кнопка Google */}
+						{/* Идеально выровненная кнопка Google */}
 						<button
 							onClick={handleGoogleLogin}
 							disabled={isLoading}
-							className='w-full py-3.5 px-5 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 font-medium text-sm transition-all duration-200 flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer'
+							style={{
+								backgroundColor: '#FFFFFF',
+								color: '#111827'
+							}}
+							className='w-full max-w-[300px] h-[48px] relative flex items-center justify-center rounded-xl font-medium text-sm transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
 						>
 							{isLoading ? (
-								<>
+								<div className='flex items-center gap-2.5'>
 									<Loader2 size={18} className='animate-spin text-neutral-800' />
-									<span>Перенаправление в Google...</span>
-								</>
+									<span className='font-semibold text-sm' style={{ color: '#111827' }}>
+										Перенаправление...
+									</span>
+								</div>
 							) : (
 								<>
-									<svg className='w-4 h-4 flex-shrink-0' viewBox='0 0 24 24'>
-										<path
-											fill='#4285F4'
-											d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z'
-										/>
-										<path
-											fill='#34A853'
-											d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z'
-										/>
-										<path
-											fill='#FBBC05'
-											d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z'
-										/>
-										<path
-											fill='#EA4335'
-											d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z'
-										/>
-									</svg>
-									<span>Продолжить с Google</span>
+									<span className='absolute left-4.5 flex items-center justify-center'>
+										<svg className='w-5 h-5 flex-shrink-0' viewBox='0 0 24 24'>
+											<path
+												fill='#4285F4'
+												d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z'
+											/>
+											<path
+												fill='#34A853'
+												d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z'
+											/>
+											<path
+												fill='#FBBC05'
+												d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z'
+											/>
+											<path
+												fill='#EA4335'
+												d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z'
+											/>
+										</svg>
+									</span>
+									<span
+										className='font-semibold text-sm tracking-tight'
+										style={{ color: '#111827' }}
+									>
+										Войти через Google
+									</span>
 								</>
 							)}
 						</button>
 
 						{/* Мелкий текст условий */}
-						<p className='mt-6 text-xs text-white/35 text-center leading-relaxed'>
+						<p className='mt-5 text-xs text-white/35 text-center leading-relaxed max-w-[280px]'>
 							Авторизуясь в сервисе, вы соглашаетесь с условиями использования и политикой конфиденциальности.
 						</p>
 					</div>
