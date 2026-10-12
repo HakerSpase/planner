@@ -34,6 +34,14 @@ body {
 * {
 	scrollbar-color: #3a3d45 #101112;
 	scrollbar-width: thin;
+	color-scheme: dark;
+}
+
+/* Planner uses square, quiet surfaces throughout the interface. */
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
 }
 
 *::-webkit-scrollbar {
@@ -48,7 +56,6 @@ body {
 *::-webkit-scrollbar-thumb {
 	background: #363a42;
 	border: 2px solid #101112;
-	border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb:hover {

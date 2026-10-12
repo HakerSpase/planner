@@ -38,7 +38,7 @@ export function Statistics() {
 									{statistic.value}
 								</p>
 							</div>
-							<span className='shrink-0 border-l border-primary/40 pl-2 text-primary/80'>
+							<span className='shrink-0 text-primary/80'>
 								<Icon size={16} />
 							</span>
 						</div>

@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 	const code = requestUrl.searchParams.get('code')
 	const cookieValue = request.headers
 		.get('cookie')
-		?.split(/;\\s*/)
+		?.split(/;\s*/)
 		.find(cookie => cookie.startsWith('planner-captcha-oauth='))
 		?.slice('planner-captcha-oauth='.length)
 	const secret = process.env.TURNSTILE_SECRET_KEY

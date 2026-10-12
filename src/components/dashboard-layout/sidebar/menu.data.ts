@@ -3,6 +3,7 @@ import {
 	KanbanSquare,
 	LayoutDashboard,
 	BookOpenText,
+	NotebookPen,
 	Settings,
 	Timer
 } from 'lucide-react'
@@ -31,6 +32,11 @@ export const MENU: IMenuItem[] = [
 		icon: CalendarRange,
 		link: DASHBOARD_PAGES.TIME_BLOCKING,
 		name: 'Тайм-блокинг'
+	},
+	{
+		icon: NotebookPen,
+		link: DASHBOARD_PAGES.THOUGHTS,
+		name: 'Мысли'
 	},
 	{
 		icon: Settings,

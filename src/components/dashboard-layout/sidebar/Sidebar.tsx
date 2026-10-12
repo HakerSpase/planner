@@ -31,11 +31,11 @@ export function Sidebar({
 					className={cn(
 						'flex items-center border-b border-b-border relative min-h-[60px]',
 						collapsed
-							? 'justify-between gap-1 px-2 py-2'
+						? 'justify-center px-2 py-2'
 							: 'justify-between p-3'
 					)}
 				>
-					<Link
+					{!collapsed && <Link
 						href='/'
 						onClick={isMobile ? onCloseMobile : undefined}
 						className='flex shrink-0 items-center gap-2.5'
@@ -53,7 +53,7 @@ export function Sidebar({
 								</span>
 							</span>
 						)}
-					</Link>
+					</Link>}
 
 					{/* Кнопка закрытия для мобильного экрана */}
 					{isMobile && (

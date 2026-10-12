@@ -8,6 +8,7 @@ class DASHBOARD {
 	TIME_BLOCKING = `${this.root}/time-blocking`
 	SETTINGS = `${this.root}/settings`
 	GUIDE = `${this.root}/guide`
+	THOUGHTS = `${this.root}/thoughts`
 }
 
 export const DASHBOARD_PAGES = new DASHBOARD()
