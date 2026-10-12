@@ -85,6 +85,9 @@ export default function ThoughtsPage() {
 	}, [selected, entries])
 
 	const save = async () => {
+		const dateKey = iso(selected)
+		const previousContent = entries[dateKey]
+		setEntries(current => ({ ...current, [dateKey]: draft }))
 		setSaving(true)
 		try {
 			const response = await fetch('/api/user/thoughts', {
@@ -100,6 +103,12 @@ export default function ThoughtsPage() {
 			}))
 			toast.success('Запись сохранена')
 		} catch {
+			setEntries(current => {
+				const updated = { ...current }
+				if (previousContent === undefined) delete updated[dateKey]
+				else updated[dateKey] = previousContent
+				return updated
+			})
 			toast.error('Не удалось сохранить запись')
 		} finally {
 			setSaving(false)
@@ -161,18 +170,21 @@ export default function ThoughtsPage() {
 									onClick={() => setSelected(day)}
 									aria-pressed={isSameDay(day, selected)}
 									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${entries[key]?.trim() ? ', запись сохранена' : ''}`}
-									className={`relative grid aspect-square grid-rows-[1fr_6px] place-items-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isSameMonth(day, month) ? 'text-white/20' : 'text-white/75'} ${isSameDay(day, selected) ? 'bg-emerald-500/15 text-emerald-300 outline outline-1 -outline-offset-1 outline-emerald-400/60' : ''} ${key === todayKey ? 'text-emerald-300' : ''}`}
+									className={`relative grid aspect-square grid-rows-[1fr_8px] place-items-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isSameMonth(day, month) ? 'text-white/20' : 'text-white/75'} ${isSameDay(day, selected) ? 'bg-emerald-500/15 text-emerald-300 outline outline-1 -outline-offset-1 outline-emerald-400/60' : ''} ${key === todayKey ? 'text-emerald-300' : ''}`}
 								>
 									<span className='leading-none'>{format(day, 'd')}</span>
 									{(key === todayKey || entries[key]?.trim()) && (
 										<span
 											aria-hidden='true'
-											className='relative -top-0.5 block h-1.5 w-1.5 shrink-0'
-											style={{
-												backgroundColor:
-													key === todayKey ? '#22c55e' : '#f59e0b'
-											}}
-										/>
+											className='relative -top-[3px] flex h-2 items-center justify-center gap-0.5'
+										>
+											{key === todayKey && (
+												<span className='block h-[7px] w-[7px] shrink-0 bg-emerald-400' />
+											)}
+											{entries[key]?.trim() && (
+												<span className='block h-[7px] w-[7px] shrink-0 bg-amber-400' />
+											)}
+										</span>
 									)}
 								</button>
 							)

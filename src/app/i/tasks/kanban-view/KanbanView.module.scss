@@ -8,6 +8,10 @@
 	&::-webkit-scrollbar {
 		display: none;
 	}
+	&.panning {
+		cursor: grabbing;
+		user-select: none;
+	}
 	@media (min-width: 1024px) {
 		@apply auto-cols-[15rem] snap-none;
 	}
