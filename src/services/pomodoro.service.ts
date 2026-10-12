@@ -9,10 +9,12 @@ import { axiosWithAuth } from '@/api/interceptors'
 class PomodoroService {
 	private BASE_URL = '/user/timer'
 
-	async getTodaySession() {
+	async getTodaySession(
+		timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+	) {
 		const response = await axiosWithAuth.get<IPomodoroSessionResponse>(
 			`${this.BASE_URL}/today`,
-			{ params: { timezoneOffset: new Date().getTimezoneOffset() } }
+			{ params: { timeZone } }
 		)
 		return response
 	}

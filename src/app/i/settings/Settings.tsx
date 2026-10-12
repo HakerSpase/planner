@@ -10,11 +10,47 @@ import { TypeUserForm } from '@/types/auth.types'
 import { useInitialData } from './useInitialData'
 import { useUpdateSettings } from './useUpdateSettings'
 
+const FALLBACK_TIME_ZONES = [
+	'UTC',
+	'Europe/London',
+	'Europe/Moscow',
+	'Europe/Berlin',
+	'Europe/Istanbul',
+	'Asia/Dubai',
+	'Asia/Kolkata',
+	'Asia/Almaty',
+	'Asia/Bangkok',
+	'Asia/Singapore',
+	'Asia/Tokyo',
+	'Asia/Seoul',
+	'Australia/Sydney',
+	'Pacific/Auckland',
+	'America/Los_Angeles',
+	'America/Denver',
+	'America/Chicago',
+	'America/New_York',
+	'America/Toronto',
+	'America/Sao_Paulo'
+]
+
+function getTimeZones() {
+	const intl = Intl as typeof Intl & {
+		supportedValuesOf?: (key: 'timeZone') => string[]
+	}
+	return Array.from(
+		new Set([
+			'UTC',
+			...(intl.supportedValuesOf?.('timeZone') || FALLBACK_TIME_ZONES)
+		])
+	)
+}
+
 export function Settings() {
 	const {
 		register,
 		handleSubmit,
 		reset,
+		watch,
 		formState: { errors }
 	} = useForm<TypeUserForm>({
 		mode: 'onChange'
@@ -23,6 +59,7 @@ export function Settings() {
 	useInitialData(reset)
 
 	const { isPending, mutate } = useUpdateSettings()
+	const timeZones = getTimeZones()
 
 	const onSubmit: SubmitHandler<TypeUserForm> = data => {
 		const { password, ...rest } = data
@@ -60,7 +97,6 @@ export function Settings() {
 							extra='mb-6'
 						/>
 					</div>
-
 					{/* Настройки интервалов Pomodoro */}
 					<div>
 						<Field
@@ -129,6 +165,37 @@ export function Settings() {
 							</p>
 						)}
 					</div>
+				</div>
+				<div className='mt-6 max-w-xl border-t border-white/[0.08] pt-5'>
+					<label
+						htmlFor='timeZone'
+						className='text-sm font-medium text-white/75'
+					>
+						Часовой пояс
+					</label>
+					<p className='mb-2 mt-1 text-xs text-white/45'>
+						Используется для дат, календаря активности и дневных сессий
+						Pomodoro.
+					</p>
+					<select
+						id='timeZone'
+						{...register('timeZone', { required: true })}
+						value={watch('timeZone') || ''}
+						className='w-full border border-border bg-[#141515] p-3 text-sm text-white outline-none focus:border-primary'
+					>
+						{!watch('timeZone') && (
+							<option value=''>Определяется устройством</option>
+						)}
+						{timeZones.map(zone => (
+							<option
+								key={zone}
+								value={zone}
+								className='bg-[#141515]'
+							>
+								{zone.replaceAll('_', ' ')}
+							</option>
+						))}
+					</select>
 				</div>
 
 				<Button

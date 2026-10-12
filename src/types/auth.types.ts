@@ -11,6 +11,7 @@ export interface IUser {
 	workInterval?: number
 	breakInterval?: number
 	intervalsCount?: number
+	timeZone?: string
 }
 
 export interface IAuthResponse {

@@ -1,6 +1,7 @@
 .board {
 	@apply grid w-full grid-flow-col auto-cols-[min(84vw,22rem)] gap-3 overflow-x-auto pb-3 snap-x snap-mandatory lg:auto-cols-[17rem] lg:gap-8;
 	min-width: 0;
+	min-height: calc(100dvh - 14rem);
 	@media (min-width: 1024px) {
 		overflow-x: auto;
 		@apply snap-none;

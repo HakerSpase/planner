@@ -15,7 +15,9 @@ export function useInitialData(reset: UseFormReset<TypeUserForm>) {
 				name: data.user.name,
 				breakInterval: data.user.breakInterval,
 				intervalsCount: data.user.intervalsCount,
-				workInterval: data.user.workInterval
+				workInterval: data.user.workInterval,
+				timeZone:
+					data.user.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
 			})
 		}
 	}, [isSuccess])

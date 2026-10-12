@@ -14,7 +14,10 @@ class UserService {
 	private BASE_URL = '/user/profile'
 
 	async getProfile() {
-		const response = await axiosWithAuth.get<IProfileResponse>(this.BASE_URL)
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+		const response = await axiosWithAuth.get<IProfileResponse>(this.BASE_URL, {
+			params: { timeZone }
+		})
 		return response.data
 	}
 

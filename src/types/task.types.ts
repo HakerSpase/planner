@@ -8,6 +8,7 @@ export enum EnumTaskPriority {
 
 export interface ITaskResponse extends Omit<IBase, 'createdAt'> {
 	createdAt?: string | null
+	completedAt?: string | null
 	name: string
 	note?: string | null
 	priority?: EnumTaskPriority

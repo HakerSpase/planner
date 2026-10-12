@@ -4,6 +4,7 @@ import { Heading } from '@/components/ui/Heading'
 
 import { NO_INDEX_PAGE } from '@/constants/seo.constants'
 
+import { ActivityCalendar } from './ActivityCalendar'
 import { Statistics } from './Statistics'
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function DashboardPage() {
 		<div>
 			<Heading title='Статистика' />
 			<Statistics />
+			<ActivityCalendar />
 		</div>
 	)
 }

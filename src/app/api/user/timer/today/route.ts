@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
+import {
+	dateKeyInTimeZone,
+	isValidTimeZone,
+	startOfDayInTimeZone
+} from '@/lib/time-zone'
 
 export async function GET(request: Request) {
 	const supabase = createClient()
@@ -14,20 +19,22 @@ export async function GET(request: Request) {
 	}
 
 	const url = new URL(request.url)
-	const requestedOffset = Number(url.searchParams.get('timezoneOffset'))
-	const timezoneOffset =
-		Number.isFinite(requestedOffset) && Math.abs(requestedOffset) <= 840
-			? requestedOffset
-			: 0
-	const localNow = new Date(Date.now() - timezoneOffset * 60_000)
-	const todayStart = new Date(
-		Date.UTC(
-			localNow.getUTCFullYear(),
-			localNow.getUTCMonth(),
-			localNow.getUTCDate()
-		) +
-			timezoneOffset * 60_000
-	).toISOString()
+	const requestedTimeZone = url.searchParams.get('timeZone') || 'UTC'
+	const { data: profile } = await supabase
+		.from('user')
+		.select('time_zone')
+		.eq('id', user.id)
+		.maybeSingle()
+	const timeZone = profile?.time_zone || requestedTimeZone
+	if (!isValidTimeZone(timeZone))
+		return NextResponse.json(
+			{ error: 'Некорректный часовой пояс.' },
+			{ status: 400 }
+		)
+	const todayStart = startOfDayInTimeZone(
+		dateKeyInTimeZone(new Date(), timeZone),
+		timeZone
+	)
 
 	const { data: session } = await supabase
 		.from('pomodoro_session')

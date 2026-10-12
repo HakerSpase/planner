@@ -12,17 +12,18 @@ export function useTodaySession({
 	setIsRunning,
 	setIsBreakTime
 }: ITimerState) {
-	const { breakInterval, workInterval } = useLoadSettings()
+	const { breakInterval, workInterval, timeZone } = useLoadSettings()
 
 	const {
 		data: sessionsResponse,
 		isLoading,
 		isSuccess
 	} = useQuery({
-		queryKey: ['get today session'],
-		queryFn: () => pomodoroService.getTodaySession(),
+		queryKey: ['get today session', timeZone],
+		queryFn: () => pomodoroService.getTodaySession(timeZone),
 		refetchInterval: 3000,
-		refetchIntervalInBackground: true
+		refetchIntervalInBackground: true,
+		enabled: Boolean(timeZone)
 	})
 
 	const rounds = sessionsResponse?.data?.rounds

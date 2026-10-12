@@ -111,16 +111,17 @@ export function Sidebar({
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<div className='pt-4 text-center text-xs text-white/35'>
+					<div className='flex items-center justify-between gap-2 pt-3 text-xs text-white/40'>
 						<p>© 2026 Planner</p>
 						<a
 							href='https://t.me/w_dtc'
 							target='_blank'
 							rel='noreferrer'
 							aria-label='Телеграм разработчика @w_dtc'
-							className='mt-2 inline-flex min-h-10 items-center text-white/45 transition-colors hover:text-primary'
+							className='inline-flex min-h-8 items-center text-white/45 transition-colors hover:text-primary'
 						>
-							<Send size={16} aria-hidden='true' />
+							<Send className='mr-1.5' size={13} aria-hidden='true' />
+							TG разработчика
 						</a>
 					</div>
 				)}

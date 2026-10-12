@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
 	const supabase = createClient()
@@ -14,7 +15,9 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from('task')
-		.select('id,name,note,priority,is_completed,created_at,updated_at')
+		.select(
+			'id,name,note,priority,is_completed,created_at,completed_at,updated_at'
+		)
 		.eq('user_id', user.id)
 		.order('created_at', { ascending: true })
 
@@ -28,6 +31,7 @@ export async function GET() {
 		note: task.note ?? '',
 		priority: task.priority,
 		isCompleted: task.is_completed,
+		completedAt: task.completed_at,
 		createdAt: task.created_at,
 		updatedAt: task.updated_at
 	}))
@@ -55,7 +59,10 @@ export async function POST(request: Request) {
 			note: body.note || '',
 			priority: body.priority || 'medium',
 			is_completed: body.isCompleted || false,
-			created_at: body.createdAt ? new Date(body.createdAt).toISOString() : new Date().toISOString(),
+			completed_at: body.isCompleted ? new Date().toISOString() : null,
+			created_at: body.createdAt
+				? new Date(body.createdAt).toISOString()
+				: new Date().toISOString(),
 			user_id: user.id
 		})
 		.select()
@@ -71,6 +78,7 @@ export async function POST(request: Request) {
 		note: data.note ?? '',
 		priority: data.priority,
 		isCompleted: data.is_completed,
+		completedAt: data.completed_at,
 		createdAt: data.created_at,
 		updatedAt: data.updated_at
 	})

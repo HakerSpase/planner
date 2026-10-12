@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/buttons/Button'
 import { formatTime } from './format-time'
 import { useCreateSession } from './hooks/useCreateSession'
 import { useDeleteSession } from './hooks/useDeleteSession'
+import { useLoadSettings } from './hooks/useLoadSettings'
 import { useTimer } from './hooks/useTimer'
 import { useTimerActions } from './hooks/useTimerActions'
 import { useTodaySession } from './hooks/useTodaySession'
@@ -16,6 +17,7 @@ import { PomodoroRounds } from './rounds/PomodoroRounds'
 
 export function Pomodoro() {
 	const timerState = useTimer()
+	const { timeZone } = useLoadSettings()
 	const { isLoading, sessionsResponse, workInterval, breakInterval } =
 		useTodaySession(timerState)
 	const rounds = sessionsResponse?.data?.rounds
@@ -33,7 +35,7 @@ export function Pomodoro() {
 	)
 	const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
 	const autoCompletedRoundId = useRef<string>()
-	const { isPending, mutate } = useCreateSession()
+	const { isPending, mutate } = useCreateSession(timeZone)
 	const { deleteSession, isDeletePending } = useDeleteSession(() => {
 		setIsResetConfirmOpen(false)
 		timerState.setIsRunning(false)
