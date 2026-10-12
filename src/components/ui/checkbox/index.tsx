@@ -23,7 +23,7 @@ const Checkbox = (props: {
 		<input
 			id={id}
 			type='checkbox'
-			className={`defaultCheckbox relative inline-flex h-[20px] min-h-[20px] w-[20px] min-w-[20px] appearance-none items-center
+			className={`defaultCheckbox relative inline-flex h-[20px] min-h-[20px] w-[20px] min-w-[20px] shrink-0 align-middle appearance-none items-center
       justify-center border border-gray-300 text-white/0 outline-none transition ease-linear
       checked:border-none checked:text-white hover:cursor-pointer dark:border-white/10 ${
 				color === 'red'

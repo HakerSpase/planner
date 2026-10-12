@@ -10,6 +10,7 @@ import {
 	subYears
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useProfile } from '@/hooks/useProfile'
@@ -28,9 +29,12 @@ const PERIODS = [
 export function ActivityCalendar() {
 	const [counts, setCounts] = useState<Record<string, number>>({})
 	const [loading, setLoading] = useState(true)
-	const [period, setPeriod] = useState('30d')
+	const [period, setPeriod] = useState('6m')
+	const [periodMenuOpen, setPeriodMenuOpen] = useState(false)
 	const [chartWidth, setChartWidth] = useState(0)
 	const chartRef = useRef<HTMLDivElement>(null)
+	const periodMenuRef = useRef<HTMLDivElement>(null)
+	const periodButtonRef = useRef<HTMLButtonElement>(null)
 	const { data: profile } = useProfile()
 	const deviceTimeZone = useMemo(
 		() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -44,6 +48,7 @@ export function ActivityCalendar() {
 		return new Date(year, month - 1, day)
 	}, [timeZone])
 	const todayKey = dayKey(today)
+	const selectedPeriod = PERIODS.find(option => option.value === period) ?? PERIODS[3]
 	const rangeStart = useMemo(() => {
 		switch (period) {
 			case '7d':
@@ -81,6 +86,26 @@ export function ActivityCalendar() {
 		observer.observe(element)
 		return () => observer.disconnect()
 	}, [])
+
+	useEffect(() => {
+		if (!periodMenuOpen) return
+		const closeOnOutsideClick = (event: PointerEvent) => {
+			if (!periodMenuRef.current?.contains(event.target as Node))
+				setPeriodMenuOpen(false)
+		}
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				setPeriodMenuOpen(false)
+				periodButtonRef.current?.focus()
+			}
+		}
+		document.addEventListener('pointerdown', closeOnOutsideClick)
+		document.addEventListener('keydown', closeOnEscape)
+		return () => {
+			document.removeEventListener('pointerdown', closeOnOutsideClick)
+			document.removeEventListener('keydown', closeOnEscape)
+		}
+	}, [periodMenuOpen])
 
 	const cellSize = Math.min(
 		36,
@@ -135,33 +160,56 @@ export function ActivityCalendar() {
 						Завершённые задачи и записи в «Мыслях»
 					</p>
 				</div>
-				<div className='flex items-center gap-2'>
+				<div className='flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center'>
 					<span className='inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-white/65'>
 						<span className='h-2.5 w-2.5 bg-emerald-400 outline outline-1 outline-emerald-200' />
 						Сегодня, {format(today, 'd MMMM', { locale: ru })}
 					</span>
 					{loading && <span className='text-xs text-white/40'>Загружаем…</span>}
-					<label
-						htmlFor='activity-period'
-						className='sr-only'
+					<div
+						ref={periodMenuRef}
+						className='relative'
 					>
-						Период активности
-					</label>
-					<select
-						id='activity-period'
-						value={period}
-						onChange={event => setPeriod(event.target.value)}
-						className='h-9 border border-white/15 bg-[#0e0f0f] px-2 text-xs text-white outline-none focus:border-primary sm:px-3 sm:text-sm'
-					>
-						{PERIODS.map(option => (
-							<option
-								key={option.value}
-								value={option.value}
+						<span className='sr-only'>Период активности</span>
+						<button
+							ref={periodButtonRef}
+							type='button'
+							aria-haspopup='listbox'
+							aria-expanded={periodMenuOpen}
+							aria-label={`Период активности: ${selectedPeriod.label}`}
+							onClick={() => setPeriodMenuOpen(open => !open)}
+							className='inline-flex h-9 min-w-32 items-center justify-between gap-3 border border-white/15 bg-[#0e0f0f] px-3 text-sm text-white transition-colors hover:border-primary focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
+						>
+							{selectedPeriod.label}
+							<ChevronDown
+								size={15}
+								className={`text-white/55 transition-transform ${periodMenuOpen ? 'rotate-180' : ''}`}
+							/>
+						</button>
+						{periodMenuOpen && (
+							<div
+								role='listbox'
+								aria-label='Период активности'
+								className='absolute right-0 top-full z-30 mt-1 flex w-36 flex-col border border-white/15 bg-[#111213] p-1 shadow-xl'
 							>
-								{option.label}
-							</option>
-						))}
-					</select>
+								{PERIODS.map(option => (
+									<button
+										key={option.value}
+										type='button'
+										role='option'
+										aria-selected={period === option.value}
+										onClick={() => {
+											setPeriod(option.value)
+											setPeriodMenuOpen(false)
+										}}
+										className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary ${period === option.value ? 'bg-primary/15 text-white' : 'text-white/75'}`}
+									>
+										{option.label}
+									</button>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
