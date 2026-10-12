@@ -1,4 +1,6 @@
-import type { PropsWithChildren } from 'react'
+'use client'
+
+import { type PropsWithChildren, useEffect, useState } from 'react'
 
 import { Header } from './header/Header'
 import { Sidebar } from './sidebar/Sidebar'
@@ -6,13 +8,51 @@ import { Sidebar } from './sidebar/Sidebar'
 export default function DashboardLayout({
 	children
 }: PropsWithChildren<unknown>) {
-	return (
-		<div className='grid min-h-screen 2xl:grid-cols-[1.1fr_6fr] grid-cols-[1.2fr_6fr]'>
-			<Sidebar />
+	const [isCollapsed, setIsCollapsed] = useState(false)
+	const [isMobileOpen, setIsMobileOpen] = useState(false)
 
-			<main className='p-big-layout overflow-x-hidden max-h-screen relative'>
-				<Header />
-				{children}
+	// Запоминание состояния сворачивания в localStorage
+	useEffect(() => {
+		const saved = localStorage.getItem('sidebar-collapsed')
+		if (saved !== null) {
+			setIsCollapsed(saved === 'true')
+		}
+	}, [])
+
+	const handleToggleCollapse = () => {
+		setIsCollapsed(prev => {
+			const next = !prev
+			localStorage.setItem('sidebar-collapsed', String(next))
+			return next
+		})
+	}
+
+	return (
+		<div className='flex min-h-screen bg-[#0E0F0F] text-white relative overflow-x-hidden'>
+			{/* Мобильный бэкдроп (затемнение фона при открытом меню) */}
+			{isMobileOpen && (
+				<div
+					className='fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity'
+					onClick={() => setIsMobileOpen(false)}
+				/>
+			)}
+
+			{/* Сайдбар (десктопный и мобильный) */}
+			<Sidebar
+				isCollapsed={isCollapsed}
+				onToggleCollapse={handleToggleCollapse}
+				isMobileOpen={isMobileOpen}
+				onCloseMobile={() => setIsMobileOpen(false)}
+			/>
+
+			{/* Основная рабочая область */}
+			<main className='flex-1 min-w-0 p-4 sm:p-6 lg:p-layout xl:p-big-layout overflow-x-hidden max-h-screen overflow-y-auto relative flex flex-col'>
+				<Header
+					onToggleMobile={() => setIsMobileOpen(true)}
+					isCollapsed={isCollapsed}
+					onToggleCollapse={handleToggleCollapse}
+				/>
+				<div className='flex-1 pb-10'>{children}</div>
 			</main>
 		</div>
 	)

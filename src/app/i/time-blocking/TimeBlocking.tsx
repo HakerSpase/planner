@@ -12,7 +12,7 @@ export function TimeBlocking() {
 
 	return (
 		<FormProvider {...methods}>
-			<div className='grid grid-cols-2 gap-12'>
+			<div className='grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12'>
 				<TimeBlockingList />
 				<TimeBlockingForm />
 			</div>
