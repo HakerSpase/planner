@@ -79,7 +79,7 @@ export function SingleSelect({
 								onChange(item.value)
 								setIsShow(false)
 							}}
-							className='block mb-4 last:mb-0 capitalize rounded-lg'
+							className='block mb-2 last:mb-0 rounded-lg hover:brightness-110 transition'
 							style={
 								isColorSelect
 									? {

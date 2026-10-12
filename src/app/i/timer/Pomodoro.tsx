@@ -26,9 +26,9 @@ export function Pomodoro() {
 	)
 
 	return (
-		<div className='relative w-80 text-center'>
+		<div className='relative mx-auto w-full max-w-md text-center py-5'>
 			{!isLoading && (
-				<div className='text-7xl font-semibold'>
+				<div className='text-6xl sm:text-7xl font-semibold tabular-nums tracking-tight text-white'>
 					{formatTime(timerState.secondsLeft)}
 				</div>
 			)}

@@ -28,7 +28,7 @@ export default function DashboardLayout({
 	}
 
 	return (
-		<div className='flex min-h-screen bg-[#0E0F0F] text-white relative overflow-x-hidden'>
+		<div className='flex h-screen w-full bg-[#0E0F0F] text-white relative overflow-hidden'>
 			{/* Мобильный бэкдроп (затемнение фона при открытом меню) */}
 			{isMobileOpen && (
 				<div
@@ -46,11 +46,9 @@ export default function DashboardLayout({
 			/>
 
 			{/* Основная рабочая область */}
-			<main className='flex-1 min-w-0 p-4 sm:p-6 lg:p-layout xl:p-big-layout overflow-x-hidden max-h-screen overflow-y-auto relative flex flex-col'>
+			<main className='flex-1 min-w-0 min-h-0 p-4 sm:p-6 lg:p-layout xl:p-big-layout overflow-x-hidden overflow-y-auto relative flex flex-col'>
 				<Header
 					onToggleMobile={() => setIsMobileOpen(true)}
-					isCollapsed={isCollapsed}
-					onToggleCollapse={handleToggleCollapse}
 				/>
 				<div className='flex-1 pb-10'>{children}</div>
 			</main>

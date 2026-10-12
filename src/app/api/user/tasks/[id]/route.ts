@@ -21,6 +21,7 @@ export async function PUT(
 	}
 
 	if (body.name !== undefined) updateData.name = body.name
+	if (body.note !== undefined) updateData.note = body.note
 	if (body.priority !== undefined) updateData.priority = body.priority
 	if (body.isCompleted !== undefined) updateData.is_completed = body.isCompleted
 	if (body.createdAt !== undefined) updateData.created_at = body.createdAt
@@ -40,6 +41,7 @@ export async function PUT(
 	return NextResponse.json({
 		id: data.id,
 		name: data.name,
+		note: data.note ?? '',
 		priority: data.priority,
 		isCompleted: data.is_completed,
 		createdAt: data.created_at,

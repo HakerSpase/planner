@@ -1,25 +1,17 @@
 'use client'
 
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Menu } from 'lucide-react'
 
-import { LogoutButton } from '../sidebar/LogoutButton'
 import { GlobalLoader } from './GlobalLoader'
 import { Profile } from './profile/Profile'
 
 interface IHeaderProps {
 	onToggleMobile?: () => void
-	isCollapsed?: boolean
-	onToggleCollapse?: () => void
 }
 
-export function Header({
-	onToggleMobile,
-	isCollapsed,
-	onToggleCollapse
-}: IHeaderProps) {
+export function Header({ onToggleMobile }: IHeaderProps) {
 	return (
-		<header className='flex items-center justify-between pb-6 mb-2 select-none'>
-			{/* Левая сторона шапки: кнопка меню для мобилки и переключатель для десктопа */}
+		<header className='flex items-center justify-between pb-5 mb-1 select-none'>
 			<div className='flex items-center gap-3'>
 				{/* Кнопка гамбургер-меню для телефонов */}
 				{onToggleMobile && (
@@ -31,34 +23,12 @@ export function Header({
 						<Menu size={20} />
 					</button>
 				)}
-
-				{/* Кнопка быстрого сворачивания/разворачивания на десктопе */}
-				{onToggleCollapse && (
-					<button
-						onClick={onToggleCollapse}
-						title={isCollapsed ? 'Развернуть боковое меню' : 'Свернуть боковое меню'}
-						className='hidden lg:flex items-center gap-2 py-1.5 px-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] text-xs text-white/50 hover:text-white transition-colors cursor-pointer'
-					>
-						{isCollapsed ? (
-							<>
-								<PanelLeftOpen size={16} className='text-[#7551FF]' />
-								<span>Развернуть меню</span>
-							</>
-						) : (
-							<>
-								<PanelLeftClose size={16} className='text-white/40' />
-								<span>Свернуть</span>
-							</>
-						)}
-					</button>
-				)}
 			</div>
 
-			{/* Правая сторона шапки: аватар, лоадер и кнопка выхода */}
-			<div className='flex items-center gap-3 sm:gap-4'>
+			{/* Профиль пользователя */}
+			<div className='flex items-center gap-2 sm:gap-4'>
 				<GlobalLoader />
 				<Profile />
-				<LogoutButton />
 			</div>
 		</header>
 	)

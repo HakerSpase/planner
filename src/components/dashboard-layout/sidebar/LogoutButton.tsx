@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 import { authService } from '@/services/auth.service'
 
-export function LogoutButton() {
+export function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
 	const router = useRouter()
 
 	const { mutate, isPending } = useMutation({
@@ -19,11 +19,13 @@ export function LogoutButton() {
 		<button
 			title='Выйти из аккаунта'
 			disabled={isPending}
-			className='flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white/[0.04] hover:bg-red-500/15 border border-white/[0.08] hover:border-red-500/30 text-white/50 hover:text-red-400 transition-all cursor-pointer'
-			onClick={() => mutate()}
+			className={`flex w-full items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-3'} py-2 rounded-lg text-white/55 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer disabled:opacity-40`}
+			onClick={() => {
+				if (window.confirm('Выйти из аккаунта?')) mutate()
+			}}
 		>
 			<LogOut size={16} />
-			<span className='hidden sm:inline text-xs font-medium'>Выйти</span>
+			{!collapsed && <span className='text-sm font-medium'>Выйти из аккаунта</span>}
 		</button>
 	)
 }

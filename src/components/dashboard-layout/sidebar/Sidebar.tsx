@@ -29,8 +29,8 @@ export function Sidebar({
 				{/* Шапка сайдбара с логотипом и кнопками управления */}
 				<div
 					className={cn(
-						'flex items-center border-b border-b-border p-4 relative',
-						collapsed ? 'justify-center' : 'justify-between'
+						'flex items-center border-b border-b-border p-3 relative min-h-[68px]',
+						'justify-between'
 					)}
 				>
 					<Link
@@ -40,7 +40,7 @@ export function Sidebar({
 					>
 						<GanttChartSquare
 							color={COLORS.primary}
-							size={32}
+							size={collapsed ? 25 : 32}
 							className='flex-shrink-0'
 						/>
 						{!collapsed && (
@@ -68,12 +68,9 @@ export function Sidebar({
 						<button
 							onClick={onToggleCollapse}
 							title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-							className={cn(
-								'text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5',
-								collapsed ? 'mt-2' : ''
-							)}
+							className='shrink-0 text-white/50 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10'
 						>
-							{collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+							{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={18} />}
 						</button>
 					)}
 				</div>
@@ -96,17 +93,12 @@ export function Sidebar({
 			{/* Футер сайдбара */}
 			<footer
 				className={cn(
-					'text-xs opacity-40 font-normal p-4 border-t border-t-white/[0.04]',
-					collapsed ? 'text-center text-[10px]' : 'text-center'
+					'font-normal border-t border-t-white/[0.06]',
+					collapsed ? 'p-2' : 'p-4'
 				)}
 			>
-				{!collapsed ? (
-					<>
-						&copy; 2026 Planner. <br /> Все права защищены.
-					</>
-				) : (
-					'&copy; 2026'
-				)}
+				<LogoutButton collapsed={collapsed} />
+				{!collapsed && <p className='pt-4 text-center text-xs text-white/35'>© 2026 Planner</p>}
 			</footer>
 		</div>
 	)

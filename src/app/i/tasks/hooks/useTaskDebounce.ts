@@ -20,7 +20,7 @@ export function useTaskDebounce({ watch, itemId }: IUseTaskDebounce) {
 		debounce((formData: TypeTaskFormState) => {
 			createTask(formData)
 		}, 444),
-		[]
+		[createTask]
 	)
 
 	// Теперь debouncedUpdateTask будет сохраняться между рендерами, и debounce будет работать как ожидается.
@@ -28,7 +28,7 @@ export function useTaskDebounce({ watch, itemId }: IUseTaskDebounce) {
 		debounce((formData: TypeTaskFormState) => {
 			updateTask({ id: itemId, data: formData })
 		}, 444),
-		[]
+		[itemId, updateTask]
 	)
 
 	useEffect(() => {
@@ -45,6 +45,8 @@ export function useTaskDebounce({ watch, itemId }: IUseTaskDebounce) {
 
 		return () => {
 			unsubscribe()
+			debouncedUpdateTask.cancel()
+			debouncedCreateTask.cancel()
 		}
-	}, [watch(), debouncedUpdateTask, debouncedCreateTask])
+	}, [watch, itemId, debouncedUpdateTask, debouncedCreateTask])
 }

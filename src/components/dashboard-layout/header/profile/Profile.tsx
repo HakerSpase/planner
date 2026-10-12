@@ -12,21 +12,21 @@ export function Profile() {
 			{isLoading ? (
 				<Loader />
 			) : (
-				<div className='flex items-center gap-3'>
+				<div className='flex items-center gap-2.5'>
 					<div className='text-right hidden sm:block'>
-						<p className='font-bold text-sm leading-tight text-white'>
+						<p className='font-medium text-sm leading-tight text-white/90'>
 							{data?.user.name || 'Пользователь'}
 						</p>
-						<p className='text-xs opacity-40 leading-tight truncate max-w-[180px]'>
+						<p className='text-xs text-white/40 leading-tight truncate max-w-[180px]'>
 							{data?.user.email}
 						</p>
 					</div>
 
 					<div
 						title={data?.user.email}
-						className='w-9 h-9 sm:w-10 sm:h-10 flex justify-center items-center text-lg sm:text-xl font-bold text-white bg-[#7551FF]/25 border border-[#7551FF]/40 rounded-xl uppercase shadow-sm'
+						className='w-8 h-8 flex justify-center items-center text-sm font-semibold text-white/80 bg-white/[0.07] rounded-full uppercase'
 					>
-						{data?.user.name?.charAt(0) || data?.user.email?.charAt(0) || 'P'}
+						{data?.user.name?.trim()?.charAt(0) || data?.user.email?.charAt(0) || 'U'}
 					</div>
 				</div>
 			)}

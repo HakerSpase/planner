@@ -25,6 +25,7 @@ export async function GET() {
 	const formatted = (data || []).map(task => ({
 		id: task.id,
 		name: task.name,
+		note: task.note ?? '',
 		priority: task.priority,
 		isCompleted: task.is_completed,
 		createdAt: task.created_at,
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 		.from('task')
 		.insert({
 			name: body.name || '',
+			note: body.note || '',
 			priority: body.priority || 'medium',
 			is_completed: body.isCompleted || false,
 			created_at: body.createdAt ? new Date(body.createdAt).toISOString() : new Date().toISOString(),
@@ -66,6 +68,7 @@ export async function POST(request: Request) {
 	return NextResponse.json({
 		id: data.id,
 		name: data.name,
+		note: data.note ?? '',
 		priority: data.priority,
 		isCompleted: data.is_completed,
 		createdAt: data.created_at,

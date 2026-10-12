@@ -6,7 +6,7 @@ import { SingleSelect } from '@/components/ui/task-edit/SingleSelect'
 
 import type { TypeTimeBlockFormState } from '@/types/time-block.types'
 
-import { COLORS } from './colors.data'
+import { COLORS, COLOR_LABELS } from './colors.data'
 import { useCreateTimeBlock } from './useCreateTimeBlock'
 import { useUpdateTimeBlock } from './useUpdateTimBlock'
 
@@ -77,7 +77,7 @@ export function TimeBlockingForm() {
 						<SingleSelect
 							data={COLORS.map(item => ({
 								value: item,
-								label: item
+								label: COLOR_LABELS[item]
 							}))}
 							onChange={onChange}
 							value={value || COLORS[COLORS.length - 1]}

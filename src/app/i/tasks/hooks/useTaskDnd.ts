@@ -25,7 +25,8 @@ export function useTaskDnd() {
 			return
 		}
 
-		const newCreatedAt = FILTERS[destinationColumnId].format()
+		const newCreatedAt = FILTERS[destinationColumnId]?.format()
+		if (!newCreatedAt) return
 
 		updateTask({
 			id: result.draggableId,

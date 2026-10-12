@@ -24,6 +24,7 @@ export function KanbanCard({ item, setItems }: IKanbanCard) {
 	const { register, control, watch } = useForm<TypeTaskFormState>({
 		defaultValues: {
 			name: item.name,
+			note: item.note ?? '',
 			isCompleted: item.isCompleted,
 			createdAt: item.createdAt,
 			priority: item.priority
@@ -63,6 +64,14 @@ export function KanbanCard({ item, setItems }: IKanbanCard) {
 				<TransparentField {...register('name')} />
 			</div>
 
+			<textarea
+				{...register('note')}
+				aria-label='Заметка к задаче'
+				placeholder='Добавить заметку…'
+				rows={3}
+				className='mb-3 w-full resize-y rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-sm leading-5 text-white/75 placeholder:text-white/30 focus:border-white/20 focus:outline-none'
+			/>
+
 			<div className={styles.cardBody}>
 				<Controller
 					control={control}
@@ -96,7 +105,9 @@ export function KanbanCard({ item, setItems }: IKanbanCard) {
 			<div className={styles.cardActions}>
 				<button
 					onClick={() =>
-						item.id ? deleteTask(item.id) : setItems(prev => prev?.slice(0, -1))
+						item.id
+							? window.confirm('Удалить задачу?') && deleteTask(item.id)
+							: setItems(prev => prev?.slice(0, -1))
 					}
 					className='opacity-50 transition-opacity hover:opacity-100'
 				>

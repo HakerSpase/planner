@@ -1,0 +1,2 @@
+ALTER TABLE public.task
+ADD COLUMN IF NOT EXISTS note text NOT NULL DEFAULT '';
