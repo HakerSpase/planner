@@ -167,7 +167,7 @@ export default function ThoughtsPage() {
 									{(key === todayKey || entries[key]?.trim()) && (
 										<span
 											aria-hidden='true'
-											className='block h-1.5 w-1.5 shrink-0'
+											className='relative -top-0.5 block h-1.5 w-1.5 shrink-0'
 											style={{
 												backgroundColor:
 													key === todayKey ? '#22c55e' : '#f59e0b'

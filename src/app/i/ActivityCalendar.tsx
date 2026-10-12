@@ -5,20 +5,32 @@ import {
 	endOfWeek,
 	format,
 	startOfWeek,
-	subDays
+	subDays,
+	subMonths,
+	subYears
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useProfile } from '@/hooks/useProfile'
 
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
 const dayKey = (date: Date) => format(date, 'yyyy-MM-dd')
+const PERIODS = [
+	{ value: '7d', label: '7 дней' },
+	{ value: '30d', label: '30 дней' },
+	{ value: '90d', label: '90 дней' },
+	{ value: '6m', label: '6 месяцев' },
+	{ value: '1y', label: '1 год' }
+]
 
 export function ActivityCalendar() {
 	const [counts, setCounts] = useState<Record<string, number>>({})
 	const [loading, setLoading] = useState(true)
+	const [period, setPeriod] = useState('30d')
+	const [chartWidth, setChartWidth] = useState(0)
+	const chartRef = useRef<HTMLDivElement>(null)
 	const { data: profile } = useProfile()
 	const deviceTimeZone = useMemo(
 		() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
@@ -31,26 +43,55 @@ export function ActivityCalendar() {
 			.map(Number)
 		return new Date(year, month - 1, day)
 	}, [timeZone])
-	const rangeStart = useMemo(
-		() => startOfWeek(subDays(today, 181), { weekStartsOn: 1 }),
-		[today]
-	)
-	const days = useMemo(
-		() =>
-			eachDayOfInterval({
-				start: rangeStart,
-				end: endOfWeek(today, { weekStartsOn: 1 })
-			}),
-		[rangeStart, today]
-	)
-	const rangeStartKey = dayKey(rangeStart)
 	const todayKey = dayKey(today)
+	const rangeStart = useMemo(() => {
+		switch (period) {
+			case '7d':
+				return subDays(today, 6)
+			case '90d':
+				return subDays(today, 89)
+			case '6m':
+				return subMonths(today, 6)
+			case '1y':
+				return subYears(today, 1)
+			default:
+				return subDays(today, 29)
+		}
+	}, [today, period])
+	const rangeStartKey = dayKey(rangeStart)
+	const gridStart = startOfWeek(rangeStart, { weekStartsOn: 1 })
+	const gridEnd = endOfWeek(today, { weekStartsOn: 1 })
+	const days = useMemo(
+		() => eachDayOfInterval({ start: gridStart, end: gridEnd }),
+		[gridStart.getTime(), gridEnd.getTime()]
+	)
 	const weeks = useMemo(() => {
 		const result: Date[][] = []
 		for (let index = 0; index < days.length; index += 7)
 			result.push(days.slice(index, index + 7))
 		return result
 	}, [days])
+
+	useEffect(() => {
+		const element = chartRef.current
+		if (!element) return
+		const observer = new ResizeObserver(([entry]) =>
+			setChartWidth(entry.contentRect.width)
+		)
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [])
+
+	const cellSize = Math.min(
+		36,
+		Math.max(
+			6,
+			Math.floor(
+				(chartWidth - 34 - Math.max(0, weeks.length - 1) * 4) /
+					Math.max(1, weeks.length)
+			)
+		)
+	)
 
 	useEffect(() => {
 		let active = true
@@ -84,64 +125,118 @@ export function ActivityCalendar() {
 
 	return (
 		<section
-			className='mt-5 border border-white/[0.08] bg-[#141516] p-4 sm:p-5'
+			className='mt-5 min-w-0 border border-white/[0.08] bg-[#141516] p-4 sm:p-5'
 			aria-label='Календарь активности'
 		>
-			<div className='flex flex-wrap items-end justify-between gap-2'>
+			<div className='flex flex-wrap items-end justify-between gap-3'>
 				<div>
-					<h2 className='text-base font-medium text-white'>
-						Активность за 6 месяцев
-					</h2>
+					<h2 className='text-base font-medium text-white'>Активность</h2>
 					<p className='mt-1 text-xs text-white/45'>
 						Завершённые задачи и записи в «Мыслях»
 					</p>
 				</div>
-				{loading && <span className='text-xs text-white/40'>Загружаем…</span>}
-			</div>
-			<div className='mt-4 overflow-x-auto pb-2'>
-				<div className='min-w-[700px]'>
-					<div
-						className='mb-2 grid gap-1 pl-8 text-[10px] text-white/45'
-						style={{
-							gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`
-						}}
+				<div className='flex items-center gap-2'>
+					<span className='inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-white/65'>
+						<span className='h-2.5 w-2.5 bg-emerald-400 outline outline-1 outline-emerald-200' />
+						Сегодня, {format(today, 'd MMMM', { locale: ru })}
+					</span>
+					{loading && <span className='text-xs text-white/40'>Загружаем…</span>}
+					<label
+						htmlFor='activity-period'
+						className='sr-only'
 					>
-						{weeks.map((week, index) => (
-							<span key={index}>
-								{week[0].getDate() <= 7
-									? format(week[0], 'LLL', { locale: ru })
-									: ''}
-							</span>
+						Период активности
+					</label>
+					<select
+						id='activity-period'
+						value={period}
+						onChange={event => setPeriod(event.target.value)}
+						className='h-9 border border-white/15 bg-[#0e0f0f] px-2 text-xs text-white outline-none focus:border-primary sm:px-3 sm:text-sm'
+					>
+						{PERIODS.map(option => (
+							<option
+								key={option.value}
+								value={option.value}
+							>
+								{option.label}
+							</option>
 						))}
+					</select>
+				</div>
+			</div>
+
+			<div
+				ref={chartRef}
+				className='mt-5 w-full min-w-0 overflow-x-auto pb-2'
+			>
+				<div className='w-max'>
+					<div className='mb-2 flex gap-2'>
+						<span
+							className='w-[26px] shrink-0'
+							aria-hidden='true'
+						/>
+						<div
+							className='grid gap-1 text-[10px] text-white/45'
+							style={{
+								gridTemplateColumns: `repeat(${weeks.length}, ${cellSize}px)`
+							}}
+						>
+							{weeks.map((week, index) => (
+								<span
+									key={index}
+									className='truncate'
+								>
+									{week.find(day => day.getDate() === 1)
+										? format(
+												week.find(day => day.getDate() === 1)!,
+												'LLL',
+												{ locale: ru }
+											)
+										: ''}
+								</span>
+							))}
+						</div>
 					</div>
 					<div className='flex gap-2'>
-						<div className='grid shrink-0 grid-rows-7 gap-1 pt-0.5 text-[9px] leading-[11px] text-white/35'>
-							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(
-								(label, index) => (
-									<span
-										key={index}
-										className='h-[11px]'
-									>
-										{label}
-									</span>
-								)
-							)}
+						<div className='grid w-[26px] shrink-0 grid-rows-7 gap-1 text-[9px] leading-none text-white/40'>
+							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
+								<span
+									key={day}
+									className='flex items-center'
+									style={{ height: `${cellSize}px` }}
+								>
+									{day}
+								</span>
+							))}
 						</div>
 						<div
-							className='grid flex-1 grid-flow-col grid-rows-7 gap-1'
+							className='grid grid-flow-col grid-rows-7 gap-1'
 							style={{
-								gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`
+								gridTemplateColumns: `repeat(${weeks.length}, ${cellSize}px)`,
+								gridTemplateRows: `repeat(7, ${cellSize}px)`
 							}}
 						>
 							{weeks.flatMap(week =>
 								week.map(day => {
 									const key = dayKey(day)
-									const count = counts[key] || 0
+									const isInRange = key >= rangeStartKey && key <= todayKey
+									const isToday = key === todayKey
+									const count = isInRange ? counts[key] || 0 : 0
 									return (
 										<span
 											key={key}
-											title={`${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} ${count === 1 ? 'событие' : 'событий'}`}
-											className={`h-[11px] min-w-0 transition-colors ${intensity(count)} ${key === todayKey ? 'outline outline-1 outline-emerald-300' : ''}`}
+											title={
+												isInRange
+													? `${isToday ? 'Сегодня, ' : ''}${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} ${count === 1 ? 'событие' : 'событий'}`
+													: undefined
+											}
+											aria-label={
+												isInRange
+													? `${isToday ? 'Сегодня, ' : ''}${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} событий`
+													: undefined
+											}
+											className={`z-0 block transition-colors ${isInRange ? intensity(count) : 'bg-transparent'} ${isToday ? 'z-10 bg-emerald-500/50 outline outline-2 outline-emerald-300 outline-offset-1' : ''}`}
+											style={{ width: cellSize, height: cellSize }}
 										/>
 									)
 								})
@@ -150,12 +245,13 @@ export function ActivityCalendar() {
 					</div>
 				</div>
 			</div>
+
 			<div className='mt-2 flex items-center justify-end gap-1.5 text-[10px] text-white/40'>
 				<span>Меньше</span>
 				{[0, 1, 2, 4, 7].map(value => (
 					<span
 						key={value}
-						className={`h-[11px] w-[11px] ${intensity(value)}`}
+						className={`h-3 w-3 ${intensity(value)}`}
 					/>
 				))}
 				<span>Больше</span>
