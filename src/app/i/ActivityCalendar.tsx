@@ -88,7 +88,7 @@ export function ActivityCalendar() {
 		return () => observer.disconnect()
 	}, [])
 
-	const sizingWeekCount = period === '1y' ? ninetyDayWeekCount : weeks.length
+	const sizingWeekCount = ninetyDayWeekCount
 	const cellSize = Math.min(
 		36,
 		Math.max(
