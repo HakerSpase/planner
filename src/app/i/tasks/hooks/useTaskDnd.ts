@@ -1,6 +1,6 @@
 import { DropResult } from '@hello-pangea/dnd'
 
-import { FILTERS } from '../columns.data'
+import { getTaskFilters } from '../columns.data'
 
 import { useUpdateTask } from './useUpdateTask'
 
@@ -25,7 +25,7 @@ export function useTaskDnd() {
 			return
 		}
 
-		const newCreatedAt = FILTERS[destinationColumnId]?.format()
+		const newCreatedAt = getTaskFilters()[destinationColumnId]?.format()
 		if (!newCreatedAt) return
 
 		updateTask({

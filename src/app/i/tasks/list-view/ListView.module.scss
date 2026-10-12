@@ -37,7 +37,7 @@
 			@apply font-normal grid grid-cols-[1.4fr_.4fr_.4fr_.1fr] relative;
 
 			&.completed {
-				> div > span > input {
+				> div:first-child input {
 					@apply italic line-through opacity-50;
 				}
 			}
@@ -76,7 +76,7 @@
 			}
 
 			.row {
-				@apply grid grid-cols-[minmax(0,1fr)_max-content_max-content] gap-x-2 gap-y-2 whitespace-normal border-t border-border py-2;
+				@apply grid grid-cols-[minmax(0,1fr)_max-content] gap-x-3 gap-y-2 whitespace-normal border-t border-border py-3;
 
 				> div {
 					@apply min-w-0 border-0 p-0;
@@ -87,14 +87,19 @@
 
 					&:nth-child(2) {
 						grid-column: 1;
+						grid-row: 2;
 					}
 
 					&:nth-child(3) {
-						grid-column: 2;
+						grid-column: 1;
+						grid-row: 3;
 					}
 
 					&:nth-child(4) {
-						grid-column: 3;
+						grid-column: 2;
+						grid-row: 2;
+						align-self: start;
+						justify-self: end;
 					}
 				}
 			}

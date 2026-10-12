@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
 import LocalizedFormat from 'dayjs/plugin/localizedFormat'
 import { X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DayPicker, type SelectSingleEventHandler } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
@@ -29,6 +29,10 @@ export function DatePicker({
 	const [selected, setSelected] = useState<Date>()
 	const { isShow, setIsShow, ref } = useOutside(false)
 
+	useEffect(() => {
+		setSelected(value ? new Date(value) : undefined)
+	}, [value])
+
 	const handleDaySelect: SelectSingleEventHandler = date => {
 		const ISOdate = date?.toISOString()
 
@@ -46,7 +50,10 @@ export function DatePicker({
 			className='relative inline-flex min-w-0 items-center gap-1'
 			ref={ref}
 		>
-			<button className='min-w-0 text-left' onClick={() => setIsShow(!isShow)}>
+			<button
+				className='min-w-0 text-left'
+				onClick={() => setIsShow(!isShow)}
+			>
 				{value ? dayjs(value).locale('ru').format('LL') : 'Выберите дату'}
 			</button>
 			{value && (
@@ -74,7 +81,7 @@ export function DatePicker({
 						toYear={2054}
 						initialFocus={isShow}
 						mode='single'
-						defaultMonth={selected}
+						defaultMonth={selected || (value ? new Date(value) : undefined)}
 						selected={selected}
 						onSelect={handleDaySelect}
 						weekStartsOn={1}

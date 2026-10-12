@@ -18,7 +18,7 @@ export function KanbanAddCardInput({
 			return [
 				...prev,
 				{
-					id: '',
+					id: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
 					name: '',
 					isCompleted: false,
 					createdAt: filterDate

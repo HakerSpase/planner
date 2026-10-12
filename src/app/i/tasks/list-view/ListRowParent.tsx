@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 
 import type { ITaskResponse } from '@/types/task.types'
 
-import { FILTERS } from '../columns.data'
+import { getTaskFilters } from '../columns.data'
 import { filterTasks } from '../filter-tasks'
 
 import { ListAddRowInput } from './ListAddRowInput'
@@ -39,6 +39,7 @@ export function ListRowParent({
 							key={item.id}
 							draggableId={item.id}
 							index={index}
+							isDragDisabled={item.id.startsWith('draft-')}
 						>
 							{provided => (
 								<div
@@ -59,12 +60,13 @@ export function ListRowParent({
 
 					{provided.placeholder}
 
-					{value !== 'completed' && !items?.some(item => !item.id) && (
-						<ListAddRowInput
-							setItems={setItems}
-							filterDate={FILTERS[value] ? FILTERS[value].format() : undefined}
-						/>
-					)}
+					{value !== 'completed' &&
+						!items?.some(item => item.id.startsWith('draft-')) && (
+							<ListAddRowInput
+								setItems={setItems}
+								filterDate={getTaskFilters()[value]?.format()}
+							/>
+						)}
 				</div>
 			)}
 		</Droppable>

@@ -21,8 +21,11 @@ export function useTodaySession({
 	} = useQuery({
 		queryKey: ['get today session', timeZone],
 		queryFn: () => pomodoroService.getTodaySession(timeZone),
-		refetchInterval: 3000,
-		refetchIntervalInBackground: true,
+		// Keep cross-device state fresh without making a server request every 3 seconds.
+		refetchInterval: query =>
+			query.state.data?.data?.timerIsRunning ? 15000 : 60000,
+		refetchIntervalInBackground: false,
+		staleTime: 10000,
 		enabled: Boolean(timeZone)
 	})
 

@@ -37,7 +37,7 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 		}
 	})
 
-	useTaskDebounce({ watch, itemId: item.id })
+	const { isCreating } = useTaskDebounce({ watch, itemId: item.id, setItems })
 
 	const { deleteTask, isDeletePending } = useDeleteTask()
 
@@ -119,13 +119,18 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 				<button
 					type='button'
 					onClick={() =>
-						item.id
-							? setIsDeleteConfirmOpen(true)
-							: setItems(prev => prev?.slice(0, -1))
+						item.id.startsWith('draft-')
+							? setItems(prev => prev?.filter(task => task.id !== item.id))
+							: setIsDeleteConfirmOpen(true)
 					}
+					disabled={isCreating}
 					className='grid h-10 w-10 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100'
 				>
-					{isDeletePending ? <Loader size={17} /> : <Trash size={17} />}
+					{isCreating || isDeletePending ? (
+						<Loader size={17} />
+					) : (
+						<Trash size={17} />
+					)}
 				</button>
 			</div>
 			{isDeleteConfirmOpen && (
