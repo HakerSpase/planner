@@ -39,7 +39,7 @@ export function Sidebar() {
 				</div>
 			</div>
 			<footer className='text-xs opacity-40 font-normal text-center p-layout'>
-				&copy; 2024 Planner. <br /> Все права защищены.
+				&copy; 2026 Planner. <br /> Все права защищены.
 			</footer>
 		</aside>
 	)
