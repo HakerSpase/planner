@@ -9,7 +9,14 @@ export function Providers({ children }: PropsWithChildren) {
 		new QueryClient({
 			defaultOptions: {
 				queries: {
-					refetchOnWindowFocus: false
+					staleTime: 30_000,
+					gcTime: 5 * 60_000,
+					retry: 1,
+					refetchOnWindowFocus: false,
+					refetchOnReconnect: true
+				},
+				mutations: {
+					retry: 0
 				}
 			}
 		})
@@ -18,7 +25,7 @@ export function Providers({ children }: PropsWithChildren) {
 	return (
 		<QueryClientProvider client={client}>
 			{children}
-			<ReactQueryDevtools initialIsOpen={false} />
+			{process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
 		</QueryClientProvider>
 	)
 }

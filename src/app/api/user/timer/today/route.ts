@@ -17,7 +17,7 @@ export async function GET() {
 
 	const { data: session } = await supabase
 		.from('pomodoro_session')
-		.select('*, rounds:pomodoro_round(*)')
+		.select('id,is_completed,created_at,updated_at,rounds:pomodoro_round(id,total_seconds,is_completed,created_at,updated_at)')
 		.eq('user_id', user.id)
 		.gte('created_at', todayStart)
 		.order('created_at', { ascending: false })

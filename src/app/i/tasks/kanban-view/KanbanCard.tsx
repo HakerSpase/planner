@@ -8,6 +8,8 @@ import { TransparentField } from '@/components/ui/fields/TransparentField'
 import { SingleSelect } from '@/components/ui/task-edit/SingleSelect'
 import { DatePicker } from '@/components/ui/task-edit/date-picker/DatePicker'
 
+import { TaskNoteEditor } from '../TaskNoteEditor'
+
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
 import { useDeleteTask } from '../hooks/useDeleteTask'
@@ -64,12 +66,10 @@ export function KanbanCard({ item, setItems }: IKanbanCard) {
 				<TransparentField {...register('name')} />
 			</div>
 
-			<textarea
-				{...register('note')}
-				aria-label='Заметка к задаче'
-				placeholder='Добавить заметку…'
-				rows={3}
-				className='mb-3 w-full resize-y rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-sm leading-5 text-white/75 placeholder:text-white/30 focus:border-white/20 focus:outline-none'
+			<Controller
+				control={control}
+				name='note'
+				render={({ field }) => <TaskNoteEditor value={field.value || ''} onChange={field.onChange} />}
 			/>
 
 			<div className={styles.cardBody}>

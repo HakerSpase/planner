@@ -16,20 +16,14 @@ export function useTimer(): ITimerState {
 	const [activeRound, setActiveRound] = useState<IPomodoroRoundResponse>()
 
 	useEffect(() => {
-		let interval: NodeJS.Timeout | null = null
+		if (!isRunning) return
 
-		if (isRunning) {
-			interval = setInterval(() => {
-				setSecondsLeft(secondsLeft => secondsLeft - 1)
-			}, 1000)
-		} else if (!isRunning && secondsLeft !== 0 && interval) {
-			clearInterval(interval)
-		}
+		const interval = setInterval(() => {
+			setSecondsLeft(secondsLeft => Math.max(0, secondsLeft - 1))
+		}, 1000)
 
-		return () => {
-			if (interval) clearInterval(interval)
-		}
-	}, [isRunning, secondsLeft, workInterval, activeRound])
+		return () => clearInterval(interval)
+	}, [isRunning])
 
 	useEffect(() => {
 		// Ранний выход, если время не истекло

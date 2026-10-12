@@ -2,94 +2,79 @@
 
 import { Check, GanttChartSquare, Loader2, Timer } from 'lucide-react'
 import Script from 'next/script'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { createClient } from '@/lib/supabase/client'
+
+declare global {
+	interface Window {
+		turnstile?: {
+			render: (container: HTMLElement, options: Record<string, unknown>) => string
+			reset: (widgetId?: string) => void
+		}
+	}
+}
 
 export function Auth() {
 	const [isLoading, setIsLoading] = useState(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+	const [captchaError, setCaptchaError] = useState('')
 	const turnstileContainerRef = useRef<HTMLDivElement>(null)
+	const turnstileWidgetIdRef = useRef<string>()
 
-	const siteKey =
-		process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAFUvK-Ot88Si8C4y'
+	const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
-	// Инициализация виджета Cloudflare Turnstile
-	useEffect(() => {
-		;(window as any).onTurnstileSuccess = (token: string) => {
-			setTurnstileToken(token)
+	const renderTurnstile = useCallback(() => {
+		if (!siteKey) {
+			setCaptchaError('Проверка безопасности не настроена. Вход временно недоступен.')
+			return
 		}
+		if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return
 
-		const initTurnstile = () => {
-			if (
-				(window as any).turnstile &&
-				turnstileContainerRef.current &&
-				turnstileContainerRef.current.childElementCount === 0
-			) {
-				try {
-					;(window as any).turnstile.render(turnstileContainerRef.current, {
-						sitekey: siteKey,
-						theme: 'dark',
-						callback: (token: string) => {
-							setTurnstileToken(token)
-						}
-					})
-				} catch (e) {
-					console.log('Turnstile widget render:', e)
+		try {
+			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+				sitekey: siteKey,
+				theme: 'dark',
+				action: 'planner_login',
+				callback: (token: string) => {
+					setCaptchaError('')
+					setTurnstileToken(token)
+				},
+				'expired-callback': () => setTurnstileToken(null),
+				'error-callback': () => {
+					setTurnstileToken(null)
+					setCaptchaError('Не удалось загрузить проверку. Обновите страницу и попробуйте снова.')
 				}
-			}
-		}
-
-		if ((window as any).turnstile) {
-			initTurnstile()
-		} else {
-			const interval = setInterval(() => {
-				if ((window as any).turnstile) {
-					initTurnstile()
-					clearInterval(interval)
-				}
-			}, 300)
-			return () => clearInterval(interval)
+			})
+		} catch {
+			setCaptchaError('Не удалось загрузить проверку безопасности.')
 		}
 	}, [siteKey])
 
 	const handleGoogleLogin = async () => {
+		if (!turnstileToken) {
+			toast.error('Сначала пройдите проверку безопасности.')
+			return
+		}
 		setIsLoading(true)
 
 		try {
-			const supabase = createClient()
-			const redirectTo = `${window.location.origin}/auth/callback`
-
-			const { data, error } = await supabase.auth.signInWithOAuth({
-				provider: 'google',
-				options: {
-					redirectTo
-				}
+			const response = await fetch('/api/auth/google', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ token: turnstileToken })
 			})
-
-			if (error) {
-				console.error('OAuth error:', error)
-				toast.error(
-					error.message ||
-						'Ошибка входа через Google. Убедитесь, что провайдер Google включен в панели Supabase.'
-				)
-				setIsLoading(false)
-				return
+			const result = await response.json()
+			if (!response.ok || !result.url) {
+				throw new Error(result.error || 'Не удалось начать вход через Google.')
 			}
-
-			if (data.url) {
-				window.location.href = data.url
-			}
+			window.location.assign(result.url)
 		} catch (error: any) {
-			console.error('Login error:', error)
-			toast.error('Не удалось подключиться к сервису авторизации')
+			toast.error(error?.message || 'Не удалось подключиться к сервису авторизации')
+			setTurnstileToken(null)
+			window.turnstile?.reset(turnstileWidgetIdRef.current)
 			setIsLoading(false)
 		}
-
-		setTimeout(() => {
-			setIsLoading(false)
-		}, 8000)
 	}
 
 	return (
@@ -98,6 +83,8 @@ export function Auth() {
 			<Script
 				src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 				strategy='afterInteractive'
+				onReady={renderTurnstile}
+				onError={() => setCaptchaError('Не удалось загрузить проверку безопасности.')}
 			/>
 
 			<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30 select-none'>
@@ -209,19 +196,20 @@ export function Auth() {
 						</div>
 
 						{/* Виджет Cloudflare Turnstile */}
-						<div className='w-full mb-6 flex justify-center min-h-[65px] items-center'>
+						<div className='w-full mb-2 flex justify-center min-h-[65px] items-center'>
 							<div ref={turnstileContainerRef} id='turnstile-widget' />
 						</div>
+						{captchaError && <p role='alert' className='mb-4 max-w-[300px] text-xs text-red-300'>{captchaError}</p>}
 
 						{/* Идеально выровненная кнопка Google без перекрытий */}
 						<button
 							onClick={handleGoogleLogin}
-							disabled={isLoading}
+							disabled={isLoading || !turnstileToken}
 							style={{
 								backgroundColor: '#FFFFFF',
 								color: '#111827'
 							}}
-							className='w-full max-w-[300px] h-[48px] flex items-center justify-center gap-3 rounded-xl font-medium text-sm transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed px-4'
+							className='w-full max-w-[300px] h-[48px] flex items-center justify-center gap-3 rounded-xl font-medium text-sm transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed px-4'
 						>
 							{isLoading ? (
 								<div className='flex items-center gap-2.5'>

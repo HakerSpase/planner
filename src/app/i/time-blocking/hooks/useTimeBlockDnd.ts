@@ -27,6 +27,21 @@ export function useTimeBlockDnd(
 	const { mutate } = useMutation({
 		mutationKey: ['update order time block'],
 		mutationFn: (ids: string[]) => timeBlockService.updateOrderTimeBlock(ids),
+		async onMutate(ids) {
+			await queryClient.cancelQueries({ queryKey: ['time-blocks'] })
+			const previous = queryClient.getQueryData<{ data: ITimeBlockResponse[] }>(['time-blocks'])
+			if (previous) {
+				const orderById = new Map(ids.map((id, index) => [id, index + 1]))
+				queryClient.setQueryData(['time-blocks'], {
+					...previous,
+					data: previous.data.map(item => ({ ...item, order: orderById.get(item.id) ?? item.order }))
+				})
+			}
+			return { previous }
+		},
+		onError(_error, _ids, context) {
+			if (context?.previous) queryClient.setQueryData(['time-blocks'], context.previous)
+		},
 		onSuccess() {
 			queryClient.invalidateQueries({ queryKey: ['time-blocks'] })
 		}

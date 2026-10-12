@@ -18,7 +18,11 @@ export async function PUT(request: Request) {
 		return NextResponse.json({ error: 'ids must be an array' }, { status: 400 })
 	}
 
-	await Promise.all(
+	if (ids.some((id: unknown) => typeof id !== 'string')) {
+		return NextResponse.json({ error: 'Each block id must be a string.' }, { status: 400 })
+	}
+
+	const results = await Promise.all(
 		ids.map((id: string, order: number) =>
 			supabase
 				.from('time_block')
@@ -27,6 +31,10 @@ export async function PUT(request: Request) {
 				.eq('user_id', user.id)
 		)
 	)
+	const failedUpdate = results.find(result => result.error)
+	if (failedUpdate?.error) {
+		return NextResponse.json({ error: failedUpdate.error.message }, { status: 400 })
+	}
 
 	return NextResponse.json({ success: true })
 }

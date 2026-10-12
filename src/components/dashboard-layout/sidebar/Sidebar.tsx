@@ -29,14 +29,14 @@ export function Sidebar({
 				{/* Шапка сайдбара с логотипом и кнопками управления */}
 				<div
 					className={cn(
-						'flex items-center border-b border-b-border p-3 relative min-h-[68px]',
-						'justify-between'
+						'flex items-center border-b border-b-border relative min-h-[60px]',
+						collapsed ? 'justify-between gap-1 px-2 py-2' : 'justify-between p-3'
 					)}
 				>
 					<Link
 						href='/'
 						onClick={isMobile ? onCloseMobile : undefined}
-						className='flex items-center gap-2.5'
+						className='flex shrink-0 items-center gap-2.5'
 					>
 						<GanttChartSquare
 							color={COLORS.primary}
@@ -68,7 +68,7 @@ export function Sidebar({
 						<button
 							onClick={onToggleCollapse}
 							title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-							className='shrink-0 text-white/50 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10'
+							className={cn('shrink-0 text-white/50 hover:text-white transition-colors rounded-lg hover:bg-white/10', collapsed ? 'p-1' : 'p-1.5')}
 						>
 							{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={18} />}
 						</button>

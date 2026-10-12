@@ -11,7 +11,7 @@ interface IHeaderProps {
 
 export function Header({ onToggleMobile }: IHeaderProps) {
 	return (
-		<header className='flex items-center justify-between pb-5 mb-1 select-none'>
+		<header className='flex min-h-8 items-center justify-between pb-2 mb-0 select-none'>
 			<div className='flex items-center gap-3'>
 				{/* Кнопка гамбургер-меню для телефонов */}
 				{onToggleMobile && (

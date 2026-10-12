@@ -26,7 +26,7 @@ export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 				className={styles.block}
 				style={{
 					backgroundColor: item.color || 'lightgray',
-					height: `${item.duration}px`
+					minHeight: `${Math.max(56, Math.min(item.duration * 2, 240))}px`
 				}}
 			>
 				<div className='flex items-center'>
@@ -38,8 +38,10 @@ export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 						<GripVertical className={styles.grip} />
 					</button>
 					<div>
-						{item.name}{' '}
-						<i className='text-xs opacity-50'>({item.duration} мин.)</i>
+						<div className='min-w-0'>
+							<div className='truncate'>{item.name}</div>
+							<div className='text-xs opacity-60'>({item.duration} мин.)</div>
+						</div>
 					</div>
 				</div>
 

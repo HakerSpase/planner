@@ -16,6 +16,13 @@ export async function PUT(
 	}
 
 	const body = await request.json()
+	if (body.duration !== undefined) {
+		const duration = Number(body.duration)
+		if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
+			return NextResponse.json({ error: 'Длительность должна быть от 1 до 1440 минут.' }, { status: 400 })
+		}
+		body.duration = duration
+	}
 	const updateData: Record<string, any> = {
 		updated_at: new Date().toISOString()
 	}

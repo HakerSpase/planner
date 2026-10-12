@@ -15,7 +15,14 @@ export function TimeBlockingList() {
 
 	if (isLoading) return <Loader />
 
-	const { hoursLeft } = calcHoursLeft(items)
+	const { totalMinutes, remainingMinutes, overbookedMinutes } = calcHoursLeft(items)
+	const formatDuration = (minutes: number) => {
+		const hours = Math.floor(minutes / 60)
+		const rest = minutes % 60
+		return [hours ? `${hours} ч.` : '', rest ? `${rest} мин.` : '']
+			.filter(Boolean)
+			.join(' ') || '0 мин.'
+	}
 
 	return (
 		<div>
@@ -42,10 +49,21 @@ export function TimeBlockingList() {
 					</SortableContext>
 				</div>
 			</DndContext>
-			<div>
-				{hoursLeft > 0
-					? `${hoursLeft} ч. из 24 осталось на отдых и сон`
-					: 'Не осталось времени на сон'}
+			<div className='mt-5 rounded-xl border border-white/[0.07] bg-white/[0.025] p-4'>
+				<div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
+					<span className='text-white/55'>Запланировано за день</span>
+					<strong className='font-medium text-white'>{formatDuration(totalMinutes)}</strong>
+				</div>
+				{overbookedMinutes ? (
+					<p className='mt-2 text-sm text-amber-300'>
+						План превышает сутки на {formatDuration(overbookedMinutes)}
+					</p>
+				) : (
+					<div className='mt-2 flex flex-wrap items-center justify-between gap-2 text-sm'>
+						<span className='text-white/55'>Осталось на сон и отдых</span>
+						<strong className='font-medium text-white'>{formatDuration(remainingMinutes)}</strong>
+					</div>
+				)}
 			</div>
 		</div>
 	)

@@ -15,7 +15,7 @@ export async function GET() {
 	// Получаем профиль пользователя
 	const { data: profile } = await supabase
 		.from('user')
-		.select('*')
+		.select('id,name,work_interval,break_interval,intervals_count')
 		.eq('id', user.id)
 		.single()
 
@@ -26,20 +26,20 @@ export async function GET() {
 
 	// Статистика
 	const [totalRes, completedRes, todayRes, weekRes] = await Promise.all([
-		supabase.from('task').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+		supabase.from('task').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
 		supabase
 			.from('task')
-			.select('*', { count: 'exact', head: true })
+			.select('id', { count: 'exact', head: true })
 			.eq('user_id', user.id)
 			.eq('is_completed', true),
 		supabase
 			.from('task')
-			.select('*', { count: 'exact', head: true })
+			.select('id', { count: 'exact', head: true })
 			.eq('user_id', user.id)
 			.gte('created_at', todayStart),
 		supabase
 			.from('task')
-			.select('*', { count: 'exact', head: true })
+			.select('id', { count: 'exact', head: true })
 			.eq('user_id', user.id)
 			.gte('created_at', weekStart)
 	])
@@ -73,7 +73,24 @@ export async function PUT(request: Request) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 	}
 
-	const body = await request.json()
+	const body = await request.json().catch(() => null)
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		return NextResponse.json({ error: 'Некорректные настройки' }, { status: 400 })
+	}
+	const boundedInteger = (value: unknown, min: number, max: number) =>
+		Number.isInteger(value) && Number(value) >= min && Number(value) <= max
+	if (body.workInterval !== undefined && !boundedInteger(body.workInterval, 1, 180)) {
+		return NextResponse.json({ error: 'Интервал работы должен быть от 1 до 180 минут' }, { status: 400 })
+	}
+	if (body.breakInterval !== undefined && !boundedInteger(body.breakInterval, 1, 60)) {
+		return NextResponse.json({ error: 'Интервал перерыва должен быть от 1 до 60 минут' }, { status: 400 })
+	}
+	if (body.intervalsCount !== undefined && !boundedInteger(body.intervalsCount, 1, 10)) {
+		return NextResponse.json({ error: 'Количество интервалов должно быть от 1 до 10' }, { status: 400 })
+	}
+	if (body.name !== undefined && (typeof body.name !== 'string' || body.name.length > 80)) {
+		return NextResponse.json({ error: 'Имя должно содержать не более 80 символов' }, { status: 400 })
+	}
 
 	const updateData: Record<string, any> = {
 		updated_at: new Date().toISOString()

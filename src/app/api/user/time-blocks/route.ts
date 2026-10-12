@@ -14,7 +14,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from('time_block')
-		.select('*')
+		.select('id,name,color,duration,order,created_at,updated_at')
 		.eq('user_id', user.id)
 		.order('order', { ascending: true })
 
@@ -47,13 +47,17 @@ export async function POST(request: Request) {
 	}
 
 	const body = await request.json()
+	const duration = Number(body.duration)
+	if (!Number.isInteger(duration) || duration < 1 || duration > 1440) {
+		return NextResponse.json({ error: 'Длительность должна быть от 1 до 1440 минут.' }, { status: 400 })
+	}
 
 	const { data, error } = await supabase
 		.from('time_block')
 		.insert({
 			name: body.name || '',
 			color: body.color || null,
-			duration: body.duration || 0,
+			duration,
 			order: body.order || 1,
 			user_id: user.id
 		})

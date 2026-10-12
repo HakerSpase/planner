@@ -8,6 +8,8 @@ import { TransparentField } from '@/components/ui/fields/TransparentField'
 import { SingleSelect } from '@/components/ui/task-edit/SingleSelect'
 import { DatePicker } from '@/components/ui/task-edit/date-picker/DatePicker'
 
+import { TaskNoteEditor } from '../TaskNoteEditor'
+
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
 import { useDeleteTask } from '../hooks/useDeleteTask'
@@ -60,12 +62,10 @@ export function ListRow({ item, setItems }: IListRow) {
 
 						<TransparentField {...register('name')} />
 					</span>
-					<textarea
-						{...register('note')}
-						aria-label='Заметка к задаче'
-						placeholder='Добавить заметку…'
-						rows={2}
-						className='ml-7 w-[calc(100%-1.75rem)] min-h-12 resize-y rounded-md border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-sm leading-5 text-white/70 placeholder:text-white/30 focus:border-white/20 focus:outline-none'
+					<Controller
+						control={control}
+						name='note'
+						render={({ field }) => <TaskNoteEditor value={field.value || ''} onChange={field.onChange} />}
 					/>
 				</div>
 			</div>

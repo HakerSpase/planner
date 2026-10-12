@@ -31,6 +31,30 @@ body {
 	}
 }
 
+* {
+	scrollbar-color: #3a3d45 #101112;
+	scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+	background: #101112;
+}
+
+*::-webkit-scrollbar-thumb {
+	background: #363a42;
+	border: 2px solid #101112;
+	border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: #4b505a;
+}
+
 input.defaultCheckbox {
 	color: white;
 }

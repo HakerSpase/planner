@@ -2,6 +2,7 @@ import {
 	CalendarRange,
 	KanbanSquare,
 	LayoutDashboard,
+	BookOpenText,
 	Settings,
 	Timer
 } from 'lucide-react'
@@ -35,5 +36,10 @@ export const MENU: IMenuItem[] = [
 		icon: Settings,
 		link: DASHBOARD_PAGES.SETTINGS,
 		name: 'Настройки'
+	},
+	{
+		icon: BookOpenText,
+		link: DASHBOARD_PAGES.GUIDE,
+		name: 'Как пользоваться'
 	}
 ]
