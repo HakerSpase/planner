@@ -15,7 +15,7 @@ export function ListView() {
 
 	return (
 		<DragDropContext onDragEnd={onDragEnd}>
-			<div className='overflow-x-auto w-full pb-4'>
+			<div className='w-full min-w-0 pb-4'>
 				<div className={styles.table}>
 					<div className={styles.header}>
 						<div>Название задачи</div>

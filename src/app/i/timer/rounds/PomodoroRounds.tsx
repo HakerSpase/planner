@@ -10,13 +10,17 @@ interface IPomodoroRounds {
 	nextRoundHandler: () => void
 	prevRoundHandler: () => void
 	activeRound: IPomodoroRoundResponse | undefined
+	disabled?: boolean
+	progressPercent?: number
 }
 
 export function PomodoroRounds({
 	rounds,
 	nextRoundHandler,
 	prevRoundHandler,
-	activeRound
+	activeRound,
+	disabled = false,
+	progressPercent = 0
 }: IPomodoroRounds) {
 	const isCanPrevRound =
 		rounds && rounds.length > 0
@@ -30,8 +34,11 @@ export function PomodoroRounds({
 	return (
 		<div className={styles.container}>
 			<button
+				type='button'
 				className={styles.button}
-				disabled={!isCanPrevRound}
+				aria-label='Предыдущий раунд'
+				title='Предыдущий раунд'
+				disabled={!isCanPrevRound || disabled}
 				onClick={() => (isCanPrevRound ? prevRoundHandler() : false)}
 			>
 				<ChevronLeft size={23} />
@@ -41,17 +48,26 @@ export function PomodoroRounds({
 					rounds.map((round, index) => (
 						<div
 							key={index}
+							aria-label={`Раунд ${index + 1}${round.isCompleted ? ', завершён' : ''}`}
 							className={cn(styles.round, {
-								[styles.completed]: round.isCompleted,
-								[styles.active]:
-									round.id === activeRound?.id && !round.isCompleted
+								[styles.completed]: round.isCompleted
 							})}
-						/>
+						>
+							<span
+								className={styles.fill}
+								style={{
+									width: `${round.isCompleted ? 100 : round.id === activeRound?.id ? progressPercent : 0}%`
+								}}
+							/>
+						</div>
 					))}
 			</div>
 			<button
+				type='button'
 				className={styles.button}
-				disabled={!isCanNextRound}
+				aria-label='Следующий раунд'
+				title='Следующий раунд'
+				disabled={!isCanNextRound || disabled}
 				onClick={() => (isCanNextRound ? nextRoundHandler() : false)}
 			>
 				<ChevronRight size={23} />

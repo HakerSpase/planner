@@ -1,5 +1,5 @@
 import cn from 'clsx'
-import { X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/Badge'
 
@@ -24,71 +24,92 @@ export function SingleSelect({
 	isColorSelect
 }: ISingleSelect) {
 	const { isShow, setIsShow, ref } = useOutside(false)
-	const getValue = () => data.find(item => item.value === value)?.value
+	const selected = data.find(item => item.value === value)
 
 	return (
 		<div
-			className={cn('relative min-w-36', {
-				'w-max': isColorSelect
-			})}
+			className={cn(
+				'relative min-w-0',
+				isColorSelect ? 'w-full' : 'w-max max-w-full'
+			)}
 			ref={ref}
 		>
 			<button
-				onClick={e => {
-					e.preventDefault()
-					setIsShow(!isShow)
-				}}
+				type='button'
+				aria-expanded={isShow}
+				aria-haspopup='listbox'
+				onClick={() => setIsShow(!isShow)}
+				className={cn(
+					'flex min-h-9 items-center gap-2 text-left',
+					isColorSelect ? 'w-full border border-border px-3' : 'max-w-full'
+				)}
 			>
-				{getValue() ? (
+				{isColorSelect ? (
+					<>
+						<span
+							className='h-4 w-4 shrink-0 border border-white/20'
+							style={{ backgroundColor: selected?.value || '#64748b' }}
+						/>
+						<span className='min-w-0 flex-1 truncate text-sm text-white/75'>
+							{selected?.label || 'Выберите цвет'}
+						</span>
+					</>
+				) : selected ? (
 					<Badge
 						variant={value}
 						className='capitalize'
-						style={isColorSelect ? { backgroundColor: value } : {}}
 					>
-						{data.find(item => item.value === value)?.label || getValue()}
+						{selected.label}
 					</Badge>
 				) : (
 					<Badge>Выберите</Badge>
 				)}
+				<ChevronDown
+					size={15}
+					className='shrink-0 text-white/40'
+				/>
 			</button>
-			{value && (
+			{selected && !isColorSelect && (
 				<button
-					className='absolute top-0 right-0 opacity-30 hover:opacity-100 transition-opacity'
-					onClick={e => {
-						e.preventDefault()
-						onChange('')
-					}}
+					type='button'
+					aria-label='Сбросить выбор'
+					className='absolute -right-5 top-1/2 -translate-y-1/2 p-1 text-white/35 hover:text-white'
+					onClick={() => onChange('')}
 				>
-					<X size={14} />
+					<X size={13} />
 				</button>
 			)}
 			{isShow && (
 				<div
-					className={cn(
-						'absolute w-full p-2.5 left-0 slide bg-sidebar z-10 shadow rounded-lg'
-					)}
-					style={{
-						top: 'calc(100% + .5rem)'
-					}}
+					role='listbox'
+					className='absolute left-0 top-[calc(100%+0.25rem)] z-30 max-h-60 w-full min-w-40 overflow-y-auto border border-white/10 bg-sidebar p-1 shadow-xl'
 				>
 					{data.map(item => (
 						<button
 							key={item.value}
-							onClick={e => {
-								e.preventDefault()
+							type='button'
+							role='option'
+							aria-selected={item.value === value}
+							onClick={() => {
 								onChange(item.value)
 								setIsShow(false)
 							}}
-							className='block mb-2 last:mb-0 rounded-lg hover:brightness-110 transition'
-							style={
-								isColorSelect
-									? {
-											backgroundColor: item.value
-										}
-									: {}
-							}
+							className={cn(
+								'flex min-h-9 w-full items-center gap-2 px-2 text-left text-sm transition-colors hover:bg-white/[0.06]',
+								item.value === value && 'bg-white/[0.06]'
+							)}
 						>
-							<Badge variant={item.value}>{item.label}</Badge>
+							{isColorSelect && (
+								<span
+									className='h-4 w-4 shrink-0 border border-white/20'
+									style={{ backgroundColor: item.value }}
+								/>
+							)}
+							{isColorSelect ? (
+								<span>{item.label}</span>
+							) : (
+								<Badge variant={item.value}>{item.label}</Badge>
+							)}
 						</button>
 					))}
 				</div>

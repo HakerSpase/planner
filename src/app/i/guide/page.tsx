@@ -1,7 +1,14 @@
+import {
+	CalendarClock,
+	CheckSquare2,
+	Coffee,
+	Lightbulb,
+	Timer
+} from 'lucide-react'
 import type { Metadata } from 'next'
-import { CalendarClock, CheckSquare2, Coffee, Lightbulb, Timer } from 'lucide-react'
 
 import { Heading } from '@/components/ui/Heading'
+
 import { NO_INDEX_PAGE } from '@/constants/seo.constants'
 
 export const metadata: Metadata = {
@@ -23,7 +30,8 @@ const guideSections = [
 	{
 		icon: CalendarClock,
 		title: 'Тайм-блокинг',
-		intro: 'Разложите день по временным блокам: например, работа, дорога, обед и отдых.',
+		intro:
+			'Разложите день по временным блокам: например, работа, дорога, обед и отдых.',
 		steps: [
 			'Для каждого блока укажите название и длительность в минутах. Например, 45 минут — это 45, а не 0 часов.',
 			'Перетаскивайте блоки, чтобы менять их порядок. Цвет помогает быстро различать занятия.',
@@ -33,7 +41,8 @@ const guideSections = [
 	{
 		icon: Timer,
 		title: 'Pomodoro',
-		intro: 'Работайте короткими сфокусированными отрезками и делайте регулярные перерывы.',
+		intro:
+			'Работайте короткими сфокусированными отрезками и делайте регулярные перерывы.',
 		steps: [
 			'В настройках задайте длительность работы, отдыха и число раундов.',
 			'Создайте сессию на сегодня и нажмите ▶, когда начинаете работу. Пауза сохраняет прогресс.',
@@ -57,22 +66,38 @@ export default function GuidePage() {
 		<div className='max-w-5xl'>
 			<Heading title='Как пользоваться Planner' />
 			<p className='mt-4 max-w-3xl text-sm leading-6 text-white/55'>
-				Короткая подсказка по основным инструментам. Начните с задач, распределите их по времени и используйте Pomodoro, чтобы удерживать фокус.
+				Короткая подсказка по основным инструментам. Начните с задач,
+				распределите их по времени и используйте Pomodoro, чтобы удерживать
+				фокус.
 			</p>
 			<div className='mt-6 grid gap-4 md:grid-cols-2'>
 				{guideSections.map(section => {
 					const Icon = section.icon
 					return (
-						<section key={section.title} className='rounded-2xl border border-white/[0.08] bg-[#151617] p-5 sm:p-6'>
+						<section
+							key={section.title}
+							className='border border-white/[0.08] bg-[#151617] p-4 sm:p-6'
+						>
 							<div className='flex items-center gap-3'>
-								<span className='rounded-xl bg-primary/10 p-2.5 text-primary'><Icon size={19} /></span>
-								<h2 className='text-base font-semibold text-white/90'>{section.title}</h2>
+								<span className='border-l-2 border-primary pl-2.5 text-primary'>
+									<Icon size={19} />
+								</span>
+								<h2 className='text-base font-semibold text-white/90'>
+									{section.title}
+								</h2>
 							</div>
-							<p className='mt-4 text-sm leading-6 text-white/60'>{section.intro}</p>
+							<p className='mt-4 text-sm leading-6 text-white/60'>
+								{section.intro}
+							</p>
 							<ol className='mt-4 space-y-3'>
 								{section.steps.map((step, index) => (
-									<li key={step} className='flex gap-3 text-sm leading-6 text-white/70'>
-										<span className='mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[11px] text-white/50'>{index + 1}</span>
+									<li
+										key={step}
+										className='flex gap-3 text-sm leading-6 text-white/70'
+									>
+										<span className='mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border border-white/10 text-[11px] text-white/50'>
+											{index + 1}
+										</span>
 										<span>{step}</span>
 									</li>
 								))}
@@ -81,9 +106,16 @@ export default function GuidePage() {
 					)
 				})}
 			</div>
-			<div className='mt-5 flex gap-3 rounded-xl border border-primary/15 bg-primary/[0.05] p-4 text-sm leading-6 text-white/65'>
-				<Lightbulb size={18} className='mt-0.5 shrink-0 text-primary' />
-				<p>Не обязательно расписывать день по минутам. Оставляйте между блоками запас — так план остаётся выполнимым, даже если дела займут чуть больше времени.</p>
+			<div className='mt-5 flex gap-3 border-l-2 border-primary/50 bg-white/[0.02] p-4 text-sm leading-6 text-white/65'>
+				<Lightbulb
+					size={18}
+					className='mt-0.5 shrink-0 text-primary'
+				/>
+				<p>
+					Не обязательно расписывать день по минутам. Оставляйте между блоками
+					запас — так план остаётся выполнимым, даже если дела займут чуть
+					больше времени.
+				</p>
 			</div>
 		</div>
 	)

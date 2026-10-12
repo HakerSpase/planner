@@ -38,12 +38,13 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 									<div
 										ref={provided.innerRef}
 										{...provided.draggableProps}
-										{...provided.dragHandleProps}
+										style={provided.draggableProps.style}
 									>
 										<KanbanCard
 											key={item.id}
 											item={item}
 											setItems={setItems}
+											dragHandleProps={provided.dragHandleProps}
 										/>
 									</div>
 								)}

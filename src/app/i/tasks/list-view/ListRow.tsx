@@ -1,17 +1,19 @@
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import cn from 'clsx'
 import { GripVertical, Loader, Trash } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import Checkbox from '@/components/ui/checkbox'
 import { TransparentField } from '@/components/ui/fields/TransparentField'
 import { SingleSelect } from '@/components/ui/task-edit/SingleSelect'
 import { DatePicker } from '@/components/ui/task-edit/date-picker/DatePicker'
 
-import { TaskNoteEditor } from '../TaskNoteEditor'
-
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
+import { TaskNoteEditor } from '../TaskNoteEditor'
 import { useDeleteTask } from '../hooks/useDeleteTask'
 import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
@@ -20,9 +22,11 @@ import styles from './ListView.module.scss'
 interface IListRow {
 	item: ITaskResponse
 	setItems: Dispatch<SetStateAction<ITaskResponse[] | undefined>>
+	dragHandleProps?: DraggableProvidedDragHandleProps | null
 }
 
-export function ListRow({ item, setItems }: IListRow) {
+export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
+	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const { register, control, watch } = useForm<TypeTaskFormState>({
 		defaultValues: {
 			name: item.name,
@@ -47,8 +51,13 @@ export function ListRow({ item, setItems }: IListRow) {
 		>
 			<div>
 				<div className='flex w-full flex-col gap-2'>
-					<span className='inline-flex items-center gap-2.5 w-full'>
-						<button aria-describedby='todo-item' type='button'>
+					<span className='inline-flex w-full min-w-0 items-center gap-2'>
+						<button
+							aria-label='Перетащить задачу'
+							type='button'
+							{...dragHandleProps}
+							className='touch-none cursor-grab active:cursor-grabbing'
+						>
 							<GripVertical className={styles.grip} />
 						</button>
 
@@ -56,7 +65,10 @@ export function ListRow({ item, setItems }: IListRow) {
 							control={control}
 							name='isCompleted'
 							render={({ field: { value, onChange } }) => (
-								<Checkbox onChange={onChange} checked={value} />
+								<Checkbox
+									onChange={onChange}
+									checked={value}
+								/>
 							)}
 						/>
 
@@ -65,7 +77,12 @@ export function ListRow({ item, setItems }: IListRow) {
 					<Controller
 						control={control}
 						name='note'
-						render={({ field }) => <TaskNoteEditor value={field.value || ''} onChange={field.onChange} />}
+						render={({ field }) => (
+							<TaskNoteEditor
+								value={field.value || ''}
+								onChange={value => field.onChange(value)}
+							/>
+						)}
 					/>
 				</div>
 			</div>
@@ -100,9 +117,10 @@ export function ListRow({ item, setItems }: IListRow) {
 			</div>
 			<div>
 				<button
+					type='button'
 					onClick={() =>
 						item.id
-							? window.confirm('Удалить задачу?') && deleteTask(item.id)
+							? setIsDeleteConfirmOpen(true)
 							: setItems(prev => prev?.slice(0, -1))
 					}
 					className='opacity-50 transition-opacity hover:opacity-100'
@@ -110,6 +128,16 @@ export function ListRow({ item, setItems }: IListRow) {
 					{isDeletePending ? <Loader size={15} /> : <Trash size={15} />}
 				</button>
 			</div>
+			{isDeleteConfirmOpen && (
+				<ConfirmDialog
+					open={isDeleteConfirmOpen}
+					title='Удалить задачу?'
+					description='Задача и её заметка будут удалены без возможности восстановления.'
+					isPending={isDeletePending}
+					onConfirm={() => deleteTask(item.id)}
+					onClose={() => setIsDeleteConfirmOpen(false)}
+				/>
+			)}
 		</div>
 	)
 }

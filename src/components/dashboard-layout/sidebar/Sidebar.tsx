@@ -24,13 +24,15 @@ export function Sidebar({
 	onCloseMobile
 }: ISidebarProps) {
 	const sidebarContent = (collapsed: boolean, isMobile: boolean) => (
-		<div className='flex flex-col justify-between h-full'>
+		<div className='flex h-full min-h-0 flex-col justify-between'>
 			<div>
 				{/* Шапка сайдбара с логотипом и кнопками управления */}
 				<div
 					className={cn(
 						'flex items-center border-b border-b-border relative min-h-[60px]',
-						collapsed ? 'justify-between gap-1 px-2 py-2' : 'justify-between p-3'
+						collapsed
+							? 'justify-between gap-1 px-2 py-2'
+							: 'justify-between p-3'
 					)}
 				>
 					<Link
@@ -57,7 +59,8 @@ export function Sidebar({
 					{isMobile && (
 						<button
 							onClick={onCloseMobile}
-							className='p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/5'
+							aria-label='Закрыть меню'
+							className='p-1.5 text-white/50 hover:text-white'
 						>
 							<X size={20} />
 						</button>
@@ -68,15 +71,24 @@ export function Sidebar({
 						<button
 							onClick={onToggleCollapse}
 							title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-							className={cn('shrink-0 text-white/50 hover:text-white transition-colors rounded-lg hover:bg-white/10', collapsed ? 'p-1' : 'p-1.5')}
+							aria-label={
+								collapsed
+									? 'Развернуть боковую панель'
+									: 'Свернуть боковую панель'
+							}
+							className='grid h-9 w-8 shrink-0 place-items-center text-white/45 transition-colors hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
 						>
-							{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={18} />}
+							{collapsed ? (
+								<ChevronRight size={16} />
+							) : (
+								<ChevronLeft size={18} />
+							)}
 						</button>
 					)}
 				</div>
 
 				{/* Список пунктов меню */}
-				<div className='p-3'>
+				<div className='min-h-0 flex-1 overflow-y-auto p-3'>
 					<nav className='space-y-1'>
 						{MENU.map(item => (
 							<MenuItem
@@ -98,7 +110,11 @@ export function Sidebar({
 				)}
 			>
 				<LogoutButton collapsed={collapsed} />
-				{!collapsed && <p className='pt-4 text-center text-xs text-white/35'>© 2026 Planner</p>}
+				{!collapsed && (
+					<p className='pt-4 text-center text-xs text-white/35'>
+						© 2026 Planner
+					</p>
+				)}
 			</footer>
 		</div>
 	)
@@ -118,7 +134,7 @@ export function Sidebar({
 			{/* Мобильный сайдбар (выдвижное меню Drawer) */}
 			<aside
 				className={cn(
-					'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-r-border h-full bg-sidebar w-64 transform transition-transform duration-300 lg:hidden shadow-2xl select-none',
+					'fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(84vw,20rem)] max-w-[320px] flex-col border-r border-r-border bg-sidebar pb-[env(safe-area-inset-bottom)] transform transition-transform duration-300 lg:hidden shadow-2xl select-none',
 					isMobileOpen ? 'translate-x-0' : '-translate-x-full'
 				)}
 			>

@@ -28,11 +28,11 @@ export default function DashboardLayout({
 	}
 
 	return (
-		<div className='flex h-screen w-full bg-[#0E0F0F] text-white relative overflow-hidden'>
+		<div className='relative flex h-[100dvh] w-full overflow-hidden bg-[#0E0F0F] text-white'>
 			{/* Мобильный бэкдроп (затемнение фона при открытом меню) */}
 			{isMobileOpen && (
 				<div
-					className='fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity'
+					className='fixed inset-0 bg-black/75 z-40 lg:hidden transition-opacity'
 					onClick={() => setIsMobileOpen(false)}
 				/>
 			)}
@@ -46,10 +46,8 @@ export default function DashboardLayout({
 			/>
 
 			{/* Основная рабочая область */}
-			<main className='flex-1 min-w-0 min-h-0 px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-layout lg:pb-layout lg:pt-5 xl:px-big-layout xl:pb-big-layout overflow-x-hidden overflow-y-auto relative flex flex-col'>
-				<Header
-					onToggleMobile={() => setIsMobileOpen(true)}
-				/>
+			<main className='relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6 sm:pt-4 lg:px-layout lg:pb-layout lg:pt-5 xl:px-big-layout xl:pb-big-layout'>
+				<Header onToggleMobile={() => setIsMobileOpen(true)} />
 				<div className='flex-1 pb-10'>{children}</div>
 			</main>
 		</div>

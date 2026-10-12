@@ -12,12 +12,15 @@ export function Profile() {
 			{isLoading ? (
 				<Loader />
 			) : (
-				<div className='flex flex-col items-end justify-center gap-0.5 py-0.5'>
-					<div className='text-right'>
-						<p className='font-medium text-xs sm:text-sm leading-4 text-white/90'>
+				<div className='flex min-w-0 max-w-[64vw] flex-col items-end justify-center gap-0 py-0.5 sm:max-w-[240px]'>
+					<div className='min-w-0 max-w-full text-right'>
+						<p className='max-w-full truncate text-xs font-medium leading-4 text-white/90 sm:text-sm'>
 							{data?.user.name || 'Пользователь'}
 						</p>
-						<p className='text-[11px] sm:text-xs text-white/40 leading-4 truncate max-w-[180px]'>
+						<p
+							className='max-w-full break-all text-[10px] leading-4 text-white/50 sm:truncate sm:text-xs'
+							title={data?.user.email || undefined}
+						>
 							{data?.user.email}
 						</p>
 					</div>

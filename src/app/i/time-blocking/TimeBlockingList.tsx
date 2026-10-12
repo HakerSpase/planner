@@ -15,13 +15,16 @@ export function TimeBlockingList() {
 
 	if (isLoading) return <Loader />
 
-	const { totalMinutes, remainingMinutes, overbookedMinutes } = calcHoursLeft(items)
+	const { totalMinutes, remainingMinutes, overbookedMinutes } =
+		calcHoursLeft(items)
 	const formatDuration = (minutes: number) => {
 		const hours = Math.floor(minutes / 60)
 		const rest = minutes % 60
-		return [hours ? `${hours} ч.` : '', rest ? `${rest} мин.` : '']
-			.filter(Boolean)
-			.join(' ') || '0 мин.'
+		return (
+			[hours ? `${hours} ч.` : '', rest ? `${rest} мин.` : '']
+				.filter(Boolean)
+				.join(' ') || '0 мин.'
+		)
 	}
 
 	return (
@@ -44,15 +47,19 @@ export function TimeBlockingList() {
 								/>
 							))
 						) : (
-							<div>Добавьте первый тайм-блок в форме справа</div>
+							<div className='py-4 text-sm text-white/45'>
+								Добавьте первый тайм-блок в форме рядом
+							</div>
 						)}
 					</SortableContext>
 				</div>
 			</DndContext>
-			<div className='mt-5 rounded-xl border border-white/[0.07] bg-white/[0.025] p-4'>
+			<div className='mt-5 border-t border-white/[0.08] py-3'>
 				<div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
 					<span className='text-white/55'>Запланировано за день</span>
-					<strong className='font-medium text-white'>{formatDuration(totalMinutes)}</strong>
+					<strong className='font-medium text-white'>
+						{formatDuration(totalMinutes)}
+					</strong>
 				</div>
 				{overbookedMinutes ? (
 					<p className='mt-2 text-sm text-amber-300'>
@@ -61,7 +68,9 @@ export function TimeBlockingList() {
 				) : (
 					<div className='mt-2 flex flex-wrap items-center justify-between gap-2 text-sm'>
 						<span className='text-white/55'>Осталось на сон и отдых</span>
-						<strong className='font-medium text-white'>{formatDuration(remainingMinutes)}</strong>
+						<strong className='font-medium text-white'>
+							{formatDuration(remainingMinutes)}
+						</strong>
 					</div>
 				)}
 			</div>

@@ -17,11 +17,14 @@ export function MenuItem({ item, isCollapsed, onClick }: IMenuItemProps) {
 				onClick={onClick}
 				title={isCollapsed ? item.name : undefined}
 				className={cn(
-					'flex items-center gap-2.5 py-2 mt-2 transition-colors hover:bg-border rounded-lg text-sm text-white/80 hover:text-white',
+					'flex items-center gap-2.5 py-2 mt-2 transition-colors hover:bg-border text-sm text-white/80 hover:text-white',
 					isCollapsed ? 'justify-center px-0' : 'px-layout'
 				)}
 			>
-				<item.icon size={20} className='flex-shrink-0' />
+				<item.icon
+					size={20}
+					className='flex-shrink-0'
+				/>
 				{!isCollapsed && <span className='truncate'>{item.name}</span>}
 			</Link>
 		</div>

@@ -11,58 +11,71 @@ type TypeUseTimerActions = ITimerState & {
 
 export function useTimerActions({
 	activeRound,
-	setIsRunning,
+	isBreakTime,
 	secondsLeft,
-	rounds,
-	setActiveRound
+	setActiveRound,
+	setIsBreakTime,
+	setIsRunning,
+	setSecondsLeft,
+	rounds
 }: TypeUseTimerActions) {
 	const { workInterval } = useLoadSettings()
 	const { isUpdateRoundPending, updateRound } = useUpdateRound()
 
 	const pauseHandler = () => {
 		setIsRunning(false)
-		if (!activeRound?.id) return
+		if (isBreakTime || !activeRound?.id) return
 
 		updateRound({
-			id: activeRound?.id,
-			data: {
-				totalSeconds: secondsLeft,
-				isCompleted: Math.floor(secondsLeft / 60) >= workInterval
-			}
+			id: activeRound.id,
+			data: { totalSeconds: secondsLeft, isCompleted: false }
 		})
 	}
 
 	const playHandler = () => {
-		setIsRunning(true)
+		if (secondsLeft > 0) setIsRunning(true)
 	}
 
 	const nextRoundHandler = () => {
-		if (!activeRound?.id) return
+		if (isBreakTime || !activeRound?.id || !rounds?.length) return
+
+		const activeIndex = rounds.findIndex(round => round.id === activeRound.id)
+		if (activeIndex < 0) return
+		const nextRound = rounds
+			.slice(activeIndex + 1)
+			.find(round => !round.isCompleted)
 
 		updateRound({
-			id: activeRound?.id,
-			data: {
-				isCompleted: true,
-				totalSeconds: workInterval * 60
-			}
+			id: activeRound.id,
+			data: { isCompleted: true, totalSeconds: 0 }
 		})
+		setIsRunning(false)
+		setActiveRound(nextRound)
+		setSecondsLeft(nextRound ? nextRound.totalSeconds || workInterval * 60 : 0)
+		setIsBreakTime(false)
 	}
 
 	const prevRoundHandler = () => {
-		const lastCompletedRound = rounds
-			? [...rounds].reverse().find(round => round.isCompleted)
-			: undefined
-		if (!lastCompletedRound?.id) return
+		if (!rounds?.length) return
+		const activeIndex = activeRound
+			? rounds.findIndex(round => round.id === activeRound.id)
+			: rounds.length
+		const previousRound = rounds
+			.slice(0, activeIndex)
+			.reverse()
+			.find(round => round.isCompleted)
 
+		const targetRound =
+			previousRound || activeRound || rounds.find(round => round.isCompleted)
+		if (!targetRound?.id) return
 		updateRound({
-			id: lastCompletedRound?.id,
-			data: {
-				isCompleted: false,
-				totalSeconds: 0
-			}
+			id: targetRound.id,
+			data: { isCompleted: false, totalSeconds: workInterval * 60 }
 		})
-
-		setActiveRound(lastCompletedRound)
+		setIsRunning(false)
+		setIsBreakTime(false)
+		setActiveRound(targetRound)
+		setSecondsLeft(workInterval * 60)
 	}
 
 	return {

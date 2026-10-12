@@ -8,9 +8,10 @@ import { pomodoroService } from '@/services/pomodoro.service'
 
 export function useTodaySession({
 	setActiveRound,
-	setSecondsLeft
+	setSecondsLeft,
+	isBreakTime
 }: ITimerState) {
-	const { workInterval } = useLoadSettings()
+	const { breakInterval, workInterval } = useLoadSettings()
 
 	const {
 		data: sessionsResponse,
@@ -25,15 +26,25 @@ export function useTodaySession({
 	const rounds = sessionsResponse?.data?.rounds
 
 	useEffect(() => {
-		if (isSuccess && rounds && rounds.length > 0) {
-			const activeRound = rounds.find(round => !round.isCompleted)
-			setActiveRound(activeRound)
+		if (!isSuccess) return
+		const activeRound = rounds?.find(round => !round.isCompleted)
+		setActiveRound(activeRound)
 
-			if (activeRound && activeRound?.totalSeconds !== 0) {
-				setSecondsLeft(activeRound.totalSeconds)
-			}
+		if (activeRound && !isBreakTime) {
+			setSecondsLeft(
+				activeRound.totalSeconds > 0
+					? activeRound.totalSeconds
+					: workInterval * 60
+			)
 		}
-	}, [isSuccess, rounds])
+	}, [
+		isSuccess,
+		rounds,
+		isBreakTime,
+		setActiveRound,
+		setSecondsLeft,
+		workInterval
+	])
 
-	return { sessionsResponse, isLoading, workInterval }
+	return { sessionsResponse, isLoading, workInterval, breakInterval }
 }

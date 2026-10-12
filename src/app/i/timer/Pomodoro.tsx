@@ -1,7 +1,9 @@
 'use client'
 
 import { Loader, Pause, Play, RefreshCcw } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/buttons/Button'
 
 import { formatTime } from './format-time'
@@ -14,55 +16,133 @@ import { PomodoroRounds } from './rounds/PomodoroRounds'
 
 export function Pomodoro() {
 	const timerState = useTimer()
-	const { isLoading, sessionsResponse, workInterval } =
+	const { isLoading, sessionsResponse, workInterval, breakInterval } =
 		useTodaySession(timerState)
-
 	const rounds = sessionsResponse?.data?.rounds
 	const actions = useTimerActions({ ...timerState, rounds })
-
-	const { isPending, mutate } = useCreateSession()
-	const { deleteSession, isDeletePending } = useDeleteSession(() =>
-		timerState.setSecondsLeft(workInterval * 60)
+	const progressPercent = Math.max(
+		0,
+		Math.min(
+			100,
+			((workInterval * 60 - timerState.secondsLeft) / (workInterval * 60)) * 100
+		)
 	)
+	const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+	const autoCompletedRoundId = useRef<string>()
+	const { isPending, mutate } = useCreateSession()
+	const { deleteSession, isDeletePending } = useDeleteSession(() => {
+		setIsResetConfirmOpen(false)
+		timerState.setIsRunning(false)
+		timerState.setIsBreakTime(false)
+		timerState.setActiveRound(undefined)
+		timerState.setSecondsLeft(workInterval * 60)
+	})
+
+	useEffect(() => {
+		if (timerState.secondsLeft !== 0) {
+			autoCompletedRoundId.current = undefined
+			return
+		}
+		if (!timerState.activeRound?.id) return
+		const phaseKey = `${timerState.activeRound.id}:${timerState.isBreakTime ? 'break' : 'work'}`
+		if (autoCompletedRoundId.current === phaseKey) return
+		autoCompletedRoundId.current = phaseKey
+
+		if (timerState.isBreakTime) {
+			timerState.setIsBreakTime(false)
+			timerState.setSecondsLeft(workInterval * 60)
+			timerState.setIsRunning(true)
+			return
+		}
+
+		const activeIndex =
+			rounds?.findIndex(round => round.id === timerState.activeRound?.id) ?? -1
+		const nextRound =
+			activeIndex >= 0
+				? rounds?.slice(activeIndex + 1).find(round => !round.isCompleted)
+				: undefined
+		actions.nextRoundHandler()
+
+		if (nextRound) {
+			timerState.setIsBreakTime(true)
+			timerState.setSecondsLeft(breakInterval * 60)
+			timerState.setIsRunning(true)
+		}
+	}, [
+		actions,
+		breakInterval,
+		rounds,
+		timerState.activeRound,
+		timerState.isBreakTime,
+		timerState.secondsLeft,
+		timerState.setIsBreakTime,
+		timerState.setIsRunning,
+		timerState.setSecondsLeft,
+		workInterval
+	])
 
 	return (
-		<div className='relative mx-auto w-full max-w-md text-center py-5'>
-			{!isLoading && (
-				<div className='text-6xl sm:text-7xl font-semibold tabular-nums tracking-tight text-white'>
-					{formatTime(timerState.secondsLeft)}
-				</div>
-			)}
+		<div className='relative mx-auto w-full max-w-md py-3 text-center sm:py-5'>
 			{isLoading ? (
 				<Loader />
 			) : sessionsResponse?.data ? (
 				<>
-					<PomodoroRounds
-						rounds={rounds}
-						nextRoundHandler={actions.nextRoundHandler}
-						prevRoundHandler={actions.prevRoundHandler}
-						activeRound={timerState.activeRound}
-					/>
-					<button
-						className='mt-6 opacity-80 hover:opacity-100 transition-opacity'
-						onClick={
-							timerState.isRunning ? actions.pauseHandler : actions.playHandler
-						}
-						disabled={actions.isUpdateRoundPending}
-					>
-						{timerState.isRunning ? <Pause size={30} /> : <Play size={30} />}
-					</button>
-					<button
-						onClick={() => {
-							timerState.setIsRunning(false)
-							if (sessionsResponse?.data?.id) {
-								deleteSession(sessionsResponse.data.id)
+					<p className='text-xs font-medium uppercase tracking-[0.12em] text-white/45'>
+						{timerState.isBreakTime
+							? 'Перерыв'
+							: timerState.activeRound
+								? 'Фокус'
+								: 'Сессия завершена'}
+					</p>
+					<div className='mt-2 text-5xl font-semibold tabular-nums tracking-tight text-white sm:text-7xl'>
+						{formatTime(timerState.secondsLeft)}
+					</div>
+					<div className='mt-5'>
+						<PomodoroRounds
+							rounds={rounds}
+							nextRoundHandler={actions.nextRoundHandler}
+							prevRoundHandler={actions.prevRoundHandler}
+							activeRound={timerState.activeRound}
+							disabled={actions.isUpdateRoundPending || timerState.isBreakTime}
+							progressPercent={timerState.isBreakTime ? 0 : progressPercent}
+						/>
+					</div>
+					<p className='mt-3 text-xs text-white/40'>
+						{timerState.isBreakTime
+							? `Отдыхайте ${breakInterval} мин. Следующий раунд начнётся автоматически.`
+							: timerState.activeRound
+								? `Раунд ${Math.max(1, (rounds?.findIndex(round => round.id === timerState.activeRound?.id) ?? 0) + 1)} из ${rounds?.length || 0}`
+								: 'Все раунды завершены'}
+					</p>
+					<div className='mt-5 flex items-center justify-center gap-6'>
+						<button
+							type='button'
+							aria-label={timerState.isRunning ? 'Пауза' : 'Начать таймер'}
+							title={timerState.isRunning ? 'Пауза' : 'Начать таймер'}
+							className='grid h-12 w-12 place-items-center border border-primary/50 text-primary transition-colors hover:bg-primary/10 disabled:opacity-40'
+							onClick={
+								timerState.isRunning
+									? actions.pauseHandler
+									: actions.playHandler
 							}
-						}}
-						className='absolute top-0 right-0 opacity-40 hover:opacity-90 transition-opacity'
-						disabled={isDeletePending}
-					>
-						<RefreshCcw size={19} />
-					</button>
+							disabled={
+								actions.isUpdateRoundPending ||
+								(!timerState.activeRound && !timerState.isBreakTime)
+							}
+						>
+							{timerState.isRunning ? <Pause size={21} /> : <Play size={21} />}
+						</button>
+						<button
+							type='button'
+							aria-label='Начать сессию заново'
+							title='Начать сессию заново'
+							className='p-2 text-white/45 transition-colors hover:text-white disabled:opacity-40'
+							onClick={() => setIsResetConfirmOpen(true)}
+							disabled={isDeletePending}
+						>
+							<RefreshCcw size={18} />
+						</button>
+					</div>
 				</>
 			) : (
 				<Button
@@ -70,9 +150,20 @@ export function Pomodoro() {
 					className='mt-1'
 					disabled={isPending}
 				>
-					Создать сессию
+					{isPending ? 'Создаём…' : 'Создать сессию'}
 				</Button>
 			)}
+			<ConfirmDialog
+				open={isResetConfirmOpen}
+				title='Начать заново?'
+				description='Текущая сессия и отметки раундов будут удалены.'
+				confirmLabel='Начать заново'
+				isPending={isDeletePending}
+				onConfirm={() =>
+					sessionsResponse?.data?.id && deleteSession(sessionsResponse.data.id)
+				}
+				onClose={() => setIsResetConfirmOpen(false)}
+			/>
 		</div>
 	)
 }

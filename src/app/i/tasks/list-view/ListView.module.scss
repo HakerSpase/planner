@@ -8,10 +8,10 @@
 	.header,
 	.parentsWrapper .row,
 	.parentsWrapper .colHeading {
-		@apply rounded border-t border-border text-left w-auto whitespace-nowrap;
+		@apply border-t border-border text-left w-auto whitespace-nowrap;
 
 		> div {
-			@apply border-r border-border py-2 px-4;
+			@apply border-r border-border px-2 py-2 sm:px-4;
 
 			&:last-child {
 				@apply border-0;
@@ -55,6 +55,52 @@
 						@apply opacity-100;
 					}
 				}
+			}
+		}
+	}
+}
+
+@media (max-width: 639px) {
+	.table {
+		.header {
+			display: none;
+		}
+
+		.parentsWrapper {
+			.colHeading {
+				@apply mt-4 border-t border-border;
+
+				> div {
+					@apply py-2 text-base;
+				}
+			}
+
+			.row {
+				@apply grid grid-cols-[minmax(0,1fr)_max-content_max-content] gap-x-2 gap-y-2 whitespace-normal border-t border-border py-2;
+
+				> div {
+					@apply min-w-0 border-0 p-0;
+
+					&:first-child {
+						grid-column: 1 / -1;
+					}
+
+					&:nth-child(2) {
+						grid-column: 1;
+					}
+
+					&:nth-child(3) {
+						grid-column: 2;
+					}
+
+					&:nth-child(4) {
+						grid-column: 3;
+					}
+				}
+			}
+
+			.addRow {
+				@apply border-t border-border px-2 py-3;
 			}
 		}
 	}

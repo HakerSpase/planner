@@ -11,7 +11,12 @@ import { useInitialData } from './useInitialData'
 import { useUpdateSettings } from './useUpdateSettings'
 
 export function Settings() {
-	const { register, handleSubmit, reset, formState: { errors } } = useForm<TypeUserForm>({
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors }
+	} = useForm<TypeUserForm>({
 		mode: 'onChange'
 	})
 
@@ -43,7 +48,7 @@ export function Settings() {
 								disabled
 								readOnly
 								{...register('email')}
-								className='w-full rounded-md border border-border bg-[#141515] p-3 text-white/60 cursor-not-allowed text-sm'
+								className='w-full border border-border bg-[#141515] p-3 text-sm text-white/60 cursor-not-allowed'
 							/>
 						</div>
 
@@ -74,7 +79,11 @@ export function Settings() {
 							step={1}
 							extra='mb-4'
 						/>
-						{errors.workInterval?.message && <p className='-mt-3 mb-4 text-xs text-red-300'>{errors.workInterval.message}</p>}
+						{errors.workInterval?.message && (
+							<p className='-mt-3 mb-4 text-xs text-red-300'>
+								{errors.workInterval.message}
+							</p>
+						)}
 
 						<Field
 							id='breakInterval'
@@ -92,7 +101,11 @@ export function Settings() {
 							step={1}
 							extra='mb-4'
 						/>
-						{errors.breakInterval?.message && <p className='-mt-3 mb-4 text-xs text-red-300'>{errors.breakInterval.message}</p>}
+						{errors.breakInterval?.message && (
+							<p className='-mt-3 mb-4 text-xs text-red-300'>
+								{errors.breakInterval.message}
+							</p>
+						)}
 
 						<Field
 							id='intervalsCount'
@@ -110,7 +123,11 @@ export function Settings() {
 							step={1}
 							extra='mb-6'
 						/>
-						{errors.intervalsCount?.message && <p className='-mt-5 mb-4 text-xs text-red-300'>{errors.intervalsCount.message}</p>}
+						{errors.intervalsCount?.message && (
+							<p className='-mt-5 mb-4 text-xs text-red-300'>
+								{errors.intervalsCount.message}
+							</p>
+						)}
 					</div>
 				</div>
 

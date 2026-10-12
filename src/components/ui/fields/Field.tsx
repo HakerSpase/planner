@@ -1,6 +1,9 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { type InputHTMLAttributes, forwardRef } from 'react'
 
-interface InputFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'placeholder' | 'disabled' | 'type'> {
+interface InputFieldProps extends Omit<
+	InputHTMLAttributes<HTMLInputElement>,
+	'id' | 'placeholder' | 'disabled' | 'type'
+> {
 	id: string
 	label: string
 	extra?: string
@@ -14,7 +17,18 @@ interface InputFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'i
 
 export const Field = forwardRef<HTMLInputElement, InputFieldProps>(
 	(
-		{ label, id, extra, type, placeholder, state, disabled, isNumber, onKeyDown, ...rest },
+		{
+			label,
+			id,
+			extra,
+			type,
+			placeholder,
+			state,
+			disabled,
+			isNumber,
+			onKeyDown,
+			...rest
+		},
 		ref
 	) => {
 		return (
@@ -31,7 +45,7 @@ export const Field = forwardRef<HTMLInputElement, InputFieldProps>(
 					type={isNumber ? 'number' : type}
 					id={id}
 					placeholder={placeholder}
-					className={`mt-2 flex w-full items-center justify-center rounded-lg border border-border bg-white/0 p-3 text-base outline-none placeholder:text-white/30 placeholder:font-normal duration-500 transition-colors focus:border-primary ${
+					className={`mt-2 flex w-full items-center justify-center border border-border bg-white/0 p-3 text-base outline-none placeholder:text-white/30 placeholder:font-normal duration-500 transition-colors focus:border-primary ${
 						disabled === true
 							? '!border-none !bg-gray-100 dark:!bg-white/5 dark:placeholder:!text-[rgba(255,255,255,0.15)]'
 							: state === 'error'

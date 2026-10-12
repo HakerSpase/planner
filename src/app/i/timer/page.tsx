@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 export default function PomodoroPage() {
 	return (
-		<div className='max-w-5xl'>
+		<div className='w-full max-w-5xl'>
 			<Heading title='Таймер Pomodoro' />
-			<div className='mt-6 rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#19191d] to-[#111214] p-6 sm:p-10 shadow-2xl shadow-black/20'>
+			<div className='mt-5 border-y border-white/[0.08] py-6 sm:py-10'>
 				<Pomodoro />
 			</div>
 		</div>

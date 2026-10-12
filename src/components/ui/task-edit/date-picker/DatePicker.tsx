@@ -1,5 +1,6 @@
 import cn from 'clsx'
 import dayjs from 'dayjs'
+import 'dayjs/locale/ru'
 import LocalizedFormat from 'dayjs/plugin/localizedFormat'
 import { X } from 'lucide-react'
 import { useState } from 'react'
@@ -10,8 +11,6 @@ import { useOutside } from '@/hooks/useOutside'
 
 import './DatePicker.scss'
 import { formatCaption } from './DatePickerCaption'
-
-import 'dayjs/locale/ru'
 
 dayjs.extend(LocalizedFormat)
 dayjs.locale('ru')
@@ -61,7 +60,7 @@ export function DatePicker({
 			{isShow && (
 				<div
 					className={cn(
-						'absolute p-2.5 slide bg-sidebar z-10 shadow rounded-lg',
+						'absolute p-2.5 slide bg-sidebar z-10 shadow border border-white/10',
 						position === 'left' ? '-left-4' : ' -right-4'
 					)}
 					style={{

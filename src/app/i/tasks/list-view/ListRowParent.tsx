@@ -44,12 +44,13 @@ export function ListRowParent({
 								<div
 									ref={provided.innerRef}
 									{...provided.draggableProps}
-									{...provided.dragHandleProps}
+									style={provided.draggableProps.style}
 								>
 									<ListRow
 										key={item.id}
 										item={item}
 										setItems={setItems}
+										dragHandleProps={provided.dragHandleProps}
 									/>
 								</div>
 							)}

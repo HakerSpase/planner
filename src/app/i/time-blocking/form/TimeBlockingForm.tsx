@@ -11,8 +11,14 @@ import { useCreateTimeBlock } from './useCreateTimeBlock'
 import { useUpdateTimeBlock } from './useUpdateTimBlock'
 
 export function TimeBlockingForm() {
-	const { register, control, watch, reset, handleSubmit, formState: { errors } } =
-		useFormContext<TypeTimeBlockFormState>()
+	const {
+		register,
+		control,
+		watch,
+		reset,
+		handleSubmit,
+		formState: { errors }
+	} = useFormContext<TypeTimeBlockFormState>()
 
 	const existsId = watch('id')
 
@@ -44,7 +50,7 @@ export function TimeBlockingForm() {
 	return (
 		<form
 			onSubmit={handleSubmit(onSubmit)}
-		className='w-full max-w-xl rounded-xl border border-white/[0.07] bg-white/[0.02] p-5'
+			className='w-full min-w-0 max-w-xl border-t border-white/[0.08] pt-5 sm:border-t-0 sm:pt-0'
 		>
 			<Field
 				{...register('name', {
@@ -62,7 +68,8 @@ export function TimeBlockingForm() {
 					valueAsNumber: true,
 					min: 1,
 					max: 1440,
-					validate: value => Number.isInteger(value) || 'Укажите целое число минут'
+					validate: value =>
+						Number.isInteger(value) || 'Укажите целое число минут'
 				})}
 				id='duration'
 				label='Длительность (мин.):'
@@ -73,10 +80,14 @@ export function TimeBlockingForm() {
 				step={1}
 				extra='mb-4'
 			/>
-			{errors.duration?.message && <p className='-mt-3 mb-4 text-xs text-red-300'>{errors.duration.message}</p>}
+			{errors.duration?.message && (
+				<p className='-mt-3 mb-4 text-xs text-red-300'>
+					{errors.duration.message}
+				</p>
+			)}
 
 			<div>
-				<span className='inline-block mb-1.5'>Цвет:</span>
+				<span className='mb-1.5 inline-block text-sm text-white/65'>Цвет:</span>
 				<Controller
 					control={control}
 					name='color'
