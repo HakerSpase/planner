@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
 							headers: request.headers
 						}
 					})
-					response.cookies.set({ name, value, ...options })
+					response.cookies.set({ name, value: '', ...options })
 				}
 			}
 		})
