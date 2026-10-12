@@ -22,7 +22,7 @@ export async function PUT(request: Request) {
 	const { data: { user }, error: authError } = await supabase.auth.getUser()
 	if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 	const body = await request.json()
-	if (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || typeof body.content !== 'string' || body.content.length > 20000) {
+	if (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date) || typeof body.content !== 'string' || body.content.length > 70000) {
 		return NextResponse.json({ error: 'Проверьте дату и длину записи.' }, { status: 400 })
 	}
 	const { data, error } = await supabase.from('daily_thought').upsert({ user_id: user.id, thought_date: body.date, content: body.content }, { onConflict: 'user_id,thought_date' }).select('thought_date,content,updated_at').single()

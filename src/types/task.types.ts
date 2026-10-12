@@ -6,7 +6,8 @@ export enum EnumTaskPriority {
 	high = 'high'
 }
 
-export interface ITaskResponse extends IBase {
+export interface ITaskResponse extends Omit<IBase, 'createdAt'> {
+	createdAt?: string | null
 	name: string
 	note?: string | null
 	priority?: EnumTaskPriority

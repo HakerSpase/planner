@@ -43,15 +43,17 @@ export function DatePicker({
 
 	return (
 		<div
-			className='relative'
+			className='relative inline-flex min-w-0 items-center gap-1'
 			ref={ref}
 		>
-			<button onClick={() => setIsShow(!isShow)}>
+			<button className='min-w-0 text-left' onClick={() => setIsShow(!isShow)}>
 				{value ? dayjs(value).locale('ru').format('LL') : 'Выберите дату'}
 			</button>
 			{value && (
 				<button
-					className='absolute -top-2 -right-4 opacity-30 hover:opacity-100 transition-opacity'
+					type='button'
+					aria-label='Удалить дату'
+					className='grid h-8 w-8 shrink-0 place-items-center opacity-45 transition-opacity hover:opacity-100'
 					onClick={() => onChange('')}
 				>
 					<X size={14} />

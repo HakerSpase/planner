@@ -24,7 +24,9 @@ export async function PUT(
 	if (body.note !== undefined) updateData.note = body.note
 	if (body.priority !== undefined) updateData.priority = body.priority
 	if (body.isCompleted !== undefined) updateData.is_completed = body.isCompleted
-	if (body.createdAt !== undefined) updateData.created_at = body.createdAt
+	// An empty date means "unscheduled". Store SQL NULL instead of an invalid
+	// empty timestamp, which previously made the optimistic card jump and roll back.
+	if (body.createdAt !== undefined) updateData.created_at = body.createdAt || null
 
 	const { data, error } = await supabase
 		.from('task')

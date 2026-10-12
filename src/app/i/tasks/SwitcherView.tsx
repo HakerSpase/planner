@@ -12,10 +12,10 @@ interface ISwitcherView {
 
 export function SwitcherView({ setType, type }: ISwitcherView) {
 	return (
-		<div className='mb-4 flex min-w-0 items-center gap-4 overflow-x-auto border-b border-white/[0.08] sm:mb-5'>
+		<div className='relative mb-4 inline-flex min-w-0 items-center border-b border-white/[0.08] sm:mb-5'>
 			<button
 				className={cn(
-					'flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 text-sm transition-colors',
+					'flex min-h-11 w-28 shrink-0 items-center justify-center gap-2 border-b-2 border-transparent px-3 text-sm transition-colors',
 					{
 						'opacity-40': type === 'kanban'
 					}
@@ -27,7 +27,7 @@ export function SwitcherView({ setType, type }: ISwitcherView) {
 			</button>
 			<button
 				className={cn(
-					'flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 text-sm transition-colors',
+					'flex min-h-11 w-28 shrink-0 items-center justify-center gap-2 border-b-2 border-transparent px-3 text-sm transition-colors',
 					{
 						'opacity-40': type === 'list'
 					}
@@ -37,6 +37,7 @@ export function SwitcherView({ setType, type }: ISwitcherView) {
 				<Kanban />
 				Доска
 			</button>
+			<span className={cn('pointer-events-none absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out', type === 'list' ? 'left-0 w-1/2' : 'left-1/2 w-1/2')} />
 		</div>
 	)
 }

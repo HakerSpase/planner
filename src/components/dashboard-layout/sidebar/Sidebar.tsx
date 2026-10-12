@@ -1,7 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import { ChevronLeft, ChevronRight, GanttChartSquare, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, GanttChartSquare, Send, X } from 'lucide-react'
 import Link from 'next/link'
 
 import { COLORS } from '@/constants/color.constants'
@@ -117,9 +117,10 @@ export function Sidebar({
 							href='https://t.me/w_dtc'
 							target='_blank'
 							rel='noreferrer'
+							aria-label='Телеграм разработчика @w_dtc'
 							className='mt-2 inline-flex min-h-10 items-center text-white/45 transition-colors hover:text-primary'
 						>
-							Разработчик: @w_dtc
+							<Send size={16} aria-hidden='true' />
 						</a>
 					</div>
 				)}

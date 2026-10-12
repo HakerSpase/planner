@@ -1,0 +1,2 @@
+alter table public.daily_thought drop constraint if exists daily_thought_content_length;
+alter table public.daily_thought add constraint daily_thought_content_length check (char_length(content) <= 70000);

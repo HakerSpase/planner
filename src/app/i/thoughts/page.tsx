@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, NotebookPen } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 
 const iso = (date: Date) => format(date, 'yyyy-MM-dd')
@@ -56,7 +56,6 @@ export default function ThoughtsPage() {
 
 	return <div className='max-w-5xl pb-8'>
 		<div className='flex items-start gap-3 border-b border-white/10 pb-5'>
-			<NotebookPen className='mt-1 text-primary' size={20} />
 			<div><h1 className='text-2xl font-semibold text-white'>Мысли на каждый день</h1><p className='mt-1 text-sm text-white/50'>Записывайте события, идеи и то, что хочется запомнить.</p></div>
 		</div>
 		<div className='mt-6 grid gap-6 lg:grid-cols-[minmax(280px,0.8fr)_1.2fr]'>
@@ -78,9 +77,12 @@ export default function ThoughtsPage() {
 				<p className='mt-4 text-xs text-white/40'>{loading ? 'Загружаем записи…' : 'Точка под датой означает, что запись сохранена.'}</p>
 			</section>
 			<section className='flex min-h-[420px] flex-col border border-white/10 bg-[#141516] p-4 sm:p-5'>
-				<label htmlFor='daily-thought' className='mb-3 text-sm font-medium capitalize text-white/80'>{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}</label>
-				<textarea id='daily-thought' value={draft} onChange={event => setDraft(event.target.value)} maxLength={20000} placeholder='Что сегодня хочется сохранить в памяти?' className='min-h-[300px] flex-1 resize-y border border-white/10 bg-[#101112] p-4 text-sm leading-6 text-white outline-none placeholder:text-white/30 focus:border-primary/60' />
-				<div className='mt-3 flex items-center justify-between gap-3'><span className='text-xs text-white/35'>{draft.length.toLocaleString('ru-RU')} / 20 000</span><button onClick={save} disabled={saving || (entries[iso(selected)] || '') === draft} className='border border-primary/50 bg-primary/10 px-4 py-2 text-sm text-white transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-40'>{saving ? 'Сохраняем…' : 'Сохранить запись'}</button></div>
+				<div className='mb-4 border-b border-white/10 pb-3'>
+					<label htmlFor='daily-thought' className='text-sm font-medium capitalize text-white/85'>{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}</label>
+					<p className='mt-1 text-xs text-white/40'>Запись сохраняется отдельно для каждого дня.</p>
+				</div>
+				<textarea id='daily-thought' value={draft} onChange={event => setDraft(event.target.value)} maxLength={70000} placeholder='Запишите, как прошёл день, что запомнилось или о чём хочется подумать…' className='min-h-[320px] flex-1 resize-y border border-white/10 bg-[#101112] p-4 text-sm leading-7 text-white outline-none placeholder:text-white/30 focus:border-primary/60' />
+				<div className='mt-3 flex flex-wrap items-center justify-between gap-3'><span className='text-xs text-white/40'>{draft.length.toLocaleString('ru-RU')} из 70 000 знаков</span><button onClick={save} disabled={saving || (entries[iso(selected)] || '') === draft} className='border border-primary/50 px-4 py-2.5 text-sm text-white transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40'>{saving ? 'Сохраняем…' : 'Сохранить запись'}</button></div>
 			</section>
 		</div>
 	</div>
