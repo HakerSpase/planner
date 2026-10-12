@@ -2,6 +2,7 @@
 
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
+import { LogoutButton } from '../sidebar/LogoutButton'
 import { GlobalLoader } from './GlobalLoader'
 import { Profile } from './profile/Profile'
 
@@ -53,10 +54,11 @@ export function Header({
 				)}
 			</div>
 
-			{/* Правая сторона шапки: аватар и лоадер */}
-			<div className='flex items-center gap-4'>
+			{/* Правая сторона шапки: аватар, лоадер и кнопка выхода */}
+			<div className='flex items-center gap-3 sm:gap-4'>
 				<GlobalLoader />
 				<Profile />
+				<LogoutButton />
 			</div>
 		</header>
 	)

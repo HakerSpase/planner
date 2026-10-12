@@ -49,8 +49,9 @@ export function useTimerActions({
 	}
 
 	const prevRoundHandler = () => {
-		// ES2023
-		const lastCompletedRound = rounds?.findLast(round => round.isCompleted)
+		const lastCompletedRound = rounds
+			? [...rounds].reverse().find(round => round.isCompleted)
+			: undefined
 		if (!lastCompletedRound?.id) return
 
 		updateRound({

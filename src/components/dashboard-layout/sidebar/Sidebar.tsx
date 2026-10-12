@@ -79,11 +79,8 @@ export function Sidebar({
 				</div>
 
 				{/* Список пунктов меню */}
-				<div className='p-3 relative'>
-					{!collapsed && <LogoutButton isCollapsed={false} />}
-					{collapsed && <LogoutButton isCollapsed={true} />}
-
-					<nav className='mt-2 space-y-1'>
+				<div className='p-3'>
+					<nav className='space-y-1'>
 						{MENU.map(item => (
 							<MenuItem
 								item={item}

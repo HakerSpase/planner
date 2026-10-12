@@ -22,10 +22,10 @@ export function useTodaySession({
 		queryFn: () => pomodoroService.getTodaySession()
 	})
 
-	const rounds = sessionsResponse?.data.rounds
+	const rounds = sessionsResponse?.data?.rounds
 
 	useEffect(() => {
-		if (isSuccess && rounds) {
+		if (isSuccess && rounds && rounds.length > 0) {
 			const activeRound = rounds.find(round => !round.isCompleted)
 			setActiveRound(activeRound)
 

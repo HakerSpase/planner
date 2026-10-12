@@ -18,10 +18,14 @@ export function PomodoroRounds({
 	prevRoundHandler,
 	activeRound
 }: IPomodoroRounds) {
-	const isCanPrevRound = rounds
-		? rounds.some(round => round.isCompleted)
-		: false
-	const isCanNextRound = rounds ? !rounds[rounds.length - 1].isCompleted : false
+	const isCanPrevRound =
+		rounds && rounds.length > 0
+			? rounds.some(round => round.isCompleted)
+			: false
+	const isCanNextRound =
+		rounds && rounds.length > 0
+			? !rounds[rounds.length - 1]?.isCompleted
+			: false
 
 	return (
 		<div className={styles.container}>

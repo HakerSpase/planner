@@ -17,7 +17,7 @@ export function Pomodoro() {
 	const { isLoading, sessionsResponse, workInterval } =
 		useTodaySession(timerState)
 
-	const rounds = sessionsResponse?.data.rounds
+	const rounds = sessionsResponse?.data?.rounds
 	const actions = useTimerActions({ ...timerState, rounds })
 
 	const { isPending, mutate } = useCreateSession()
@@ -54,7 +54,9 @@ export function Pomodoro() {
 					<button
 						onClick={() => {
 							timerState.setIsRunning(false)
-							deleteSession(sessionsResponse.data.id)
+							if (sessionsResponse?.data?.id) {
+								deleteSession(sessionsResponse.data.id)
+							}
 						}}
 						className='absolute top-0 right-0 opacity-40 hover:opacity-90 transition-opacity'
 						disabled={isDeletePending}

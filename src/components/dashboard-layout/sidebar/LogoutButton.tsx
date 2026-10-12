@@ -6,42 +6,24 @@ import { useRouter } from 'next/navigation'
 
 import { authService } from '@/services/auth.service'
 
-interface ILogoutButtonProps {
-	isCollapsed?: boolean
-}
-
-export function LogoutButton({ isCollapsed }: ILogoutButtonProps) {
+export function LogoutButton() {
 	const router = useRouter()
 
-	const { mutate } = useMutation({
+	const { mutate, isPending } = useMutation({
 		mutationKey: ['logout'],
 		mutationFn: () => authService.logout(),
 		onSuccess: () => router.push('/auth')
 	})
 
-	if (isCollapsed) {
-		return (
-			<div className='flex justify-center my-3'>
-				<button
-					title='Выйти из аккаунта'
-					className='opacity-30 hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-border text-red-400'
-					onClick={() => mutate()}
-				>
-					<LogOut size={18} />
-				</button>
-			</div>
-		)
-	}
-
 	return (
-		<div className='absolute top-3 right-3'>
-			<button
-				title='Выйти из аккаунта'
-				className='opacity-30 hover:opacity-100 transition-opacity p-1 text-white hover:text-red-400'
-				onClick={() => mutate()}
-			>
-				<LogOut size={18} />
-			</button>
-		</div>
+		<button
+			title='Выйти из аккаунта'
+			disabled={isPending}
+			className='flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white/[0.04] hover:bg-red-500/15 border border-white/[0.08] hover:border-red-500/30 text-white/50 hover:text-red-400 transition-all cursor-pointer'
+			onClick={() => mutate()}
+		>
+			<LogOut size={16} />
+			<span className='hidden sm:inline text-xs font-medium'>Выйти</span>
+		</button>
 	)
 }
