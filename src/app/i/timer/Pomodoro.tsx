@@ -19,7 +19,11 @@ export function Pomodoro() {
 	const { isLoading, sessionsResponse, workInterval, breakInterval } =
 		useTodaySession(timerState)
 	const rounds = sessionsResponse?.data?.rounds
-	const actions = useTimerActions({ ...timerState, rounds })
+	const actions = useTimerActions({
+		...timerState,
+		rounds,
+		sessionId: sessionsResponse?.data?.id
+	})
 	const progressPercent = Math.max(
 		0,
 		Math.min(
@@ -52,6 +56,13 @@ export function Pomodoro() {
 			timerState.setIsBreakTime(false)
 			timerState.setSecondsLeft(workInterval * 60)
 			timerState.setIsRunning(true)
+			actions.persistTimerState({
+				activeRoundId: timerState.activeRound.id,
+				timerIsRunning: true,
+				timerIsBreak: false,
+				timerSecondsRemaining: workInterval * 60,
+				timerStartedAt: new Date().toISOString()
+			})
 			return
 		}
 
@@ -67,6 +78,13 @@ export function Pomodoro() {
 			timerState.setIsBreakTime(true)
 			timerState.setSecondsLeft(breakInterval * 60)
 			timerState.setIsRunning(true)
+			actions.persistTimerState({
+				activeRoundId: nextRound.id,
+				timerIsRunning: true,
+				timerIsBreak: true,
+				timerSecondsRemaining: breakInterval * 60,
+				timerStartedAt: new Date().toISOString()
+			})
 		}
 	}, [
 		actions,

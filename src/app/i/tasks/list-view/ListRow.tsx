@@ -123,9 +123,9 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 							? setIsDeleteConfirmOpen(true)
 							: setItems(prev => prev?.slice(0, -1))
 					}
-					className='opacity-50 transition-opacity hover:opacity-100'
+					className='grid h-10 w-10 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100'
 				>
-					{isDeletePending ? <Loader size={15} /> : <Trash size={15} />}
+					{isDeletePending ? <Loader size={17} /> : <Trash size={17} />}
 				</button>
 			</div>
 			{isDeleteConfirmOpen && (

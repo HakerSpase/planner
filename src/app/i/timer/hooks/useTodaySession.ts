@@ -9,39 +9,59 @@ import { pomodoroService } from '@/services/pomodoro.service'
 export function useTodaySession({
 	setActiveRound,
 	setSecondsLeft,
-	isBreakTime
+	setIsRunning,
+	setIsBreakTime
 }: ITimerState) {
 	const { breakInterval, workInterval } = useLoadSettings()
 
 	const {
 		data: sessionsResponse,
 		isLoading,
-		refetch,
 		isSuccess
 	} = useQuery({
 		queryKey: ['get today session'],
-		queryFn: () => pomodoroService.getTodaySession()
+		queryFn: () => pomodoroService.getTodaySession(),
+		refetchInterval: 3000,
+		refetchIntervalInBackground: true
 	})
 
 	const rounds = sessionsResponse?.data?.rounds
 
 	useEffect(() => {
 		if (!isSuccess) return
-		const activeRound = rounds?.find(round => !round.isCompleted)
+		const activeRound =
+			rounds?.find(
+				round => round.id === sessionsResponse?.data?.activeRoundId
+			) || rounds?.find(round => !round.isCompleted)
 		setActiveRound(activeRound)
-
-		if (activeRound && !isBreakTime) {
-			setSecondsLeft(
-				activeRound.totalSeconds > 0
-					? activeRound.totalSeconds
-					: workInterval * 60
-			)
-		}
+		const session = sessionsResponse?.data
+		const isBreak = session?.timerIsBreak ?? false
+		setIsBreakTime(isBreak)
+		const savedSeconds = session?.timerIsRunning
+			? (session.timerSecondsRemaining ?? workInterval * 60)
+			: session?.timerSecondsRemaining || activeRound?.totalSeconds
+				? session?.timerSecondsRemaining || activeRound?.totalSeconds || 0
+				: activeRound
+					? workInterval * 60
+					: 0
+		const elapsed =
+			session?.timerIsRunning && session.timerStartedAt
+				? Math.max(
+						0,
+						Math.ceil(
+							(Date.now() - new Date(session.timerStartedAt).getTime()) / 1000
+						)
+					)
+				: 0
+		setSecondsLeft(Math.max(0, savedSeconds - elapsed))
+		setIsRunning(Boolean(session?.timerIsRunning && savedSeconds > elapsed))
 	}, [
 		isSuccess,
 		rounds,
-		isBreakTime,
+		sessionsResponse?.data,
 		setActiveRound,
+		setIsBreakTime,
+		setIsRunning,
 		setSecondsLeft,
 		workInterval
 	])

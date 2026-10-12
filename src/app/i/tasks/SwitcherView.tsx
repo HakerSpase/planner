@@ -12,20 +12,26 @@ interface ISwitcherView {
 
 export function SwitcherView({ setType, type }: ISwitcherView) {
 	return (
-		<div className='flex items-center gap-4 mb-5'>
+		<div className='mb-4 flex min-w-0 items-center gap-4 overflow-x-auto border-b border-white/[0.08] sm:mb-5'>
 			<button
-				className={cn('flex items-center gap-1', {
-					'opacity-40': type === 'kanban'
-				})}
+				className={cn(
+					'flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 text-sm transition-colors',
+					{
+						'opacity-40': type === 'kanban'
+					}
+				)}
 				onClick={() => setType('list')}
 			>
 				<ListTodo />
 				Список
 			</button>
 			<button
-				className={cn('flex items-center gap-1', {
-					'opacity-40': type === 'list'
-				})}
+				className={cn(
+					'flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 text-sm transition-colors',
+					{
+						'opacity-40': type === 'list'
+					}
+				)}
 				onClick={() => setType('kanban')}
 			>
 				<Kanban />

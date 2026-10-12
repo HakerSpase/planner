@@ -19,7 +19,7 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 						onClick={onToggleMobile}
 						title='Открыть меню'
 						aria-label='Открыть меню'
-						className='lg:hidden grid h-9 w-8 shrink-0 place-items-center text-white/60 transition-colors hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
+						className='lg:hidden grid h-11 w-11 shrink-0 place-items-center text-white/65 transition-colors hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
 					>
 						<Menu size={20} />
 					</button>

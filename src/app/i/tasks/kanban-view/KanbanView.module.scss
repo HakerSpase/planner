@@ -1,14 +1,14 @@
 .board {
-	@apply grid w-full grid-cols-1 gap-4 lg:grid-flow-col lg:auto-cols-[17rem] lg:gap-8;
+	@apply grid w-full grid-flow-col auto-cols-[min(84vw,22rem)] gap-3 overflow-x-auto pb-3 snap-x snap-mandatory lg:auto-cols-[17rem] lg:gap-8;
 	min-width: 0;
-	overflow-x: visible;
 	@media (min-width: 1024px) {
 		overflow-x: auto;
+		@apply snap-none;
 	}
 
 	.column {
-		@apply w-full min-w-0;
-		min-height: auto;
+		@apply w-full min-w-0 snap-start;
+		min-height: 50vh;
 		@media (min-width: 1024px) {
 			@apply w-[17rem];
 			min-height: 79vh;

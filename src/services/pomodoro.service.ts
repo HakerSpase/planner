@@ -11,7 +11,8 @@ class PomodoroService {
 
 	async getTodaySession() {
 		const response = await axiosWithAuth.get<IPomodoroSessionResponse>(
-			`${this.BASE_URL}/today`
+			`${this.BASE_URL}/today`,
+			{ params: { timezoneOffset: new Date().getTimezoneOffset() } }
 		)
 		return response
 	}

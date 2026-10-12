@@ -16,8 +16,7 @@ import { useTimeBlockSortable } from './hooks/useTimeBlockSortable'
 export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const blockStyle = {
-		'--block-color': item.color || '#64748b',
-		minHeight: `${Math.max(56, Math.min(item.duration * 1.2, 160))}px`
+		'--block-color': item.color || '#64748b'
 	} as CSSProperties
 	const { attributes, listeners, setNodeRef, style } = useTimeBlockSortable(
 		item.id
@@ -65,14 +64,14 @@ export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 								order: item.order
 							})
 						}}
-						className='p-1 text-white/50 transition-opacity hover:text-white'
+						className='grid h-10 w-10 shrink-0 place-items-center text-white/60 transition-opacity hover:text-white'
 					>
 						<Edit size={16} />
 					</button>
 					<button
 						type='button'
 						onClick={() => setIsDeleteConfirmOpen(true)}
-						className='p-1 text-white/50 transition-opacity hover:text-white'
+						className='grid h-10 w-10 shrink-0 place-items-center text-white/60 transition-opacity hover:text-white'
 					>
 						{isDeletePending ? <Loader size={16} /> : <Trash size={16} />}
 					</button>

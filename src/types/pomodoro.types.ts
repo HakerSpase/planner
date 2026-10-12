@@ -8,6 +8,11 @@ export interface IPomodoroRoundResponse extends IBase {
 export interface IPomodoroSessionResponse extends IBase {
 	isCompleted?: boolean
 	rounds?: IPomodoroRoundResponse[]
+	activeRoundId?: string | null
+	timerIsRunning?: boolean
+	timerIsBreak?: boolean
+	timerSecondsRemaining?: number
+	timerStartedAt?: string | null
 }
 
 export type TypePomodoroSessionState = Partial<

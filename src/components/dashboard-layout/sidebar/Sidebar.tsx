@@ -30,30 +30,30 @@ export function Sidebar({
 				<div
 					className={cn(
 						'flex items-center border-b border-b-border relative min-h-[60px]',
-						collapsed
-						? 'justify-center px-2 py-2'
-							: 'justify-between p-3'
+						collapsed ? 'justify-center px-2 py-2' : 'justify-between p-3'
 					)}
 				>
-					{!collapsed && <Link
-						href='/'
-						onClick={isMobile ? onCloseMobile : undefined}
-						className='flex shrink-0 items-center gap-2.5'
-					>
-						<GanttChartSquare
-							color={COLORS.primary}
-							size={collapsed ? 25 : 32}
-							className='flex-shrink-0'
-						/>
-						{!collapsed && (
-							<span className='text-xl font-bold relative'>
-								Planner
-								<span className='absolute -top-1 -right-5 text-[10px] text-[#7551FF] opacity-80 rotate-[18deg] font-mono'>
-									beta
+					{!collapsed && (
+						<Link
+							href='/'
+							onClick={isMobile ? onCloseMobile : undefined}
+							className='flex shrink-0 items-center gap-2.5'
+						>
+							<GanttChartSquare
+								color={COLORS.primary}
+								size={collapsed ? 25 : 32}
+								className='flex-shrink-0'
+							/>
+							{!collapsed && (
+								<span className='text-xl font-bold relative'>
+									Planner
+									<span className='absolute -top-1 -right-5 text-[10px] text-[#7551FF] opacity-80 rotate-[18deg] font-mono'>
+										beta
+									</span>
 								</span>
-							</span>
-						)}
-					</Link>}
+							)}
+						</Link>
+					)}
 
 					{/* Кнопка закрытия для мобильного экрана */}
 					{isMobile && (
@@ -111,9 +111,17 @@ export function Sidebar({
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<p className='pt-4 text-center text-xs text-white/35'>
-						© 2026 Planner
-					</p>
+					<div className='pt-4 text-center text-xs text-white/35'>
+						<p>© 2026 Planner</p>
+						<a
+							href='https://t.me/w_dtc'
+							target='_blank'
+							rel='noreferrer'
+							className='mt-2 inline-flex min-h-10 items-center text-white/45 transition-colors hover:text-primary'
+						>
+							Разработчик: @w_dtc
+						</a>
+					</div>
 				)}
 			</footer>
 		</div>

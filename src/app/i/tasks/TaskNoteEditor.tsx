@@ -21,7 +21,7 @@ export function TaskNoteEditor({ value = '', onChange }: TaskNoteEditorProps) {
 			<button
 				type='button'
 				onClick={() => setIsOpen(true)}
-				className='group flex w-full min-w-0 max-w-full items-start gap-2 py-1 text-left text-xs text-white/55 transition-colors hover:text-white/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60'
+				className='group flex min-h-10 w-full min-w-0 max-w-full items-center gap-2 py-1 text-left text-xs text-white/55 transition-colors hover:text-white/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60'
 				aria-label={
 					preview ? 'Открыть заметку к задаче' : 'Добавить заметку к задаче'
 				}
@@ -72,7 +72,7 @@ export function TaskNoteEditor({ value = '', onChange }: TaskNoteEditorProps) {
 								<button
 									type='button'
 									onClick={() => setIsOpen(false)}
-									className='p-2 text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white'
+									className='grid h-11 w-11 shrink-0 place-items-center text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white'
 									aria-label='Закрыть редактор заметки'
 								>
 									<X size={18} />
