@@ -32,7 +32,7 @@ export function ActivityCalendar() {
 		return new Date(year, month - 1, day)
 	}, [timeZone])
 	const rangeStart = useMemo(
-		() => startOfWeek(subDays(today, 363), { weekStartsOn: 1 }),
+		() => startOfWeek(subDays(today, 181), { weekStartsOn: 1 }),
 		[today]
 	)
 	const days = useMemo(
@@ -73,14 +73,14 @@ export function ActivityCalendar() {
 
 	const intensity = (count: number) =>
 		count === 0
-			? 'bg-white/[0.06]'
+			? 'bg-[#242629]'
 			: count === 1
-				? 'bg-emerald-950'
+				? 'bg-[#0e4429]'
 				: count <= 3
-					? 'bg-emerald-800'
+					? 'bg-[#006d32]'
 					: count <= 6
-						? 'bg-emerald-600'
-						: 'bg-emerald-400'
+						? 'bg-[#26a641]'
+						: 'bg-[#d6e685]'
 
 	return (
 		<section
@@ -90,15 +90,13 @@ export function ActivityCalendar() {
 			<div className='flex flex-wrap items-end justify-between gap-2'>
 				<div>
 					<h2 className='text-base font-medium text-white'>
-						Активность за год
+						Активность за 6 месяцев
 					</h2>
 					<p className='mt-1 text-xs text-white/45'>
 						Завершённые задачи и записи в «Мыслях»
 					</p>
 				</div>
-				<span className='text-xs text-white/40'>
-					{loading ? 'Загружаем…' : timeZone.replaceAll('_', ' ')}
-				</span>
+				{loading && <span className='text-xs text-white/40'>Загружаем…</span>}
 			</div>
 			<div className='mt-4 overflow-x-auto pb-2'>
 				<div className='min-w-[700px]'>
@@ -118,14 +116,16 @@ export function ActivityCalendar() {
 					</div>
 					<div className='flex gap-2'>
 						<div className='grid shrink-0 grid-rows-7 gap-1 pt-0.5 text-[9px] leading-[11px] text-white/35'>
-							{['Пн', '', 'Ср', '', 'Пт', '', ''].map((label, index) => (
-								<span
-									key={index}
-									className='h-[11px]'
-								>
-									{label}
-								</span>
-							))}
+							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(
+								(label, index) => (
+									<span
+										key={index}
+										className='h-[11px]'
+									>
+										{label}
+									</span>
+								)
+							)}
 						</div>
 						<div
 							className='grid flex-1 grid-flow-col grid-rows-7 gap-1'
@@ -141,7 +141,7 @@ export function ActivityCalendar() {
 										<span
 											key={key}
 											title={`${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} ${count === 1 ? 'событие' : 'событий'}`}
-											className={`h-[11px] min-w-0 transition-colors ${intensity(count)} ${key === dayKey(today) ? 'outline outline-1 outline-emerald-300' : ''}`}
+											className={`h-[11px] min-w-0 transition-colors ${intensity(count)} ${key === todayKey ? 'outline outline-1 outline-emerald-300' : ''}`}
 										/>
 									)
 								})

@@ -96,6 +96,37 @@ export function Settings() {
 							{...register('name')}
 							extra='mb-6'
 						/>
+						<div className='border-t border-white/[0.08] pt-5'>
+							<label
+								htmlFor='timeZone'
+								className='text-sm font-medium text-white/75'
+							>
+								Часовой пояс
+							</label>
+							<p className='mb-2 mt-1 text-xs text-white/45'>
+								Используется для дат, календаря активности и дневных сессий
+								Pomodoro.
+							</p>
+							<select
+								id='timeZone'
+								{...register('timeZone', { required: true })}
+								value={watch('timeZone') || ''}
+								className='w-full border border-border bg-[#141515] p-3 text-sm text-white outline-none focus:border-primary'
+							>
+								{!watch('timeZone') && (
+									<option value=''>Определяется устройством</option>
+								)}
+								{timeZones.map(zone => (
+									<option
+										key={zone}
+										value={zone}
+										className='bg-[#141515]'
+									>
+										{zone.replaceAll('_', ' ')}
+									</option>
+								))}
+							</select>
+						</div>
 					</div>
 					{/* Настройки интервалов Pomodoro */}
 					<div>
@@ -166,38 +197,6 @@ export function Settings() {
 						)}
 					</div>
 				</div>
-				<div className='mt-6 max-w-xl border-t border-white/[0.08] pt-5'>
-					<label
-						htmlFor='timeZone'
-						className='text-sm font-medium text-white/75'
-					>
-						Часовой пояс
-					</label>
-					<p className='mb-2 mt-1 text-xs text-white/45'>
-						Используется для дат, календаря активности и дневных сессий
-						Pomodoro.
-					</p>
-					<select
-						id='timeZone'
-						{...register('timeZone', { required: true })}
-						value={watch('timeZone') || ''}
-						className='w-full border border-border bg-[#141515] p-3 text-sm text-white outline-none focus:border-primary'
-					>
-						{!watch('timeZone') && (
-							<option value=''>Определяется устройством</option>
-						)}
-						{timeZones.map(zone => (
-							<option
-								key={zone}
-								value={zone}
-								className='bg-[#141515]'
-							>
-								{zone.replaceAll('_', ' ')}
-							</option>
-						))}
-					</select>
-				</div>
-
 				<Button
 					type='submit'
 					disabled={isPending}

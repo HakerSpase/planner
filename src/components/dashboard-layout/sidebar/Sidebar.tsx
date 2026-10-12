@@ -117,7 +117,7 @@ export function Sidebar({
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<div className='flex justify-end pt-3 text-xs text-white/40'>
+					<div className='flex justify-center pt-3 text-xs text-white/40'>
 						<a
 							href='https://t.me/w_dtc'
 							target='_blank'
