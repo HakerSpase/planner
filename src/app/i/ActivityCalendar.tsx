@@ -71,6 +71,12 @@ export function ActivityCalendar() {
 			result.push(days.slice(index, index + 7))
 		return result
 	}, [days])
+	const ninetyDayWeekCount =
+		(Math.round(
+			(endOfWeek(today, { weekStartsOn: 1 }).getTime() -
+				startOfWeek(subDays(today, 89), { weekStartsOn: 1 }).getTime()) /
+				(7 * 24 * 60 * 60 * 1000)
+		) || 0) + 1
 
 	useEffect(() => {
 		const element = chartRef.current
@@ -82,13 +88,14 @@ export function ActivityCalendar() {
 		return () => observer.disconnect()
 	}, [])
 
+	const sizingWeekCount = period === '1y' ? ninetyDayWeekCount : weeks.length
 	const cellSize = Math.min(
 		36,
 		Math.max(
-			3,
+			12,
 			Math.floor(
-				(chartWidth - 34 - Math.max(0, weeks.length - 1) * 2) /
-					Math.max(1, weeks.length)
+				(chartWidth - 34 - Math.max(0, sizingWeekCount - 1) * 2) /
+					Math.max(1, sizingWeekCount)
 			)
 		)
 	)
@@ -166,12 +173,14 @@ export function ActivityCalendar() {
 
 			<div
 				ref={chartRef}
-				className='mt-5 w-full min-w-0 overflow-x-auto pb-2'
+				className='mt-5 w-full min-w-0 overflow-x-auto overscroll-x-contain pb-2'
+				tabIndex={0}
+				aria-label='Сетка активности. На годовом периоде прокручивайте по горизонтали'
 			>
 				<div className='w-max'>
 					<div className='mb-2 flex gap-2'>
 						<span
-							className='w-[26px] shrink-0'
+							className='sticky left-0 z-20 w-[26px] shrink-0 bg-[#141516]'
 							aria-hidden='true'
 						/>
 						<div
@@ -197,7 +206,7 @@ export function ActivityCalendar() {
 						</div>
 					</div>
 					<div className='flex gap-2'>
-						<div className='grid w-[26px] shrink-0 grid-rows-7 gap-0.5 text-[9px] leading-none text-white/40'>
+						<div className='sticky left-0 z-20 grid w-[26px] shrink-0 grid-rows-7 gap-0.5 border-r border-white/[0.08] bg-[#141516] pr-1 text-[9px] leading-none text-white/55'>
 							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
 								<span
 									key={day}
