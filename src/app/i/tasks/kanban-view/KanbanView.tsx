@@ -36,6 +36,10 @@ export function KanbanView() {
 			if (touch)
 				touchPositionRef.current = { x: touch.clientX, y: touch.clientY }
 		}
+		const trackPointer = (event: PointerEvent) => {
+			if (event.pointerType === 'touch')
+				touchPositionRef.current = { x: event.clientX, y: event.clientY }
+		}
 		const clearTouch = () => {
 			touchPositionRef.current = null
 		}
@@ -45,6 +49,7 @@ export function KanbanView() {
 		})
 		document.addEventListener('touchend', clearTouch, true)
 		document.addEventListener('touchcancel', clearTouch, true)
+		document.addEventListener('pointermove', trackPointer, true)
 
 		let frame = 0
 		const autoScroll = () => {
@@ -84,11 +89,16 @@ export function KanbanView() {
 			document.removeEventListener('touchmove', trackTouch, true)
 			document.removeEventListener('touchend', clearTouch, true)
 			document.removeEventListener('touchcancel', clearTouch, true)
+			document.removeEventListener('pointermove', trackPointer, true)
 			touchPositionRef.current = null
 		}
 	}, [isDraggingTask])
 
 	const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (event.pointerType === 'touch') {
+			touchPositionRef.current = { x: event.clientX, y: event.clientY }
+			return
+		}
 		if (event.button !== 1 && event.button !== 2) return
 		if ((event.target as HTMLElement).closest('[data-task-drag-handle]')) return
 		event.preventDefault()
@@ -103,9 +113,11 @@ export function KanbanView() {
 	}
 
 	const movePan = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (event.pointerType === 'touch' && isDraggingTask)
+			touchPositionRef.current = { x: event.clientX, y: event.clientY }
 		if (!panRef.current || panRef.current.pointerId !== event.pointerId) return
 		const delta = panRef.current.x - event.clientX
-		event.currentTarget.scrollLeft += delta
+		event.currentTarget.scrollLeft += delta * 1.7
 		if (Math.abs(delta) > 2) panRef.current.moved = true
 		panRef.current.x = event.clientX
 	}

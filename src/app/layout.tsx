@@ -20,7 +20,11 @@ export const metadata: Metadata = {
 		default: SITE_NAME,
 		template: `%s | ${SITE_NAME}`
 	},
-	description: 'Современный планировщик задач, таймер Pomodoro и тайм-блокинг'
+	description: 'Современный планировщик задач, таймер Pomodoro и тайм-блокинг',
+	icons: {
+		icon: '/planner-icon.svg',
+		apple: '/planner-icon-192.png'
+	}
 }
 
 export default function RootLayout({

@@ -57,7 +57,7 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 					aria-label='Перетащить задачу'
 					data-task-drag-handle
 					{...dragHandleProps}
-					className='touch-none cursor-grab active:cursor-grabbing'
+					className='touch-none grid h-9 w-9 shrink-0 cursor-grab place-items-center active:cursor-grabbing'
 				>
 					<GripVertical className={styles.grip} />
 				</button>

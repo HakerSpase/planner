@@ -1,13 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import {
-	ChevronLeft,
-	ChevronRight,
-	GanttChartSquare,
-	Send,
-	X
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, GanttChartSquare, X } from 'lucide-react'
 import Link from 'next/link'
 
 import { COLORS } from '@/constants/color.constants'
@@ -117,7 +111,7 @@ export function Sidebar({
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<div className='flex justify-center pt-3 text-xs text-white/40'>
+					<div className='pt-3 pl-9 text-xs text-white/40'>
 						<a
 							href='https://t.me/w_dtc'
 							target='_blank'
@@ -125,11 +119,6 @@ export function Sidebar({
 							aria-label='Телеграм разработчика @w_dtc'
 							className='inline-flex min-h-8 items-center whitespace-nowrap text-white/45 transition-colors hover:text-primary'
 						>
-							<Send
-								className='mr-1.5'
-								size={13}
-								aria-hidden='true'
-							/>
 							TG разработчика
 						</a>
 					</div>
