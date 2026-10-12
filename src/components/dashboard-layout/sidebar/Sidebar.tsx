@@ -1,7 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import { ChevronLeft, ChevronRight, GanttChartSquare, X } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import Link from 'next/link'
 
 import { COLORS } from '@/constants/color.constants'
@@ -39,7 +39,7 @@ export function Sidebar({
 							onClick={isMobile ? onCloseMobile : undefined}
 							className='flex shrink-0 items-center gap-2.5'
 						>
-							<GanttChartSquare
+							<CalendarDays
 								color={COLORS.primary}
 								size={collapsed ? 25 : 32}
 								className='flex-shrink-0'
@@ -111,7 +111,7 @@ export function Sidebar({
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<div className='pt-3 pl-9 text-xs text-white/40'>
+					<div className='pt-3 pl-3 text-xs text-white/40'>
 						<a
 							href='https://t.me/w_dtc'
 							target='_blank'
