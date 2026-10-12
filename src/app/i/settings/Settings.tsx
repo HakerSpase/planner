@@ -1,5 +1,7 @@
 'use client'
 
+import { Check, ChevronDown, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/buttons/Button'
@@ -45,12 +47,28 @@ function getTimeZones() {
 	)
 }
 
+function getUtcOffset(timeZone: string) {
+	try {
+		const offset = new Intl.DateTimeFormat('en-US', {
+			timeZone,
+			timeZoneName: 'longOffset'
+		})
+			.formatToParts(new Date())
+			.find(part => part.type === 'timeZoneName')?.value
+		if (!offset || offset === 'GMT') return 'UTC+00:00'
+		return offset.replace(/^GMT/, 'UTC')
+	} catch {
+		return 'UTC+00:00'
+	}
+}
+
 export function Settings() {
 	const {
 		register,
 		handleSubmit,
 		reset,
 		watch,
+		setValue,
 		formState: { errors }
 	} = useForm<TypeUserForm>({
 		mode: 'onChange'
@@ -59,7 +77,44 @@ export function Settings() {
 	useInitialData(reset)
 
 	const { isPending, mutate } = useUpdateSettings()
-	const timeZones = getTimeZones()
+	const timeZoneMenuRef = useRef<HTMLDivElement>(null)
+	const [timeZoneMenuOpen, setTimeZoneMenuOpen] = useState(false)
+	const [timeZoneSearch, setTimeZoneSearch] = useState('')
+	const selectedTimeZone = watch('timeZone') || ''
+	const timeZones = useMemo(() => {
+		const zones = getTimeZones()
+		if (selectedTimeZone && !zones.includes(selectedTimeZone))
+			zones.push(selectedTimeZone)
+		return zones.map(zone => ({
+			zone,
+			label: zone.replaceAll('_', ' '),
+			offset: getUtcOffset(zone)
+		}))
+	}, [selectedTimeZone])
+	const filteredTimeZones = useMemo(() => {
+		const query = timeZoneSearch.trim().toLocaleLowerCase('ru')
+		if (!query) return timeZones
+		return timeZones.filter(({ label, offset }) =>
+			`${label} ${offset}`.toLocaleLowerCase('ru').includes(query)
+		)
+	}, [timeZoneSearch, timeZones])
+
+	useEffect(() => {
+		if (!timeZoneMenuOpen) return
+		const closeOnOutsideClick = (event: PointerEvent) => {
+			if (!timeZoneMenuRef.current?.contains(event.target as Node))
+				setTimeZoneMenuOpen(false)
+		}
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setTimeZoneMenuOpen(false)
+		}
+		document.addEventListener('pointerdown', closeOnOutsideClick)
+		document.addEventListener('keydown', closeOnEscape)
+		return () => {
+			document.removeEventListener('pointerdown', closeOnOutsideClick)
+			document.removeEventListener('keydown', closeOnEscape)
+		}
+	}, [timeZoneMenuOpen])
 
 	const onSubmit: SubmitHandler<TypeUserForm> = data => {
 		const { password, ...rest } = data
@@ -107,25 +162,96 @@ export function Settings() {
 								Используется для дат, календаря активности и дневных сессий
 								Pomodoro.
 							</p>
-							<select
-								id='timeZone'
+							<input
+								type='hidden'
 								{...register('timeZone', { required: true })}
-								value={watch('timeZone') || ''}
-								className='w-full border border-border bg-[#141515] p-3 text-sm text-white outline-none focus:border-primary'
+							/>
+							<div
+								ref={timeZoneMenuRef}
+								className='relative'
 							>
-								{!watch('timeZone') && (
-									<option value=''>Определяется устройством</option>
+								<button
+									id='timeZone'
+									type='button'
+									aria-haspopup='listbox'
+									aria-expanded={timeZoneMenuOpen}
+									aria-label='Выбрать часовой пояс'
+									onClick={() => setTimeZoneMenuOpen(open => !open)}
+									className='flex min-h-12 w-full items-center justify-between gap-3 border border-border bg-[#141515] px-3 py-2 text-left text-sm text-white outline-none transition-colors hover:border-primary focus-visible:border-primary'
+								>
+									<span className='min-w-0 truncate'>
+										{selectedTimeZone
+											? `${selectedTimeZone.replaceAll('_', ' ')} (${timeZones.find(zone => zone.zone === selectedTimeZone)?.offset || 'UTC+00:00'})`
+											: 'Определяется устройством'}
+									</span>
+									<ChevronDown
+										size={16}
+										className={`shrink-0 text-white/50 transition-transform ${timeZoneMenuOpen ? 'rotate-180' : ''}`}
+									/>
+								</button>
+								{timeZoneMenuOpen && (
+									<div className='absolute left-0 right-0 top-full z-40 mt-1 border border-white/15 bg-[#111213] shadow-xl'>
+										<div className='sticky top-0 border-b border-white/10 bg-[#111213] p-2'>
+											<div className='flex items-center gap-2 border border-white/10 px-2'>
+												<Search
+													size={15}
+													className='shrink-0 text-white/40'
+												/>
+												<input
+													autoFocus
+													value={timeZoneSearch}
+													onChange={event =>
+														setTimeZoneSearch(event.target.value)
+													}
+													placeholder='Найти город или регион'
+													className='h-9 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35'
+												/>
+											</div>
+										</div>
+										<div
+											role='listbox'
+											aria-label='Часовой пояс'
+											className='max-h-64 overflow-y-auto'
+										>
+											{filteredTimeZones.length ? (
+												filteredTimeZones.map(({ zone, label, offset }) => (
+													<button
+														key={zone}
+														type='button'
+														role='option'
+														aria-selected={selectedTimeZone === zone}
+														title={zone}
+														onClick={() => {
+															setValue('timeZone', zone, {
+																shouldDirty: true,
+																shouldValidate: true
+															})
+															setTimeZoneMenuOpen(false)
+															setTimeZoneSearch('')
+														}}
+														className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.06] ${selectedTimeZone === zone ? 'bg-primary/10 text-white' : 'text-white/75'}`}
+													>
+														<span className='min-w-0 truncate'>{label}</span>
+														<span className='flex shrink-0 items-center gap-2 text-xs text-white/45'>
+															{offset}
+															{selectedTimeZone === zone && (
+																<Check
+																	size={14}
+																	className='text-primary'
+																/>
+															)}
+														</span>
+													</button>
+												))
+											) : (
+												<p className='px-3 py-4 text-sm text-white/45'>
+													Ничего не найдено
+												</p>
+											)}
+										</div>
+									</div>
 								)}
-								{timeZones.map(zone => (
-									<option
-										key={zone}
-										value={zone}
-										className='bg-[#141515]'
-									>
-										{zone.replaceAll('_', ' ')}
-									</option>
-								))}
-							</select>
+							</div>
 						</div>
 					</div>
 					{/* Настройки интервалов Pomodoro */}

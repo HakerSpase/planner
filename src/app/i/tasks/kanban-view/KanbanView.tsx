@@ -1,7 +1,12 @@
 'use client'
 
 import { DragDropContext } from '@hello-pangea/dnd'
-import { type PointerEvent as ReactPointerEvent, useRef } from 'react'
+import {
+	type PointerEvent as ReactPointerEvent,
+	useEffect,
+	useRef,
+	useState
+} from 'react'
 
 import { COLUMNS } from '../columns.data'
 import { useTaskDnd } from '../hooks/useTaskDnd'
@@ -13,6 +18,9 @@ import styles from './KanbanView.module.scss'
 export function KanbanView() {
 	const { items, setItems } = useTasks()
 	const { onDragEnd } = useTaskDnd()
+	const [isDraggingTask, setIsDraggingTask] = useState(false)
+	const boardRef = useRef<HTMLDivElement>(null)
+	const touchPositionRef = useRef<{ x: number; y: number } | null>(null)
 	const panRef = useRef<{
 		pointerId: number
 		x: number
@@ -20,6 +28,65 @@ export function KanbanView() {
 		moved: boolean
 	} | null>(null)
 	const suppressContextMenuUntilRef = useRef(0)
+
+	useEffect(() => {
+		if (!isDraggingTask) return
+		const trackTouch = (event: TouchEvent) => {
+			const touch = event.touches[0] || event.changedTouches[0]
+			if (touch)
+				touchPositionRef.current = { x: touch.clientX, y: touch.clientY }
+		}
+		const clearTouch = () => {
+			touchPositionRef.current = null
+		}
+		document.addEventListener('touchmove', trackTouch, {
+			capture: true,
+			passive: true
+		})
+		document.addEventListener('touchend', clearTouch, true)
+		document.addEventListener('touchcancel', clearTouch, true)
+
+		let frame = 0
+		const autoScroll = () => {
+			const point = touchPositionRef.current
+			const board = boardRef.current
+			if (point && board) {
+				const bounds = board.getBoundingClientRect()
+				const pageScroller = board.closest('main')
+				const pageBounds = pageScroller?.getBoundingClientRect()
+				const edge = 64
+				if (board.scrollWidth > board.clientWidth) {
+					if (point.x > bounds.right - edge)
+						board.scrollLeft += Math.ceil(
+							((point.x - (bounds.right - edge)) / edge) * 14
+						)
+					else if (point.x < bounds.left + edge)
+						board.scrollLeft -= Math.ceil(
+							((bounds.left + edge - point.x) / edge) * 14
+						)
+				}
+				if (pageScroller && pageBounds) {
+					if (point.y > pageBounds.bottom - edge)
+						pageScroller.scrollTop += Math.ceil(
+							((point.y - (pageBounds.bottom - edge)) / edge) * 14
+						)
+					else if (point.y < pageBounds.top + edge)
+						pageScroller.scrollTop -= Math.ceil(
+							((pageBounds.top + edge - point.y) / edge) * 14
+						)
+				}
+			}
+			frame = window.requestAnimationFrame(autoScroll)
+		}
+		frame = window.requestAnimationFrame(autoScroll)
+		return () => {
+			window.cancelAnimationFrame(frame)
+			document.removeEventListener('touchmove', trackTouch, true)
+			document.removeEventListener('touchend', clearTouch, true)
+			document.removeEventListener('touchcancel', clearTouch, true)
+			touchPositionRef.current = null
+		}
+	}, [isDraggingTask])
 
 	const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
 		if (event.button !== 1 && event.button !== 2) return
@@ -54,8 +121,15 @@ export function KanbanView() {
 	}
 
 	return (
-		<DragDropContext onDragEnd={onDragEnd}>
+		<DragDropContext
+			onDragStart={() => setIsDraggingTask(true)}
+			onDragEnd={result => {
+				setIsDraggingTask(false)
+				onDragEnd(result)
+			}}
+		>
 			<div
+				ref={boardRef}
 				className={styles.board}
 				onPointerDown={startPan}
 				onPointerMove={movePan}
