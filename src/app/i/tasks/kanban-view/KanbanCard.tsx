@@ -57,9 +57,9 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 					aria-label='Перетащить задачу'
 					data-task-drag-handle
 					{...dragHandleProps}
-					className='touch-none grid h-9 w-9 shrink-0 cursor-grab place-items-center active:cursor-grabbing'
+					className='touch-none grid h-8 w-6 shrink-0 cursor-grab place-items-center active:cursor-grabbing text-white/35 hover:text-white'
 				>
-					<GripVertical className={styles.grip} />
+					<GripVertical className={styles.grip} size={16} />
 				</button>
 
 				<Controller
@@ -73,48 +73,52 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 					)}
 				/>
 
-				<TransparentField {...register('name')} />
+				<div className='flex-1 min-w-0 ml-1.5'>
+					<TransparentField {...register('name')} />
+				</div>
 			</div>
 
-			<Controller
-				control={control}
-				name='note'
-				render={({ field }) => (
-					<TaskNoteEditor
-						value={field.value || ''}
-						onChange={value => field.onChange(value)}
+			<div className='pl-8 flex flex-col gap-1.5'>
+				<Controller
+					control={control}
+					name='note'
+					render={({ field }) => (
+						<TaskNoteEditor
+							value={field.value || ''}
+							onChange={value => field.onChange(value)}
+						/>
+					)}
+				/>
+
+				<div className={styles.cardBody}>
+					<Controller
+						control={control}
+						name='createdAt'
+						render={({ field: { value, onChange } }) => (
+							<DatePicker
+								onChange={onChange}
+								value={value || ''}
+								position='left'
+							/>
+						)}
 					/>
-				)}
-			/>
 
-			<div className={styles.cardBody}>
-				<Controller
-					control={control}
-					name='createdAt'
-					render={({ field: { value, onChange } }) => (
-						<DatePicker
-							onChange={onChange}
-							value={value || ''}
-							position='left'
-						/>
-					)}
-				/>
-
-				<Controller
-					control={control}
-					name='priority'
-					render={({ field: { value, onChange } }) => (
-						<SingleSelect
-							data={[
-								{ value: 'high', label: 'Высокий' },
-								{ value: 'medium', label: 'Средний' },
-								{ value: 'low', label: 'Низкий' }
-							]}
-							onChange={onChange}
-							value={value || ''}
-						/>
-					)}
-				/>
+					<Controller
+						control={control}
+						name='priority'
+						render={({ field: { value, onChange } }) => (
+							<SingleSelect
+								data={[
+									{ value: 'high', label: 'Высокий' },
+									{ value: 'medium', label: 'Средний' },
+									{ value: 'low', label: 'Низкий' }
+								]}
+								onChange={onChange}
+								value={value || ''}
+							/>
+						)}
+					/>
+				</div>
 			</div>
 
 			<div className={styles.cardActions}>

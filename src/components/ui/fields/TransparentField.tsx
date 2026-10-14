@@ -12,10 +12,9 @@ export const TransparentField = forwardRef<
 			ref={ref}
 			placeholder={placeholder}
 			className={cn(
-				'w-full min-w-0 bg-transparent px-2 py-1 text-sm sm:text-base text-white/90 placeholder:text-white/35',
-				'border border-transparent hover:border-white/10 focus:border-white/20',
-				'hover:bg-white/[0.03] focus:bg-white/[0.06]',
-				'focus:text-white focus:outline-none transition-colors duration-150',
+				'w-full min-w-0 bg-transparent px-1 py-0.5 text-sm sm:text-base text-white/90 placeholder:text-white/35',
+				'border-none outline-none focus:outline-none focus:ring-0',
+				'focus:text-white transition-colors duration-150',
 				className
 			)}
 			{...rest}

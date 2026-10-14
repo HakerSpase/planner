@@ -78,24 +78,24 @@ export function KanbanView() {
 				if (board.scrollWidth > board.clientWidth) {
 					if (point.x > bounds.right - edge) {
 						const distance = point.x - (bounds.right - edge)
-						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
-						board.scrollLeft += Math.round(ratio * 20)
+						const ratio = Math.min(1.0, Math.max(0.15, distance / edge))
+						board.scrollLeft += Math.max(1, Math.round(ratio * 7))
 					} else if (point.x < bounds.left + edge) {
 						const distance = bounds.left + edge - point.x
-						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
-						board.scrollLeft -= Math.round(ratio * 20)
+						const ratio = Math.min(1.0, Math.max(0.15, distance / edge))
+						board.scrollLeft -= Math.max(1, Math.round(ratio * 7))
 					}
 				}
 
 				if (pageScroller && pageBounds) {
 					if (point.y > pageBounds.bottom - edge) {
 						const distance = point.y - (pageBounds.bottom - edge)
-						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
-						pageScroller.scrollTop += Math.round(ratio * 20)
+						const ratio = Math.min(1.0, Math.max(0.15, distance / edge))
+						pageScroller.scrollTop += Math.max(1, Math.round(ratio * 8))
 					} else if (point.y < pageBounds.top + edge) {
 						const distance = pageBounds.top + edge - point.y
-						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
-						pageScroller.scrollTop -= Math.round(ratio * 20)
+						const ratio = Math.min(1.0, Math.max(0.15, distance / edge))
+						pageScroller.scrollTop -= Math.max(1, Math.round(ratio * 8))
 					}
 				}
 			}

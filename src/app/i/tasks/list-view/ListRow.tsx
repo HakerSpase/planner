@@ -74,16 +74,18 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 
 						<TransparentField {...register('name')} />
 					</span>
-					<Controller
-						control={control}
-						name='note'
-						render={({ field }) => (
-							<TaskNoteEditor
-								value={field.value || ''}
-								onChange={value => field.onChange(value)}
-							/>
-						)}
-					/>
+					<div className='pl-8'>
+						<Controller
+							control={control}
+							name='note'
+							render={({ field }) => (
+								<TaskNoteEditor
+									value={field.value || ''}
+									onChange={value => field.onChange(value)}
+								/>
+							)}
+						/>
+					</div>
 				</div>
 			</div>
 			<div>

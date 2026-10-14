@@ -31,6 +31,11 @@ class BreathingService {
 		)
 		return response
 	}
+
+	async deleteSession(id: string) {
+		const response = await axiosWithAuth.delete(`${this.BASE_URL}/${id}`)
+		return response
+	}
 }
 
 export const breathingService = new BreathingService()

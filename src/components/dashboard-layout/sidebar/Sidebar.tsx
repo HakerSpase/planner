@@ -37,11 +37,11 @@ export function Sidebar({
 						<Link
 							href='/'
 							onClick={isMobile ? onCloseMobile : undefined}
-							className='flex shrink-0 items-center gap-2.5'
+							className='flex shrink-0 items-center gap-3 pl-2'
 						>
 							<CalendarDays
 								color={COLORS.primary}
-								size={collapsed ? 25 : 32}
+								size={collapsed ? 25 : 30}
 								className='flex-shrink-0'
 							/>
 							{!collapsed && (

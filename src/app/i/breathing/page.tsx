@@ -3,13 +3,18 @@
 import {
 	Activity,
 	Check,
+	Clock,
+	Flame,
 	History,
+	Info,
 	Moon,
 	Pause,
 	Play,
 	RotateCcw,
 	Smartphone,
+	Sparkles,
 	Square,
+	Trash2,
 	Volume2,
 	VolumeX,
 	Wind,
@@ -70,7 +75,6 @@ export default function BreathingPage() {
 	const phaseStartTimeRef = useRef<number>(0)
 	const pausedAtRef = useRef<number>(0)
 	const accumulatedElapsedRef = useRef<number>(0)
-	const lastPhaseRef = useRef<IBreathingPhase | null>(null)
 
 	// Load user settings and sessions on mount
 	useEffect(() => {
@@ -97,7 +101,10 @@ export default function BreathingPage() {
 	}
 
 	const saveSessionToHistory = async (elapsed: number, cycles: number) => {
-		if (elapsed < 15 && cycles === 0) return
+		if (elapsed < 15 && cycles === 0) {
+			toast.info('Сеанс слишком короткий (<15 сек), запись не создана')
+			return
+		}
 		try {
 			const res = await breathingService.saveSession({
 				techniqueId: selectedTechnique.id,
@@ -108,11 +115,21 @@ export default function BreathingPage() {
 			if (res.data) {
 				setSessions(prev => [res.data, ...prev])
 				toast.success(
-					`Сеанс сохранён: ${Math.round(elapsed / 60)} мин, ${cycles} циклов!`
+					`Сеанс записан: ${Math.round(elapsed / 60) || 1} мин, ${cycles} циклов`
 				)
 			}
 		} catch {
 			toast.error('Не удалось сохранить сеанс на сервере')
+		}
+	}
+
+	const handleDeleteSession = async (id: string) => {
+		try {
+			await breathingService.deleteSession(id)
+			setSessions(prev => prev.filter(s => s.id !== id))
+			toast.success('Сеанс удалён из истории')
+		} catch {
+			toast.error('Ошибка при удалении сеанса')
 		}
 	}
 
@@ -298,10 +315,12 @@ export default function BreathingPage() {
 		todaySessions.reduce((acc, s) => acc + s.duration_seconds, 0) / 60
 	)
 
+	const SelectedIcon = selectedTechnique.icon
+
 	return (
-		<div className='max-w-4xl pb-16'>
+		<div className='w-full pb-16'>
 			{/* Page Header */}
-			<div className='flex items-start justify-between border-b border-white/10 pb-5'>
+			<div className='flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4'>
 				<div>
 					<div className='flex items-center gap-2.5'>
 						<div className='grid h-8 w-8 place-items-center bg-primary/10 text-primary'>
@@ -312,270 +331,352 @@ export default function BreathingPage() {
 						</h1>
 					</div>
 					<p className='mt-1 text-sm text-white/50'>
-						Снятие тревоги, глубокое расслабление и фокус на основе научно
-						доказанных дыхательных циклов.
+						Снятие тревоги, глубокое расслабление и фокус на основе доказанных дыхательных циклов.
 					</p>
+				</div>
+
+				{/* Quick Stats Pill */}
+				<div className='flex items-center gap-3 border border-white/10 bg-[#121314] px-3.5 py-2 text-xs'>
+					<Sparkles size={14} className='text-primary' />
+					<span className='text-white/60'>Сегодня:</span>
+					<strong className='font-medium text-white'>
+						{todayTotalMinutes} мин ({todaySessions.length} сеанс.)
+					</strong>
 				</div>
 			</div>
 
-			{/* Techniques Selection Cards */}
-			<div className='mt-6'>
-				<label className='text-xs font-semibold uppercase tracking-wider text-white/40'>
-					Выберите практику
+			{/* MOBILE-ONLY: Horizontal quick-picker so the visualizer is immediately on-screen */}
+			<div className='mt-4 lg:hidden'>
+				<label className='text-[11px] font-semibold uppercase tracking-wider text-white/40'>
+					Практика:
 				</label>
-				<div className='mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3'>
+				<div className='mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-none'>
 					{BREATHING_TECHNIQUES.map(tech => {
 						const isSelected = tech.id === selectedTechnique.id
+						const TechIcon = tech.icon
 						return (
 							<button
 								key={tech.id}
 								type='button'
 								onClick={() => selectTechnique(tech)}
-								className={`flex flex-col justify-between border p-3.5 text-left transition-all ${
+								className={`flex shrink-0 items-center gap-2 border px-3 py-2 text-xs font-medium transition-all ${
 									isSelected
-										? 'border-primary/60 bg-[#17191b] shadow-lg shadow-black/40'
-										: 'border-white/[0.08] bg-[#121314] hover:border-white/20 hover:bg-[#161718]'
+										? 'border-primary bg-primary/15 text-white shadow-md'
+										: 'border-white/10 bg-[#141516] text-white/70 hover:border-white/20'
 								}`}
 							>
-								<div>
-									<div className='flex items-center justify-between gap-2'>
-										<span
-											className='text-sm font-semibold'
-											style={{
-												color: isSelected ? tech.accentColor : '#ffffff'
-											}}
-										>
-											{tech.name}
-										</span>
-										{isSelected && (
-											<span
-												className='block h-2 w-2 rounded-full'
-												style={{ backgroundColor: tech.accentColor }}
-											/>
-										)}
-									</div>
-									<p className='mt-1 text-xs text-white/55'>{tech.tagline}</p>
-								</div>
-								<div className='mt-3 flex items-center gap-1.5 text-[11px] text-white/40'>
-									<span>Цикл: {tech.totalCycleSeconds} сек</span>
-								</div>
+								<TechIcon
+									size={14}
+									style={{ color: isSelected ? tech.accentColor : 'rgba(255,255,255,0.5)' }}
+								/>
+								<span>{tech.shortName || tech.name.split('(')[0]}</span>
 							</button>
 						)
 					})}
 				</div>
 			</div>
 
-			{/* Duration Selector */}
-			{!isActive && (
-				<div className='mt-6 flex flex-wrap items-center gap-2'>
-					<span className='mr-2 text-xs font-medium text-white/50'>
-						Длительность:
-					</span>
-					{DURATIONS.map(dur => (
-						<button
-							key={dur.seconds}
-							type='button'
-							onClick={() => setTargetDurationSeconds(dur.seconds)}
-							className={`border px-3 py-1.5 text-xs transition-colors ${
-								targetDurationSeconds === dur.seconds
-									? 'border-primary bg-primary/10 text-white font-medium'
-									: 'border-white/10 bg-[#141516] text-white/60 hover:text-white hover:border-white/25'
-							}`}
-						>
-							{dur.label}
-						</button>
-					))}
-				</div>
-			)}
+			{/* Responsive 2-Column Grid on Desktop */}
+			<div className='mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12'>
+				{/* MAIN / LEFT COLUMN: Visualizer Stage & Controls (lg:col-span-7 xl:col-span-8) */}
+				<div className='flex flex-col gap-6 lg:col-span-7 xl:col-span-8'>
+					{/* Interactive Breathing Stage */}
+					<div className='relative overflow-hidden border border-white/10 bg-[#121314] p-5 sm:p-8 shadow-2xl'>
+						{/* Top bar with timer & toggles */}
+						<div className='flex items-center justify-between border-b border-white/[0.07] pb-4'>
+							<div className='flex items-center gap-4 text-xs font-mono text-white/70'>
+								<span className='flex items-center gap-1.5'>
+									<Clock size={13} className='text-white/40' />
+									<strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
+									{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
+								</span>
+								<span>
+									Циклов: <strong className='text-white'>{completedCycles}</strong>
+								</span>
+							</div>
 
-			{/* Main Interactive Stage */}
-			<div className='mt-6 border border-white/10 bg-[#121314] p-6 sm:p-8 relative overflow-hidden'>
-				{/* Top bar with quick settings & elapsed timer */}
-				<div className='flex items-center justify-between border-b border-white/[0.07] pb-4'>
-					<div className='flex items-center gap-4 text-xs font-mono text-white/70'>
-						<span>
-							Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
-							{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
-						</span>
-						<span>
-							Циклов: <strong className='text-white'>{completedCycles}</strong>
-						</span>
-					</div>
-
-					{/* Feedback Toggles */}
-					<div className='flex items-center gap-2'>
-						<button
-							type='button'
-							onClick={toggleVibration}
-							title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
-							className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
-								vibrationEnabled
-									? 'border-primary/50 bg-primary/10 text-primary'
-									: 'border-white/10 bg-transparent text-white/40 hover:text-white'
-							}`}
-						>
-							<Smartphone size={13} />
-							<span className='hidden sm:inline'>Вибрация</span>
-						</button>
-
-						<button
-							type='button'
-							onClick={toggleSound}
-							title={soundEnabled ? 'Звук включен' : 'Звук выключен'}
-							className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
-								soundEnabled
-									? 'border-primary/50 bg-primary/10 text-primary'
-									: 'border-white/10 bg-transparent text-white/40 hover:text-white'
-							}`}
-						>
-							{soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
-							<span className='hidden sm:inline'>Звук</span>
-						</button>
-					</div>
-				</div>
-
-				{/* Visualizer Orb */}
-				<BreathingCircle
-					technique={selectedTechnique}
-					currentPhase={currentPhase}
-					phaseRemainingSeconds={phaseRemainingSeconds}
-					phaseProgress={phaseProgress}
-					isActive={isActive}
-					isPaused={isPaused}
-					cycleCount={completedCycles}
-				/>
-
-				{/* Controls */}
-				<div className='mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-white/[0.07] pt-6'>
-					{!isActive ? (
-						<button
-							type='button'
-							onClick={startSession}
-							className='flex h-11 items-center gap-2 border border-primary bg-primary px-7 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95'
-						>
-							<Play size={16} fill='currentColor' />
-							<span>Начать практику</span>
-						</button>
-					) : (
-						<>
-							{isPaused ? (
+							{/* Feedback Toggles */}
+							<div className='flex items-center gap-2'>
 								<button
 									type='button'
-									onClick={resumeSession}
-									className='flex h-11 items-center gap-2 border border-primary bg-primary px-6 text-sm font-semibold text-white transition-all hover:bg-primary/90'
+									onClick={toggleVibration}
+									title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
+									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
+										vibrationEnabled
+											? 'border-primary/50 bg-primary/10 text-primary'
+											: 'border-white/10 bg-transparent text-white/40 hover:text-white'
+									}`}
+								>
+									<Smartphone size={13} />
+									<span className='hidden sm:inline'>Вибрация</span>
+								</button>
+
+								<button
+									type='button'
+									onClick={toggleSound}
+									title={soundEnabled ? 'Звук включен' : 'Звук выключен'}
+									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
+										soundEnabled
+											? 'border-primary/50 bg-primary/10 text-primary'
+											: 'border-white/10 bg-transparent text-white/40 hover:text-white'
+									}`}
+								>
+									{soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+									<span className='hidden sm:inline'>Звук</span>
+								</button>
+							</div>
+						</div>
+
+						{/* Visualizer Orb */}
+						<BreathingCircle
+							technique={selectedTechnique}
+							currentPhase={currentPhase}
+							phaseRemainingSeconds={phaseRemainingSeconds}
+							phaseProgress={phaseProgress}
+							isActive={isActive}
+							isPaused={isPaused}
+							cycleCount={completedCycles}
+						/>
+
+						{/* Duration selector when idle */}
+						{!isActive && (
+							<div className='mt-2 flex flex-wrap items-center justify-center gap-1.5 pt-2'>
+								<span className='mr-1.5 text-xs text-white/40'>Время:</span>
+								{DURATIONS.map(dur => (
+									<button
+										key={dur.seconds}
+										type='button'
+										onClick={() => setTargetDurationSeconds(dur.seconds)}
+										className={`border px-2.5 py-1 text-xs transition-colors ${
+											targetDurationSeconds === dur.seconds
+												? 'border-primary bg-primary/15 font-medium text-white'
+												: 'border-white/10 bg-[#151617] text-white/60 hover:border-white/25 hover:text-white'
+										}`}
+									>
+										{dur.label}
+									</button>
+								))}
+							</div>
+						)}
+
+						{/* Action Buttons */}
+						<div className='mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-white/[0.07] pt-5'>
+							{!isActive ? (
+								<button
+									type='button'
+									onClick={startSession}
+									className='flex h-11 items-center gap-2.5 border border-primary bg-primary px-8 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95'
 								>
 									<Play size={16} fill='currentColor' />
-									<span>Продолжить</span>
+									<span>Начать практику</span>
 								</button>
 							) : (
-								<button
-									type='button'
-									onClick={pauseSession}
-									className='flex h-11 items-center gap-2 border border-white/20 bg-white/10 px-6 text-sm font-medium text-white transition-colors hover:bg-white/15'
-								>
-									<Pause size={16} />
-									<span>Пауза</span>
-								</button>
+								<>
+									{isPaused ? (
+										<button
+											type='button'
+											onClick={resumeSession}
+											className='flex h-11 items-center gap-2 border border-primary bg-primary px-6 text-sm font-semibold text-white transition-all hover:bg-primary/90'
+										>
+											<Play size={16} fill='currentColor' />
+											<span>Продолжить</span>
+										</button>
+									) : (
+										<button
+											type='button'
+											onClick={pauseSession}
+											className='flex h-11 items-center gap-2 border border-white/20 bg-white/10 px-6 text-sm font-medium text-white transition-colors hover:bg-white/15'
+										>
+											<Pause size={16} />
+											<span>Пауза</span>
+										</button>
+									)}
+
+									<button
+										type='button'
+										onClick={finishSession}
+										className='flex h-11 items-center gap-2 border border-emerald-500/50 bg-emerald-500/10 px-5 text-sm font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+									>
+										<Check size={16} />
+										<span>Завершить и сохранить</span>
+									</button>
+
+									<button
+										type='button'
+										onClick={resetSession}
+										title='Сбросить'
+										className='flex h-11 w-11 items-center justify-center border border-white/10 bg-transparent text-white/50 transition-colors hover:border-white/20 hover:text-white'
+									>
+										<RotateCcw size={15} />
+									</button>
+								</>
 							)}
+						</div>
+					</div>
 
-							<button
-								type='button'
-								onClick={finishSession}
-								className='flex h-11 items-center gap-2 border border-emerald-500/50 bg-emerald-500/10 px-5 text-sm font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
-							>
-								<Check size={16} />
-								<span>Завершить и сохранить</span>
-							</button>
-
-							<button
-								type='button'
-								onClick={resetSession}
-								title='Сбросить'
-								className='flex h-11 w-11 items-center justify-center border border-white/10 bg-transparent text-white/50 transition-colors hover:border-white/20 hover:text-white'
-							>
-								<RotateCcw size={15} />
-							</button>
-						</>
-					)}
-				</div>
-			</div>
-
-			{/* Info & Science Card */}
-			<div className='mt-8 border border-white/[0.08] bg-[#141516] p-5'>
-				<h3 className='text-sm font-semibold text-white'>
-					О технике: {selectedTechnique.name}
-				</h3>
-				<p className='mt-1.5 text-xs leading-relaxed text-white/65'>
-					{selectedTechnique.description}
-				</p>
-				<div className='mt-4 flex flex-wrap gap-2'>
-					{selectedTechnique.benefits.map((b, idx) => (
-						<span
-							key={idx}
-							className='inline-flex items-center gap-1.5 border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-white/80'
-						>
-							<span
-								className='h-1.5 w-1.5 rounded-full'
-								style={{ backgroundColor: selectedTechnique.accentColor }}
+					{/* Active Technique Information */}
+					<div className='border border-white/[0.08] bg-[#141516] p-5'>
+						<div className='flex items-center gap-2.5'>
+							<SelectedIcon
+								size={20}
+								style={{ color: selectedTechnique.accentColor }}
 							/>
-							{b}
-						</span>
-					))}
-				</div>
-			</div>
+							<h3 className='text-base font-semibold text-white'>
+								{selectedTechnique.name}
+							</h3>
+						</div>
+						<p className='mt-2 text-xs leading-relaxed text-white/70'>
+							{selectedTechnique.description}
+						</p>
 
-			{/* History & Logged Sessions */}
-			<div className='mt-8 border border-white/[0.08] bg-[#141516] p-5'>
-				<div className='flex items-center justify-between border-b border-white/[0.07] pb-3'>
-					<div className='flex items-center gap-2'>
-						<History size={16} className='text-white/50' />
-						<h3 className='text-sm font-semibold text-white'>
-							Записанные сеансы
-						</h3>
-					</div>
-					<div className='text-xs text-white/50'>
-						Сегодня: <strong className='text-emerald-400'>{todayTotalMinutes} мин</strong> ({todaySessions.length} сеанс.)
+						<div className='mt-4 flex flex-wrap gap-2'>
+							{selectedTechnique.benefits.map((b, idx) => (
+								<span
+									key={idx}
+									className='inline-flex items-center gap-1.5 border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-white/80'
+								>
+									<span
+										className='h-1.5 w-1.5 rounded-full'
+										style={{ backgroundColor: selectedTechnique.accentColor }}
+									/>
+									{b}
+								</span>
+							))}
+						</div>
 					</div>
 				</div>
 
-				{loadingHistory ? (
-					<p className='py-6 text-center text-xs text-white/40'>
-						Загружаем историю сессий…
-					</p>
-				) : sessions.length === 0 ? (
-					<p className='py-6 text-center text-xs text-white/40'>
-						Здесь будут отображаться ваши завершённые сеансы дыхания. Начните первую практику выше!
-					</p>
-				) : (
-					<div className='mt-3 divide-y divide-white/[0.05]'>
-						{sessions.slice(0, 10).map(s => (
-							<div
-								key={s.id}
-								className='flex items-center justify-between py-2.5 text-xs'
-							>
-								<div>
-									<span className='font-medium text-white/90'>
-										{s.technique_name}
-									</span>
-									<span className='ml-2 text-[11px] text-white/40'>
-										{new Date(s.created_at).toLocaleDateString('ru-RU', {
-											day: 'numeric',
-											month: 'short',
-											hour: '2-digit',
-											minute: '2-digit'
-										})}
-									</span>
-								</div>
-								<div className='flex items-center gap-3 text-white/60 font-mono'>
-									<span>{Math.round(s.duration_seconds / 60)} мин ({s.duration_seconds} сек)</span>
-									<span className='border border-white/10 px-1.5 py-0.5 text-[10px] text-white/50'>
-										{s.cycles_count} цикло{s.cycles_count === 1 ? 'в' : s.cycles_count < 5 ? 'в' : 'в'}
-									</span>
-								</div>
+				{/* SIDEBAR / RIGHT COLUMN: Techniques list & Recorded history (lg:col-span-5 xl:col-span-4) */}
+				<div className='flex flex-col gap-6 lg:col-span-5 xl:col-span-4'>
+					{/* Technique Selection List (Desktop View) */}
+					<div className='border border-white/[0.08] bg-[#141516] p-4 hidden lg:block'>
+						<label className='text-xs font-semibold uppercase tracking-wider text-white/40'>
+							Техники дыхания
+						</label>
+						<div className='mt-3 flex flex-col gap-2'>
+							{BREATHING_TECHNIQUES.map(tech => {
+								const isSelected = tech.id === selectedTechnique.id
+								const TechIcon = tech.icon
+								return (
+									<button
+										key={tech.id}
+										type='button'
+										onClick={() => selectTechnique(tech)}
+										className={`flex items-start gap-3 border p-3 text-left transition-all ${
+											isSelected
+												? 'border-primary/60 bg-[#1a1c1e] shadow-md shadow-black/30'
+												: 'border-white/[0.07] bg-[#111213] hover:border-white/20 hover:bg-[#161718]'
+										}`}
+									>
+										<div
+											className='mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded border'
+											style={{
+												borderColor: isSelected ? `${tech.accentColor}60` : 'rgba(255,255,255,0.08)',
+												backgroundColor: isSelected ? `${tech.accentColor}18` : 'rgba(255,255,255,0.02)'
+											}}
+										>
+											<TechIcon
+												size={15}
+												style={{
+													color: isSelected ? tech.accentColor : 'rgba(255,255,255,0.6)'
+												}}
+											/>
+										</div>
+
+										<div className='min-w-0 flex-1'>
+											<div className='flex items-center justify-between gap-1'>
+												<span
+													className='text-xs font-semibold truncate'
+													style={{
+														color: isSelected ? tech.accentColor : '#ffffff'
+													}}
+												>
+													{tech.name}
+												</span>
+												{isSelected && (
+													<span
+														className='block h-1.5 w-1.5 shrink-0 rounded-full'
+														style={{ backgroundColor: tech.accentColor }}
+													/>
+												)}
+											</div>
+											<p className='mt-0.5 line-clamp-1 text-[11px] text-white/50'>
+												{tech.tagline}
+											</p>
+											<span className='mt-1 inline-block text-[10px] text-white/35'>
+												Цикл: {tech.totalCycleSeconds} сек
+											</span>
+										</div>
+									</button>
+								)
+							})}
+						</div>
+					</div>
+
+					{/* History & Recorded Sessions Card */}
+					<div className='border border-white/[0.08] bg-[#141516] p-4 sm:p-5'>
+						<div className='flex items-center justify-between border-b border-white/[0.07] pb-3'>
+							<div className='flex items-center gap-2'>
+								<History size={16} className='text-white/50' />
+								<h3 className='text-sm font-semibold text-white'>
+									История сеансов
+								</h3>
 							</div>
-						))}
+							<div className='text-xs text-white/50'>
+								Всего: <strong className='text-white'>{sessions.length}</strong>
+							</div>
+						</div>
+
+						{loadingHistory ? (
+							<p className='py-6 text-center text-xs text-white/40'>
+								Загружаем историю…
+							</p>
+						) : sessions.length === 0 ? (
+							<p className='py-6 text-center text-xs text-white/40 leading-relaxed'>
+								Сеансы автоматически сохраняются после завершения (от 15 секунд или 1 цикла).
+							</p>
+						) : (
+							<div className='mt-2 divide-y divide-white/[0.05] max-h-[380px] overflow-y-auto pr-1'>
+								{sessions.map(s => (
+									<div
+										key={s.id}
+										className='group flex items-center justify-between py-2.5 text-xs transition-colors hover:bg-white/[0.02]'
+									>
+										<div className='min-w-0 flex-1 pr-2'>
+											<p className='truncate font-medium text-white/90'>
+												{s.technique_name}
+											</p>
+											<p className='text-[10px] text-white/40'>
+												{new Date(s.created_at).toLocaleDateString('ru-RU', {
+													day: 'numeric',
+													month: 'short',
+													hour: '2-digit',
+													minute: '2-digit'
+												})}
+											</p>
+										</div>
+
+										<div className='flex items-center gap-2 shrink-0'>
+											<div className='text-right font-mono text-[11px] text-white/60'>
+												<div>{Math.round(s.duration_seconds / 60) || 1} мин</div>
+												<div className='text-[10px] text-white/40'>{s.cycles_count} ц.</div>
+											</div>
+
+											<button
+												type='button'
+												onClick={() => handleDeleteSession(s.id)}
+												title='Удалить запись'
+												className='ml-1 grid h-7 w-7 place-items-center rounded text-white/30 hover:bg-red-500/10 hover:text-red-400 transition-colors'
+											>
+												<Trash2 size={13} />
+											</button>
+										</div>
+									</div>
+								))}
+							</div>
+						)}
 					</div>
-				)}
+				</div>
 			</div>
 		</div>
 	)

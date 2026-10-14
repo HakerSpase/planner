@@ -1,64 +1,53 @@
-const Checkbox = (props: {
-	id?: string
+import cn from 'clsx'
+import { Check } from 'lucide-react'
+import type { InputHTMLAttributes } from 'react'
+
+interface CheckboxProps
+	extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
 	extra?: string
-	color?:
-		| 'red'
-		| 'blue'
-		| 'green'
-		| 'yellow'
-		| 'orange'
-		| 'teal'
-		| 'navy'
-		| 'lime'
-		| 'cyan'
-		| 'pink'
-		| 'purple'
-		| 'amber'
-		| 'indigo'
-		| 'gray'
-	[x: string]: any
-}) => {
-	const { extra, color, id, ...rest } = props
+	color?: string
+}
+
+const Checkbox = ({
+	id,
+	checked,
+	onChange,
+	disabled,
+	extra,
+	className,
+	...rest
+}: CheckboxProps) => {
 	return (
-		<input
-			id={id}
-			type='checkbox'
-			className={`defaultCheckbox relative inline-flex h-[20px] min-h-[20px] w-[20px] min-w-[20px] shrink-0 align-middle appearance-none items-center
-      justify-center border border-gray-300 text-white/0 outline-none transition ease-linear
-      checked:border-none checked:text-white hover:cursor-pointer dark:border-white/10 ${
-				color === 'red'
-					? 'checked:border-none checked:bg-red-500 dark:checked:bg-red-400'
-					: color === 'blue'
-						? 'checked:border-none checked:bg-blue-500 dark:checked:bg-blue-400'
-						: color === 'green'
-							? 'checked:border-none checked:bg-green-500 dark:checked:bg-green-400'
-							: color === 'yellow'
-								? 'checked:border-none checked:bg-yellow-500 dark:checked:bg-yellow-400'
-								: color === 'orange'
-									? 'checked:border-none checked:bg-orange-500 dark:checked:bg-orange-400'
-									: color === 'teal'
-										? 'checked:border-none checked:bg-teal-500 dark:checked:bg-teal-400'
-										: color === 'navy'
-											? 'checked:border-none checked:bg-navy-500 dark:checked:bg-navy-400'
-											: color === 'lime'
-												? 'checked:border-none checked:bg-lime-500 dark:checked:bg-lime-400'
-												: color === 'cyan'
-													? 'checked:border-none checked:bg-cyan-500 dark:checked:bg-cyan-400'
-													: color === 'pink'
-														? 'checked:border-none checked:bg-pink-500 dark:checked:bg-pink-400'
-														: color === 'purple'
-															? 'checked:border-none checked:bg-purple-500 dark:checked:bg-purple-400'
-															: color === 'amber'
-																? 'checked:border-none checked:bg-amber-500 dark:checked:bg-amber-400'
-																: color === 'indigo'
-																	? 'checked:border-none checked:bg-indigo-500 dark:checked:bg-indigo-400'
-																	: color === 'gray'
-																		? 'checked:border-none checked:bg-gray-500 dark:checked:bg-gray-400'
-																		: 'checked:bg-brand-400 dark:checked:bg-brand-400'
-			} ${extra}`}
-			name='weekly'
-			{...rest}
-		/>
+		<label
+			htmlFor={id}
+			className={cn(
+				'relative inline-flex h-5 w-5 shrink-0 cursor-pointer select-none items-center justify-center transition-colors',
+				'border',
+				checked
+					? 'border-primary bg-primary text-white shadow-sm'
+					: 'border-white/25 bg-transparent hover:border-white/45',
+				disabled && 'cursor-not-allowed opacity-50',
+				extra,
+				className
+			)}
+		>
+			<input
+				id={id}
+				type='checkbox'
+				checked={Boolean(checked)}
+				onChange={onChange}
+				disabled={disabled}
+				className='sr-only'
+				{...rest}
+			/>
+			{checked && (
+				<Check
+					size={13}
+					strokeWidth={3}
+					className='pointer-events-none text-white'
+				/>
+			)}
+		</label>
 	)
 }
 

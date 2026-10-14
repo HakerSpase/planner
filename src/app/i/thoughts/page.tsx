@@ -12,12 +12,11 @@ import {
 	startOfWeek
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { BookOpen, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useProfile } from '@/hooks/useProfile'
-
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
 const iso = (date: Date) => format(date, 'yyyy-MM-dd')
@@ -39,49 +38,65 @@ export default function ThoughtsPage() {
 	const [draft, setDraft] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [saving, setSaving] = useState(false)
+	const hasUserSelectedRef = useRef(false)
+
 	const monthStart = startOfMonth(month)
 	const todayKey = dateKeyInTimeZone(new Date(), timeZone)
+	const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+	const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
+
+	const startKey = iso(gridStart)
+	const endKey = iso(gridEnd)
+
 	const days = useMemo(
-		() =>
-			eachDayOfInterval({
-				start: startOfWeek(monthStart, { weekStartsOn: 1 }),
-				end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
-			}),
-		[monthStart.getTime()]
+		() => eachDayOfInterval({ start: gridStart, end: gridEnd }),
+		[startKey, endKey]
 	)
 
-	useEffect(() => {
-		let active = true
+	const loadEntries = async (start: string, end: string) => {
 		setLoading(true)
-		fetch(
-			`/api/user/thoughts?start=${iso(startOfMonth(month))}&end=${iso(endOfMonth(month))}`,
-			{ cache: 'no-store' }
-		)
-			.then(async response => {
-				if (!response.ok) throw new Error('Не удалось загрузить записи')
-				return response.json()
-			})
-			.then((rows: Array<{ thought_date: string; content: string }>) => {
-				if (active)
-					setEntries(
-						Object.fromEntries(rows.map(row => [row.thought_date, row.content]))
-					)
-			})
-			.catch(() => toast.error('Не удалось загрузить мысли за этот месяц'))
-			.finally(() => active && setLoading(false))
-		return () => {
-			active = false
+		try {
+			const res = await fetch(
+				`/api/user/thoughts?start=${start}&end=${end}`,
+				{
+					cache: 'no-store',
+					credentials: 'include'
+				}
+			)
+			if (!res.ok) throw new Error('Не удалось загрузить записи')
+			const rows: Array<{ thought_date: string; content: string }> =
+				await res.json()
+			const map: Record<string, string> = {}
+			for (const row of rows || []) {
+				if (row.thought_date) {
+					const dateStr = row.thought_date.slice(0, 10)
+					map[dateStr] = row.content || ''
+				}
+			}
+			setEntries(map)
+		} catch (err) {
+			console.error(err)
+			toast.error('Не удалось загрузить мысли за этот месяц')
+		} finally {
+			setLoading(false)
 		}
-	}, [month.getFullYear(), month.getMonth()])
+	}
 
 	useEffect(() => {
-		const today = currentDate()
-		setMonth(today)
-		setSelected(today)
+		loadEntries(startKey, endKey)
+	}, [startKey, endKey])
+
+	useEffect(() => {
+		if (!hasUserSelectedRef.current) {
+			const today = currentDate()
+			setMonth(today)
+			setSelected(today)
+		}
 	}, [timeZone])
 
 	useEffect(() => {
-		setDraft(entries[iso(selected)] || '')
+		const key = iso(selected)
+		setDraft(entries[key] ?? '')
 	}, [selected, entries])
 
 	const save = async () => {
@@ -90,16 +105,21 @@ export default function ThoughtsPage() {
 		setEntries(current => ({ ...current, [dateKey]: draft }))
 		setSaving(true)
 		try {
-			const response = await fetch('/api/user/thoughts', {
+			const res = await fetch('/api/user/thoughts', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ date: iso(selected), content: draft })
+				credentials: 'include',
+				body: JSON.stringify({
+					date: dateKey,
+					content: draft
+				})
 			})
-			if (!response.ok) throw new Error()
-			const saved = await response.json()
+			if (!res.ok) throw new Error()
+			const saved = await res.json()
+			const savedDate = (saved.thought_date || dateKey).slice(0, 10)
 			setEntries(current => ({
 				...current,
-				[saved.thought_date]: saved.content
+				[savedDate]: saved.content
 			}))
 			toast.success('Запись сохранена')
 		} catch {
@@ -114,11 +134,16 @@ export default function ThoughtsPage() {
 			setSaving(false)
 		}
 	}
+
 	const changeMonth = (direction: -1 | 1) => {
 		const next = addMonths(month, direction)
 		setMonth(next)
 		setSelected(startOfMonth(next))
+		hasUserSelectedRef.current = true
 	}
+
+	const selectedKey = iso(selected)
+	const selectedHasEntry = Boolean(entries[selectedKey]?.trim())
 
 	return (
 		<div className='max-w-5xl pb-8'>
@@ -136,7 +161,7 @@ export default function ThoughtsPage() {
 				<section className='border border-white/10 bg-[#141516] p-4 sm:p-5'>
 					<div className='mb-5 flex items-center justify-between'>
 						<button
-							className='p-2 text-white/60 hover:text-white'
+							className='p-2 text-white/60 hover:text-white transition-colors'
 							aria-label='Предыдущий месяц'
 							onClick={() => changeMonth(-1)}
 						>
@@ -146,7 +171,7 @@ export default function ThoughtsPage() {
 							{format(month, 'LLLL yyyy', { locale: ru })}
 						</h2>
 						<button
-							className='p-2 text-white/60 hover:text-white'
+							className='p-2 text-white/60 hover:text-white transition-colors'
 							aria-label='Следующий месяц'
 							onClick={() => changeMonth(1)}
 						>
@@ -172,10 +197,13 @@ export default function ThoughtsPage() {
 							return (
 								<button
 									key={key}
-									onClick={() => setSelected(day)}
+									onClick={() => {
+										hasUserSelectedRef.current = true
+										setSelected(day)
+									}}
 									aria-pressed={isSelected}
 									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', запись сохранена' : ''}`}
-									className={`relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isCurrentMonth ? 'text-white/20' : 'text-white/80'} ${isSelected ? 'bg-emerald-500/15 text-emerald-300 outline outline-1 -outline-offset-1 outline-emerald-400/60 font-medium' : ''} ${isToday ? 'font-semibold text-emerald-300' : ''}`}
+									className={`group relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isCurrentMonth ? 'text-white/20' : 'text-white/80'} ${isSelected ? 'bg-primary/20 text-white outline outline-1 -outline-offset-1 outline-primary font-medium shadow-sm' : ''} ${isToday && !isSelected ? 'font-semibold text-emerald-300' : ''}`}
 								>
 									<span className='leading-none'>{format(day, 'd')}</span>
 									{(isToday || hasEntry) && (
@@ -186,13 +214,13 @@ export default function ThoughtsPage() {
 											{isToday && (
 												<span
 													title='Сегодня'
-													className='block h-[6px] w-[6px] shrink-0 rounded-full bg-emerald-400'
+													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 shadow-sm'
 												/>
 											)}
 											{hasEntry && (
 												<span
-													title='Запись сохранена'
-													className='block h-[6px] w-[6px] shrink-0 rounded-full bg-amber-400'
+													title='Есть мысль'
+													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-sm'
 												/>
 											)}
 										</span>
@@ -205,34 +233,50 @@ export default function ThoughtsPage() {
 						<p className='mt-3 text-xs text-white/40'>Загружаем записи…</p>
 					)}
 				</section>
-				<section className='flex min-h-[420px] flex-col bg-[#141516] p-4 sm:p-5'>
-					<div className='mb-4 border-b border-white/10 pb-3'>
-						<label
-							htmlFor='daily-thought'
-							className='text-sm font-medium capitalize text-white/85'
-						>
-							{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
-						</label>
-						<p className='mt-1 text-xs text-white/40'>
-							Запись сохраняется отдельно для каждого дня.
-						</p>
+
+				<section className='flex min-h-[420px] flex-col bg-[#141516] p-4 sm:p-5 border border-white/10'>
+					<div className='mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3'>
+						<div>
+							<label
+								htmlFor='daily-thought'
+								className='text-sm font-medium capitalize text-white/90'
+							>
+								{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
+							</label>
+							<p className='mt-0.5 text-xs text-white/40'>
+								Запись сохраняется отдельно для каждого дня
+							</p>
+						</div>
+
+						{selectedHasEntry ? (
+							<span className='inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-0.5 text-xs font-medium text-amber-300'>
+								<span className='h-1.5 w-1.5 rounded-full bg-amber-400' />
+								Запись сохранена
+							</span>
+						) : (
+							<span className='text-xs text-white/35'>
+								Нет записи
+							</span>
+						)}
 					</div>
+
 					<textarea
 						id='daily-thought'
 						value={draft}
 						onChange={event => setDraft(event.target.value)}
 						maxLength={70000}
 						placeholder='Запишите, как прошёл день, что запомнилось или о чём хочется подумать…'
-						className='min-h-[320px] flex-1 resize-y border-0 bg-transparent p-0 text-sm leading-7 text-white outline-none placeholder:text-white/30 focus:ring-0'
+						className='min-h-[300px] flex-1 resize-y border-0 bg-transparent p-0 text-sm leading-7 text-white outline-none placeholder:text-white/30 focus:ring-0'
 					/>
-					<div className='mt-3 flex flex-wrap items-center justify-between gap-3'>
+
+					<div className='mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-3'>
 						<span className='text-xs text-white/40'>
 							{draft.length.toLocaleString('ru-RU')} из 70 000 знаков
 						</span>
 						<button
 							onClick={save}
 							disabled={saving || (entries[iso(selected)] || '') === draft}
-							className='border border-primary/50 px-4 py-2.5 text-sm text-white transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40'
+							className='border border-primary/50 bg-primary/10 px-4 py-2 text-sm text-white transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-40'
 						>
 							{saving ? 'Сохраняем…' : 'Сохранить запись'}
 						</button>

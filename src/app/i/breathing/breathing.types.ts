@@ -1,3 +1,12 @@
+import {
+	Activity,
+	Flame,
+	Moon,
+	Square,
+	Zap,
+	type LucideIcon
+} from 'lucide-react'
+
 export type BreathingPhaseType = 'inhale' | 'holdIn' | 'exhale' | 'holdOut'
 
 export interface IBreathingPhase {
@@ -11,8 +20,10 @@ export interface IBreathingPhase {
 export interface IBreathingTechnique {
 	id: string
 	name: string
+	shortName: string
 	tagline: string
 	description: string
+	icon: LucideIcon
 	benefits: string[]
 	accentColor: string
 	bgGlow: string
@@ -24,12 +35,14 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 	{
 		id: 'box',
 		name: 'Квадратное дыхание (4-4-4-4)',
+		shortName: 'Квадрат 4-4',
 		tagline: 'Фокус, самообладание и ясность',
 		description:
 			'Техника спецназа Navy SEALs для мгновенного снижения уровня кортизола и возврата полного контроля в стрессовых ситуациях.',
+		icon: Square,
 		benefits: ['Снижает тревожность', 'Улучшает концентрацию', 'Стабилизирует пульс'],
 		accentColor: '#10b981',
-		bgGlow: 'rgba(16, 185, 129, 0.25)',
+		bgGlow: 'rgba(16, 185, 129, 0.3)',
 		totalCycleSeconds: 16,
 		phases: [
 			{
@@ -65,12 +78,14 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 	{
 		id: '4-7-8',
 		name: 'Техника 4-7-8',
+		shortName: 'Сон 4-7-8',
 		tagline: 'Глубокое расслабление и крепкий сон',
 		description:
 			'Всемирно известный метод д-ра Эндрю Вейла. Действует как естественный природный транквилизатор для нервной системы.',
+		icon: Moon,
 		benefits: ['Помогает быстро уснуть', 'Снимает панику', 'Активирует парасимпатику'],
 		accentColor: '#818cf8',
-		bgGlow: 'rgba(129, 140, 248, 0.25)',
+		bgGlow: 'rgba(129, 140, 248, 0.3)',
 		totalCycleSeconds: 19,
 		phases: [
 			{
@@ -99,12 +114,14 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 	{
 		id: 'coherence',
 		name: 'Когерентное дыхание (5.5 - 5.5)',
+		shortName: 'Баланс 5.5с',
 		tagline: 'Синхронизация сердца и мозга',
 		description:
 			'Дыхание с частотой ~5.5 циклов в минуту. Максимизирует вариабельность сердечного ритма (HRV) и вводит организм в состояние гармонии.',
+		icon: Activity,
 		benefits: ['Гармонизирует ритм сердца', 'Балансирует давление', 'Убирает эмоциональный шум'],
 		accentColor: '#38bdf8',
-		bgGlow: 'rgba(56, 189, 248, 0.25)',
+		bgGlow: 'rgba(56, 189, 248, 0.3)',
 		totalCycleSeconds: 11,
 		phases: [
 			{
@@ -126,12 +143,14 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 	{
 		id: 'sigh',
 		name: 'Физиологический вздох',
+		shortName: 'Антистресс вздох',
 		tagline: 'Мгновенное снятие тревоги (Huberman Lab)',
 		description:
 			'Исследован Стэнфордским университетом. Два быстрых вдоха через нос расправляют альвеолы легких, а длинный выдох моментально снижает пульс.',
+		icon: Zap,
 		benefits: ['Мгновенный сброс стресса за 1-2 минуты', 'Перезапуск альвеол легких', 'Снижает уровень возбуждения'],
 		accentColor: '#f59e0b',
-		bgGlow: 'rgba(245, 158, 11, 0.25)',
+		bgGlow: 'rgba(245, 158, 11, 0.3)',
 		totalCycleSeconds: 12,
 		phases: [
 			{
@@ -160,12 +179,14 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 	{
 		id: 'awake',
 		name: 'Энергия и бодрость (4-2-4)',
+		shortName: 'Энергия 4-2',
 		tagline: 'Легкий подъем тонуса без кофеина',
 		description:
 			'Сбалансированный ритмичный паттерн насыщает кровь кислородом, прогоняет дневную сонливость и активизирует рабочее состояние.',
+		icon: Flame,
 		benefits: ['Снимает сонливость', 'Освежает восприятие', 'Повышает кислородный обмен'],
 		accentColor: '#fb7185',
-		bgGlow: 'rgba(251, 113, 133, 0.25)',
+		bgGlow: 'rgba(251, 113, 133, 0.3)',
 		totalCycleSeconds: 12,
 		phases: [
 			{
