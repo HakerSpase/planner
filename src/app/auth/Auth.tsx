@@ -34,7 +34,6 @@ interface IPreviewTask {
 	date: string
 }
 
-const PRIORITY_CYCLE: TPriority[] = ['low', 'medium', 'high']
 const PRIORITY_LABEL: Record<TPriority, string> = {
 	high: 'Высокий',
 	medium: 'Средний',
@@ -94,17 +93,6 @@ export function Auth() {
 	const toggleTask = (id: string) => {
 		setTasks(prev =>
 			prev.map(t => (t.id === id ? { ...t, isCompleted: !t.isCompleted } : t))
-		)
-	}
-
-	const cyclePriority = (e: React.MouseEvent, id: string) => {
-		e.stopPropagation()
-		setTasks(prev =>
-			prev.map(t => {
-				if (t.id !== id) return t
-				const idx = PRIORITY_CYCLE.indexOf(t.priority)
-				return { ...t, priority: PRIORITY_CYCLE[(idx + 1) % 3] }
-			})
 		)
 	}
 
@@ -196,8 +184,8 @@ export function Auth() {
 			)}
 			style={{
 				gridTemplateColumns: compact
-					? 'minmax(0, 1fr) 4.8rem 6.2rem'
-					: 'minmax(0, 1fr) 5.8rem 7.2rem 2.6rem'
+					? 'minmax(0, 1fr) 5rem 6.8rem'
+					: 'minmax(0, 1fr) 5.8rem 7.5rem 2.6rem'
 			}}
 		>
 			{/* Задача */}
@@ -239,22 +227,19 @@ export function Auth() {
 			{/* Дата */}
 			<div className={cn(
 				'border-r border-white/[0.08] py-3 min-w-0 flex items-center justify-start whitespace-nowrap text-[13px] text-white/60 shrink-0',
-				compact ? 'px-2.5' : 'px-3 sm:px-4'
+				compact ? 'px-3' : 'px-4'
 			)}>
 				<span>{task.date}</span>
 			</div>
 
-			{/* Приоритет */}
+			{/* Приоритет (все бейджи строго одной ширины, не касаются границ колонок, менять нельзя) */}
 			<div className={cn(
-				'py-3 min-w-0 flex items-center justify-start shrink-0',
-				compact ? 'px-2' : 'px-3 sm:px-4',
+				'py-3 min-w-0 flex items-center justify-center shrink-0 px-2 sm:px-3',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
-				<button
-					type='button'
-					onClick={e => cyclePriority(e, task.id)}
+				<span
 					className={cn(
-						'px-2 py-[3px] text-xs font-semibold text-white inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 rounded-sm',
+						'w-[82px] py-[3px] px-2 text-xs font-semibold text-white inline-flex items-center justify-between whitespace-nowrap shrink-0 rounded-sm select-none',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
@@ -262,7 +247,7 @@ export function Auth() {
 				>
 					<span>{PRIORITY_LABEL[task.priority]}</span>
 					<ChevronDown size={12} className='opacity-50 shrink-0' />
-				</button>
+				</span>
 			</div>
 
 			{/* Удалить */}
