@@ -2,16 +2,17 @@
 	@apply w-full;
 
 	.header {
-		@apply grid grid-cols-[1.4fr_.4fr_.4fr_.1fr];
+		display: grid;
+		grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.4fr) minmax(0, 0.4fr) 3.5rem;
 	}
 
 	.header,
 	.parentsWrapper .row,
 	.parentsWrapper .colHeading {
-		@apply border-t border-border text-left w-auto whitespace-nowrap;
+		@apply border-t border-border text-left w-auto;
 
 		> div {
-			@apply border-r border-border px-2 py-2 sm:px-4;
+			@apply border-r border-border px-2 py-2 sm:px-4 min-w-0;
 
 			&:last-child {
 				@apply border-0;
@@ -19,13 +20,17 @@
 		}
 	}
 
+	.header > div {
+		@apply whitespace-nowrap;
+	}
+
 	.parentsWrapper {
 		.colHeading {
-			@apply hover:bg-transparent;
+			@apply hover:bg-transparent whitespace-nowrap;
 			background-color: #0e0f0f;
 
 			> div {
-				@apply font-semibold text-xl py-3;
+				@apply font-semibold text-xl py-3 border-0;
 			}
 		}
 
@@ -34,7 +39,18 @@
 		}
 
 		.row {
-			@apply font-normal grid grid-cols-[1.4fr_.4fr_.4fr_.1fr] relative;
+			@apply font-normal relative;
+			display: grid;
+			grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.4fr) minmax(0, 0.4fr) 3.5rem;
+
+			> div:first-child {
+				@apply min-w-0 overflow-hidden;
+				white-space: normal;
+			}
+
+			> div:not(:first-child) {
+				@apply whitespace-nowrap;
+			}
 
 			&.completed {
 				> div:first-child input {

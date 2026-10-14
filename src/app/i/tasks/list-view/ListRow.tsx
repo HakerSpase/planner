@@ -49,8 +49,8 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 				'animation-opacity'
 			)}
 		>
-			<div>
-				<div className='flex w-full flex-col gap-2'>
+			<div className='min-w-0 overflow-hidden'>
+				<div className='flex w-full min-w-0 flex-col gap-1'>
 					<span className='inline-flex w-full min-w-0 items-center gap-2'>
 						<button
 							aria-label='Перетащить задачу'

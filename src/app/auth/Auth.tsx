@@ -2,11 +2,14 @@
 
 import cn from 'clsx'
 import {
-	Calendar,
 	Check,
+	ChevronDown,
+	FileText,
 	GanttChartSquare,
 	GripVertical,
-	Loader2
+	Loader2,
+	Trash,
+	X
 } from 'lucide-react'
 import Script from 'next/script'
 import { useCallback, useRef, useState } from 'react'
@@ -27,48 +30,56 @@ interface IPreviewTask {
 	note?: string
 	priority: 'high' | 'medium' | 'low'
 	isCompleted: boolean
-	column: 'today' | 'tomorrow'
-	time: string
+	date: string
 }
 
 const INITIAL_TASKS: IPreviewTask[] = [
 	{
 		id: 'task-1',
-		name: 'Запустить релиз Planner 2.0',
-		note: 'Синхронизация с базой Supabase и проверка RLS политик',
-		priority: 'high',
-		isCompleted: true,
-		column: 'today',
-		time: 'Сегодня'
+		name: 'Исправь баги в этом планере',
+		priority: 'medium',
+		isCompleted: false,
+		date: '18 октября 2026 г.'
 	},
 	{
 		id: 'task-2',
-		name: 'Фокус-сессия: разработка проекта',
-		note: '25 минут глубокой концентрации без отвлечений',
-		priority: 'high',
+		name: 'Сделать зарядку + дыхательную практику + поесть',
+		priority: 'medium',
 		isCompleted: false,
-		column: 'today',
-		time: 'Сегодня'
+		date: '13 октября 2026 г.'
 	},
 	{
 		id: 'task-3',
-		name: 'Обзор спринта и синхронизация',
+		name: 'Записаться выложить видео в тик ток/Ютуб',
 		priority: 'medium',
 		isCompleted: false,
-		column: 'today',
-		time: '18:00'
+		date: '13 октября 2026 г.'
 	},
 	{
 		id: 'task-4',
-		name: 'Планирование архитектуры клиента',
-		priority: 'medium',
+		name: 'Как приду пройти урок по проф мату две штуки',
+		priority: 'high',
 		isCompleted: false,
-		column: 'tomorrow',
-		time: 'Завтра'
+		date: '13 октября 2026 г.'
+	},
+	{
+		id: 'task-5',
+		name: 'ОЛИМПИАДЫ',
+		note: 'Посмотреть олимпиады в которых надо принять участие и пройти то что необходимо и состоит список и дедлайны для них',
+		priority: 'high',
+		isCompleted: false,
+		date: '13 октября 2026 г.'
+	},
+	{
+		id: 'task-6',
+		name: 'Позаниматься английским языком СБ/Quizlet',
+		priority: 'high',
+		isCompleted: false,
+		date: '13 октября 2026 г.'
 	}
 ]
 
-// Клеточные элементы для анимации переливания в фоне
+// Клеточные элементы для анимации переливания в фоне справа
 const SHIMMER_CELLS = [
 	{ x: 1, y: 1, delay: '0s', duration: '4s', grad: 'url(#shimmer-violet)' },
 	{ x: 3, y: 3, delay: '1.2s', duration: '5s', grad: 'url(#shimmer-cyan)' },
@@ -95,7 +106,7 @@ export function Auth() {
 	const turnstileContainerRef = useRef<HTMLDivElement>(null)
 	const turnstileWidgetIdRef = useRef<string>()
 
-	// Интерактивное состояние задач
+	// Интерактивное состояние задач в превью
 	const [tasks, setTasks] = useState<IPreviewTask[]>(INITIAL_TASKS)
 
 	const toggleTask = (id: string) => {
@@ -105,9 +116,6 @@ export function Auth() {
 			)
 		)
 	}
-
-	const todayTasks = tasks.filter(t => t.column === 'today')
-	const tomorrowTasks = tasks.filter(t => t.column === 'tomorrow')
 
 	const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
@@ -201,14 +209,14 @@ export function Auth() {
 
 			<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30 select-none'>
 				{/* ========================================================================= */}
-				{/* ЛЕВАЯ ЧАСТЬ: ТОЛЬКО ВИЗУАЛИЗАЦИЯ И СПИСОК ЗАДАЧ                          */}
+				{/* ЛЕВАЯ ЧАСТЬ: ВИЗУАЛИЗАЦИЯ 1-В-1 С РЕАЛЬНЫМ ПРИЛОЖЕНИЕМ                    */}
 				{/* ========================================================================= */}
-				<div className='hidden lg:flex flex-col justify-between p-12 lg:p-16 bg-[#141515] border-r border-white/[0.08] relative overflow-hidden'>
-					{/* Мягкий рассеянный свет */}
-					<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-[#7551FF]/10 blur-[130px] pointer-events-none rounded-full' />
+				<div className='hidden lg:flex flex-col justify-between p-8 xl:p-12 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
+					{/* Мягкий рассеянный фоновый свет */}
+					<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-[#7551FF]/8 blur-[130px] pointer-events-none rounded-full' />
 					<div className='absolute bottom-0 left-0 w-[350px] h-[350px] bg-white/[0.02] blur-[100px] pointer-events-none rounded-full' />
 
-					{/* Логотип: чистый значок + Planner beta без лишних рамок */}
+					{/* Логотип: чистый значок + Planner beta */}
 					<div className='relative z-10 flex items-center gap-3'>
 						<GanttChartSquare color='#7551FF' size={34} />
 						<div className='text-2xl font-bold tracking-tight relative'>
@@ -219,10 +227,10 @@ export function Auth() {
 						</div>
 					</div>
 
-					{/* Центральный блок: Список задач */}
-					<div className='relative z-10 max-w-lg my-auto space-y-6 w-full'>
-						<div>
-							<h2 className='text-2xl font-semibold text-white tracking-tight mb-2'>
+					{/* Центральный блок: Реальная таблица задач как в приложении */}
+					<div className='relative z-10 my-auto py-6 max-w-2xl w-full'>
+						<div className='mb-5'>
+							<h2 className='text-2xl font-semibold text-white tracking-tight mb-1.5'>
 								Пространство фокуса и продуктивности
 							</h2>
 							<p className='text-sm text-white/50 leading-relaxed'>
@@ -230,155 +238,102 @@ export function Auth() {
 							</p>
 						</div>
 
-						{/* Визуализация списка задач */}
-						<div className='rounded-xl border border-white/[0.08] bg-[#0E0F0F] p-5 shadow-2xl space-y-4'>
-							{/* Заголовок колонок */}
-							<div className='grid grid-cols-[1.5fr_0.6fr_0.6fr] text-xs font-mono text-white/40 pb-2 border-b border-white/[0.06] px-2'>
-								<div>НАЗВАНИЕ ЗАДАЧИ</div>
-								<div>СРОК</div>
-								<div>ПРИОРИТЕТ</div>
-							</div>
+						{/* Заголовок группы: На этой неделе */}
+						<div className='text-xl font-semibold text-white py-2.5'>
+							На этой неделе
+						</div>
 
-							{/* Секция: Сегодня */}
-							<div className='space-y-1.5'>
-								<div className='text-xs font-semibold text-white/70 uppercase tracking-wider px-2 py-1'>
-									Сегодня
-								</div>
-
-								{todayTasks.map(task => (
-									<div
-										key={task.id}
-										onClick={() => toggleTask(task.id)}
-										className={cn(
-											'grid grid-cols-[1.5fr_0.6fr_0.6fr] items-center p-2.5 rounded-lg border border-transparent transition-all duration-150 cursor-pointer group',
-											task.isCompleted
-												? 'bg-white/[0.015] opacity-50'
-												: 'bg-[#141515] hover:bg-[#1a1c1d] hover:border-white/[0.08]'
-										)}
-									>
-										<div className='flex items-center gap-3 min-w-0 pr-2'>
-											<GripVertical
-												size={15}
-												className='text-white/20 group-hover:text-white/40 transition-colors shrink-0 -ml-1'
-											/>
+						{/* Реальная таблица (с вертикальными границами между колонками, как в приложении) */}
+						<div className='w-full border-b border-white/[0.08] bg-[#0E0F0F]'>
+							{tasks.map(task => (
+								<div
+									key={task.id}
+									onClick={() => toggleTask(task.id)}
+									className={cn(
+										'grid border-t border-white/[0.08] hover:bg-[#161818] transition-colors duration-150 cursor-pointer',
+										task.isCompleted && 'opacity-50'
+									)}
+									style={{
+										gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 0.4fr) minmax(0, 0.4fr) 3.5rem'
+									}}
+								>
+									{/* Колонка 1: Задача + Заметка (не съезжает при длинном описании!) */}
+									<div className='border-r border-white/[0.08] px-3 py-2.5 sm:px-4 min-w-0 overflow-hidden flex flex-col gap-1'>
+										<div className='flex items-center gap-2.5 min-w-0'>
+											<GripVertical size={16} className='text-white/20 shrink-0 -ml-1' />
 											<div
 												className={cn(
 													'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
 													task.isCompleted
 														? 'border-[#7551FF] bg-[#7551FF] text-white shadow-sm'
-														: 'border-white/25 bg-transparent group-hover:border-white/50'
+														: 'border-white/25 bg-transparent hover:border-white/50'
 												)}
 											>
 												{task.isCompleted && <Check size={11} strokeWidth={3} />}
 											</div>
-											<div className='min-w-0 truncate'>
-												<span
-													className={cn(
-														'text-sm truncate block',
-														task.isCompleted
-															? 'line-through italic text-white/60'
-															: 'text-white font-medium'
-													)}
-												>
-													{task.name}
-												</span>
-												{task.note && (
-													<span className='text-xs text-white/35 truncate block'>
-														{task.note}
-													</span>
-												)}
-											</div>
-										</div>
-
-										{/* Срок */}
-										<div className='text-xs text-white/50 font-mono flex items-center gap-1.5'>
-											<Calendar size={13} className='text-white/30' />
-											<span>{task.time}</span>
-										</div>
-
-										{/* Приоритет */}
-										<div>
 											<span
 												className={cn(
-													'text-xs px-2.5 py-0.5 rounded-md font-medium inline-block',
-													task.priority === 'high' &&
-														'bg-[#7551FF]/15 text-[#9b80ff] border border-[#7551FF]/30',
-													task.priority === 'medium' &&
-														'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-													task.priority === 'low' &&
-														'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+													'text-sm font-normal truncate block min-w-0',
+													task.isCompleted ? 'line-through italic text-white/50' : 'text-white'
 												)}
 											>
-												{task.priority === 'high'
-													? 'Высокий'
-													: task.priority === 'medium'
-														? 'Средний'
-														: 'Низкий'}
+												{task.name}
+											</span>
+										</div>
+
+										{/* Блок заметки с иконкой FileText */}
+										<div className='pl-6 flex items-start gap-1.5 min-w-0'>
+											<FileText size={13} className='text-white/35 shrink-0 mt-0.5' />
+											<span className='text-xs text-white/45 break-words line-clamp-2 leading-tight min-w-0'>
+												{task.note || 'Добавить заметку'}
 											</span>
 										</div>
 									</div>
-								))}
-							</div>
 
-							{/* Секция: Завтра */}
-							<div className='space-y-1.5 pt-2'>
-								<div className='text-xs font-semibold text-white/70 uppercase tracking-wider px-2 py-1'>
-									Завтра
-								</div>
+									{/* Колонка 2: Срок */}
+									<div className='border-r border-white/[0.08] px-3 py-2.5 sm:px-4 min-w-0 flex items-center justify-between whitespace-nowrap text-sm text-white/80'>
+										<span className='truncate'>{task.date}</span>
+										<X size={13} className='text-white/30 hover:text-white shrink-0 ml-1.5' />
+									</div>
 
-								{tomorrowTasks.map(task => (
-									<div
-										key={task.id}
-										onClick={() => toggleTask(task.id)}
-										className={cn(
-											'grid grid-cols-[1.5fr_0.6fr_0.6fr] items-center p-2.5 rounded-lg border border-transparent transition-all duration-150 cursor-pointer group',
-											task.isCompleted
-												? 'bg-white/[0.015] opacity-50'
-												: 'bg-[#141515] hover:bg-[#1a1c1d] hover:border-white/[0.08]'
-										)}
-									>
-										<div className='flex items-center gap-3 min-w-0 pr-2'>
-											<GripVertical
-												size={15}
-												className='text-white/20 group-hover:text-white/40 transition-colors shrink-0 -ml-1'
-											/>
-											<div
+									{/* Колонка 3: Приоритет (Badge 1-в-1 с SingleSelect в приложении) */}
+									<div className='border-r border-white/[0.08] px-3 py-2.5 sm:px-4 min-w-0 flex items-center justify-between whitespace-nowrap'>
+										<div className='flex items-center gap-1.5'>
+											<span
 												className={cn(
-													'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors',
-													task.isCompleted
-														? 'border-[#7551FF] bg-[#7551FF] text-white shadow-sm'
-														: 'border-white/25 bg-transparent group-hover:border-white/50'
+													'px-2 py-0.5 text-xs font-semibold text-white rounded-sm inline-flex items-center gap-1',
+													task.priority === 'high' && 'bg-red-400/60',
+													task.priority === 'medium' && 'bg-orange-400/70',
+													task.priority === 'low' && 'bg-blue-400/70'
 												)}
 											>
-												{task.isCompleted && <Check size={11} strokeWidth={3} />}
-											</div>
-											<div className='min-w-0 truncate'>
-												<span
-													className={cn(
-														'text-sm truncate block',
-														task.isCompleted
-															? 'line-through italic text-white/60'
-															: 'text-white font-medium'
-													)}
-												>
-													{task.name}
+												<span>
+													{task.priority === 'high'
+														? 'Высокий'
+														: task.priority === 'medium'
+															? 'Средний'
+															: 'Низкий'}
 												</span>
-											</div>
-										</div>
-
-										<div className='text-xs text-white/50 font-mono flex items-center gap-1.5'>
-											<Calendar size={13} className='text-white/30' />
-											<span>{task.time}</span>
-										</div>
-
-										<div>
-											<span className='text-xs px-2.5 py-0.5 rounded-md font-medium inline-block bg-amber-500/15 text-amber-300 border border-amber-500/30'>
-												Средний
+												<ChevronDown size={13} className='opacity-60 shrink-0' />
 											</span>
 										</div>
+										<X size={13} className='text-white/30 hover:text-white shrink-0 ml-1.5' />
 									</div>
-								))}
-							</div>
+
+									{/* Колонка 4: Иконка удаления */}
+									<div className='px-2 py-2.5 flex items-center justify-center'>
+										<Trash size={16} className='text-white/35 hover:text-white transition-opacity' />
+									</div>
+								</div>
+							))}
+						</div>
+
+						{/* Заголовок следующей секции (как в приложении) */}
+						<div className='text-xl font-semibold text-white py-2.5 mt-3'>
+							На следующей неделе
+						</div>
+						<div className='text-xs text-white/30 py-2 border-t border-white/[0.08]'>
+							Добавить задачу...
 						</div>
 					</div>
 
@@ -389,7 +344,7 @@ export function Auth() {
 				</div>
 
 				{/* ========================================================================= */}
-				{/* ПРАВАЯ ЧАСТЬ: МАКСИМАЛЬНО ПРОСТО И СТИЛЬНО + КЛЕТЧАТЫЙ ФОН              */}
+				{/* ПРАВАЯ ЧАСТЬ: МАКСИМАЛЬНО ПРОСТОЙ ВХОД + ПЕРЕЛИВАЮЩИЙСЯ КЛЕТЧАТЫЙ ФОН    */}
 				{/* ========================================================================= */}
 				<div className='flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-[#0E0F0F] relative overflow-hidden'>
 					{/* АНИМИРОВАННЫЕ КЛЕТЧАТЫЕ ПЕРЕЛИВАЮЩИЕСЯ ЭЛЕМЕНТЫ В ФОНЕ */}

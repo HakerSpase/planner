@@ -74,7 +74,10 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 				/>
 
 				<div className='flex-1 min-w-0 ml-1.5'>
-					<TransparentField {...register('name')} />
+					<TransparentField
+						{...register('name')}
+						className='text-sm sm:text-[0.95rem] py-0 leading-snug'
+					/>
 				</div>
 			</div>
 

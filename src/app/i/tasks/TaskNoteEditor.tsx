@@ -46,7 +46,7 @@ export function TaskNoteEditor({ value = '', onChange }: TaskNoteEditorProps) {
 					size={14}
 					className='shrink-0 text-white/35 group-hover:text-primary'
 				/>
-				<span className='min-w-0 flex-1 break-words [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden'>
+				<span className='min-w-0 flex-1 break-words whitespace-normal [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden'>
 					{preview ? preview : 'Добавить заметку'}
 				</span>
 				<Pencil
