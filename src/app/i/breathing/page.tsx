@@ -2,22 +2,32 @@
 
 import {
 	Activity,
+	Bell,
 	Check,
 	Clock,
+	CloudRain,
 	Flame,
+	Headphones,
 	History,
 	Info,
+	Maximize2,
+	Minimize2,
 	Moon,
 	Pause,
 	Play,
+	Radio,
 	RotateCcw,
+	SlidersHorizontal,
 	Smartphone,
 	Sparkles,
 	Square,
 	Trash2,
+	Trees,
 	Volume2,
 	VolumeX,
+	Waves,
 	Wind,
+	X,
 	Zap
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -25,8 +35,12 @@ import { toast } from 'sonner'
 
 import {
 	BREATHING_TECHNIQUES,
+	CUE_STYLE_OPTIONS,
+	SOUNDSCAPE_OPTIONS,
+	type CueStyleType,
 	type IBreathingPhase,
-	type IBreathingTechnique
+	type IBreathingTechnique,
+	type SoundscapeType
 } from './breathing.types'
 import { breathingAudio } from './breathing-audio'
 import { BreathingCircle } from './BreathingCircle'
@@ -53,6 +67,10 @@ export default function BreathingPage() {
 	const [isActive, setIsActive] = useState<boolean>(false)
 	const [isPaused, setIsPaused] = useState<boolean>(false)
 
+	// Zen Mode & Audio Settings Modal
+	const [isZenMode, setIsZenMode] = useState<boolean>(false)
+	const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState<boolean>(false)
+
 	// Phase and timing state
 	const [currentPhaseIndex, setCurrentPhaseIndex] = useState<number>(0)
 	const [phaseRemainingSeconds, setPhaseRemainingSeconds] = useState<number>(
@@ -66,6 +84,12 @@ export default function BreathingPage() {
 	const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(true)
 	const [soundEnabled, setSoundEnabled] = useState<boolean>(true)
 	const [keepScreenOn, setKeepScreenOn] = useState<boolean>(true)
+
+	// Soundscapes & Cues state
+	const [soundscape, setSoundscape] = useState<SoundscapeType>('none')
+	const [soundscapeVolume, setSoundscapeVolume] = useState<number>(45)
+	const [cueStyle, setCueStyle] = useState<CueStyleType>('tibetan')
+	const [cueVolume, setCueVolume] = useState<number>(65)
 
 	// Sessions history
 	const [sessions, setSessions] = useState<IBreathingSession[]>([])
@@ -86,10 +110,45 @@ export default function BreathingPage() {
 			if (vib !== null) setVibrationEnabled(vib === 'true')
 			const snd = localStorage.getItem('planner_breathing_sound')
 			if (snd !== null) setSoundEnabled(snd === 'true')
+
+			const sc = localStorage.getItem('planner_breathing_soundscape') as SoundscapeType | null
+			if (sc && ['none', 'rain', 'waves', 'forest', 'brown_noise'].includes(sc)) {
+				setSoundscape(sc)
+				breathingAudio.setSoundscape(sc)
+			}
+			const scVol = localStorage.getItem('planner_breathing_soundscape_vol')
+			if (scVol !== null) {
+				const v = Number(scVol)
+				setSoundscapeVolume(v)
+				breathingAudio.setSoundscapeVolume(v / 100)
+			}
+			const cue = localStorage.getItem('planner_breathing_cue_style') as CueStyleType | null
+			if (cue && ['tibetan', 'bell', 'soft_sine', 'none'].includes(cue)) {
+				setCueStyle(cue)
+				breathingAudio.setCueStyle(cue)
+			}
+			const cueVol = localStorage.getItem('planner_breathing_cue_vol')
+			if (cueVol !== null) {
+				const v = Number(cueVol)
+				setCueVolume(v)
+				breathingAudio.setCueVolume(v / 100)
+			}
 		} catch {}
 
 		loadHistory()
 	}, [])
+
+	// Escape key listener for Zen Mode
+	useEffect(() => {
+		if (!isZenMode) return
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				setIsZenMode(false)
+			}
+		}
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [isZenMode])
 
 	const loadHistory = async () => {
 		try {
@@ -151,7 +210,73 @@ export default function BreathingPage() {
 		try {
 			localStorage.setItem('planner_breathing_sound', String(next))
 		} catch {}
-		if (next) breathingAudio.playTone('inhale')
+		if (next) {
+			breathingAudio.playTone('inhale')
+			if (isActive && !isPaused && soundscape !== 'none') {
+				breathingAudio.startSoundscape()
+			}
+		} else {
+			breathingAudio.stopSoundscape()
+		}
+	}
+
+	const handleSoundscapeChange = (type: SoundscapeType) => {
+		setSoundscape(type)
+		breathingAudio.setSoundscape(type)
+		try {
+			localStorage.setItem('planner_breathing_soundscape', type)
+		} catch {}
+		if (isActive && !isPaused && soundEnabled) {
+			if (type === 'none') breathingAudio.stopSoundscape()
+			else breathingAudio.startSoundscape()
+		}
+	}
+
+	const handleSoundscapeVolumeChange = (vol: number) => {
+		setSoundscapeVolume(vol)
+		breathingAudio.setSoundscapeVolume(vol / 100)
+		try {
+			localStorage.setItem('planner_breathing_soundscape_vol', String(vol))
+		} catch {}
+	}
+
+	const handleCueStyleChange = (style: CueStyleType) => {
+		setCueStyle(style)
+		breathingAudio.setCueStyle(style)
+		try {
+			localStorage.setItem('planner_breathing_cue_style', style)
+		} catch {}
+		if (soundEnabled && style !== 'none') {
+			breathingAudio.playTone('inhale')
+		}
+	}
+
+	const handleCueVolumeChange = (vol: number) => {
+		setCueVolume(vol)
+		breathingAudio.setCueVolume(vol / 100)
+		try {
+			localStorage.setItem('planner_breathing_cue_vol', String(vol))
+		} catch {}
+	}
+
+	const toggleZenMode = () => {
+		setIsZenMode(prev => {
+			const next = !prev
+			if (next) {
+				try {
+					if (document.documentElement.requestFullscreen) {
+						document.documentElement.requestFullscreen().catch(() => {})
+					}
+				} catch {}
+			} else {
+				try {
+					if (document.fullscreenElement && document.exitFullscreen) {
+						document.exitFullscreen().catch(() => {})
+					}
+				} catch {}
+			}
+			return next
+		})
 	}
 
 	// Trigger haptics and audio on phase change
@@ -241,6 +366,9 @@ export default function BreathingPage() {
 		setIsPaused(false)
 
 		breathingAudio.startBackgroundKeepAlive()
+		if (soundEnabled && soundscape !== 'none') {
+			breathingAudio.startSoundscape()
+		}
 		if (keepScreenOn) breathingAudio.requestWakeLock()
 		notifyPhaseChange(firstPhase)
 	}
@@ -251,6 +379,7 @@ export default function BreathingPage() {
 		accumulatedElapsedRef.current += Math.floor(
 			(Date.now() - sessionStartTimeRef.current) / 1000
 		)
+		breathingAudio.stopSoundscape()
 		breathingAudio.stopBackgroundKeepAlive()
 		breathingAudio.releaseWakeLock()
 	}
@@ -263,6 +392,9 @@ export default function BreathingPage() {
 		setIsPaused(false)
 
 		breathingAudio.startBackgroundKeepAlive()
+		if (soundEnabled && soundscape !== 'none') {
+			breathingAudio.startSoundscape()
+		}
 		if (keepScreenOn) breathingAudio.requestWakeLock()
 	}
 
@@ -271,6 +403,7 @@ export default function BreathingPage() {
 		const finalCycles = completedCycles
 		setIsActive(false)
 		setIsPaused(false)
+		breathingAudio.stopSoundscape()
 		breathingAudio.stopBackgroundKeepAlive()
 		breathingAudio.releaseWakeLock()
 
@@ -285,6 +418,7 @@ export default function BreathingPage() {
 		setCurrentPhaseIndex(0)
 		setPhaseRemainingSeconds(selectedTechnique.phases[0].seconds)
 		setPhaseProgress(0)
+		breathingAudio.stopSoundscape()
 		breathingAudio.stopBackgroundKeepAlive()
 		breathingAudio.releaseWakeLock()
 	}
@@ -319,6 +453,21 @@ export default function BreathingPage() {
 	)
 
 	const SelectedIcon = selectedTechnique.icon
+
+	const getSoundscapeIcon = (type: SoundscapeType) => {
+		switch (type) {
+			case 'rain':
+				return CloudRain
+			case 'waves':
+				return Waves
+			case 'forest':
+				return Trees
+			case 'brown_noise':
+				return Radio
+			default:
+				return VolumeX
+		}
+	}
 
 	return (
 		<div className='w-full pb-16'>
@@ -398,8 +547,37 @@ export default function BreathingPage() {
 								</span>
 							</div>
 
-							{/* Feedback Toggles */}
-							<div className='flex items-center gap-2'>
+							{/* Feedback & Mode Toggles */}
+							<div className='flex items-center gap-1.5 sm:gap-2'>
+								{/* Zen Mode Button */}
+								<button
+									type='button'
+									onClick={toggleZenMode}
+									title='Полноэкранный дзен-режим'
+									className='flex h-8 items-center gap-1.5 border border-white/10 bg-white/[0.03] px-2.5 text-xs text-white/70 transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-white'
+								>
+									<Maximize2 size={13} className='text-primary' />
+									<span className='hidden sm:inline'>Дзен</span>
+								</button>
+
+								{/* Audio & Soundscape Settings Button */}
+								<button
+									type='button'
+									onClick={() => setIsAudioSettingsOpen(true)}
+									title='Настройки звука и природы'
+									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
+										soundscape !== 'none'
+											? 'border-primary/50 bg-primary/10 text-primary'
+											: 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white'
+									}`}
+								>
+									<Headphones size={13} />
+									<span className='hidden sm:inline'>
+										{soundscape === 'none' ? 'Звук' : SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label.split(' ')[0]}
+									</span>
+								</button>
+
+								{/* Vibration Toggle */}
 								<button
 									type='button'
 									onClick={toggleVibration}
@@ -411,9 +589,10 @@ export default function BreathingPage() {
 									}`}
 								>
 									<Smartphone size={13} />
-									<span className='hidden sm:inline'>Вибрация</span>
+									<span className='hidden sm:inline'>Вибро</span>
 								</button>
 
+								{/* Quick Sound Mute Toggle */}
 								<button
 									type='button'
 									onClick={toggleSound}
@@ -425,7 +604,6 @@ export default function BreathingPage() {
 									}`}
 								>
 									{soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
-									<span className='hidden sm:inline'>Звук</span>
 								</button>
 							</div>
 						</div>
@@ -681,6 +859,339 @@ export default function BreathingPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* ========================================================================= */}
+			{/* FULLSCREEN ZEN MODE OVERLAY                                               */}
+			{/* ========================================================================= */}
+			{isZenMode && (
+				<div className='fixed inset-0 z-[120] flex flex-col justify-between bg-[#0a0b0d] p-4 sm:p-8 select-none overflow-hidden'>
+					{/* Ambient atmospheric radial glow */}
+					<div
+						className='pointer-events-none absolute inset-0 transition-all duration-1000'
+						style={{
+							background: `radial-gradient(circle at 50% 45%, ${selectedTechnique.accentColor}18 0%, rgba(10,11,13,0.98) 72%)`
+						}}
+					/>
+
+					{/* Zen Header */}
+					<div className='relative z-10 flex items-center justify-between border-b border-white/[0.08] pb-4'>
+						<div className='flex items-center gap-3'>
+							<div
+								className='grid h-9 w-9 place-items-center rounded border'
+								style={{
+									borderColor: `${selectedTechnique.accentColor}50`,
+									backgroundColor: `${selectedTechnique.accentColor}15`
+								}}
+							>
+								<SelectedIcon size={18} style={{ color: selectedTechnique.accentColor }} />
+							</div>
+							<div>
+								<h2 className='text-sm sm:text-base font-semibold text-white'>
+									{selectedTechnique.name}
+								</h2>
+								<p className='text-xs text-white/40 font-mono'>
+									Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
+									{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
+									{' • '}
+									Цикл: <strong className='text-white'>{completedCycles + 1}</strong>
+								</p>
+							</div>
+						</div>
+
+						{/* Quick Zen Actions */}
+						<div className='flex items-center gap-2'>
+							<button
+								type='button'
+								onClick={() => setIsAudioSettingsOpen(true)}
+								title='Настройки звука и фона природы'
+								className={`flex h-9 items-center gap-1.5 border px-3 text-xs transition-colors ${
+									soundscape !== 'none' || soundEnabled
+										? 'border-primary/50 bg-primary/10 text-primary'
+										: 'border-white/10 bg-white/[0.04] text-white/50 hover:text-white'
+								}`}
+							>
+								<Headphones size={14} />
+								<span className='hidden sm:inline'>
+									{soundscape === 'none' ? 'Звук' : SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}
+								</span>
+							</button>
+
+							<button
+								type='button'
+								onClick={toggleVibration}
+								title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
+								className={`flex h-9 w-9 items-center justify-center border text-xs transition-colors ${
+									vibrationEnabled
+										? 'border-primary/50 bg-primary/10 text-primary'
+										: 'border-white/10 bg-white/[0.04] text-white/40 hover:text-white'
+								}`}
+							>
+								<Smartphone size={14} />
+							</button>
+
+							<button
+								type='button'
+								onClick={toggleZenMode}
+								title='Выйти из дзен-режима (Esc)'
+								className='flex h-9 items-center gap-1.5 border border-white/20 bg-white/10 px-3 text-xs font-medium text-white transition-colors hover:bg-white/15'
+							>
+								<Minimize2 size={14} />
+								<span className='hidden sm:inline'>Выход (Esc)</span>
+							</button>
+						</div>
+					</div>
+
+					{/* Zen Center: Visualizer Circle */}
+					<div className='relative z-10 flex flex-1 items-center justify-center py-4'>
+						<BreathingCircle
+							technique={selectedTechnique}
+							currentPhase={currentPhase}
+							phaseRemainingSeconds={phaseRemainingSeconds}
+							phaseProgress={phaseProgress}
+							isActive={isActive}
+							isPaused={isPaused}
+							cycleCount={completedCycles}
+						/>
+					</div>
+
+					{/* Zen Bottom Controls */}
+					<div className='relative z-10 flex flex-col items-center gap-3 border-t border-white/[0.08] pt-4'>
+						<div className='flex flex-wrap items-center justify-center gap-3'>
+							{!isActive ? (
+								<button
+									type='button'
+									onClick={startSession}
+									className='flex h-12 items-center gap-2.5 border border-primary bg-primary px-9 text-sm font-semibold text-white shadow-xl shadow-primary/25 transition-all hover:bg-primary/90 active:scale-95'
+								>
+									<Play size={17} fill='currentColor' />
+									<span>Начать практику</span>
+								</button>
+							) : (
+								<>
+									{isPaused ? (
+										<button
+											type='button'
+											onClick={resumeSession}
+											className='flex h-11 items-center gap-2 border border-primary bg-primary px-7 text-sm font-semibold text-white transition-all hover:bg-primary/90'
+										>
+											<Play size={16} fill='currentColor' />
+											<span>Продолжить</span>
+										</button>
+									) : (
+										<button
+											type='button'
+											onClick={pauseSession}
+											className='flex h-11 items-center gap-2 border border-white/20 bg-white/10 px-7 text-sm font-medium text-white transition-colors hover:bg-white/15'
+										>
+											<Pause size={16} />
+											<span>Пауза</span>
+										</button>
+									)}
+
+									<button
+										type='button'
+										onClick={finishSession}
+										className='flex h-11 items-center gap-2 border border-emerald-500/50 bg-emerald-500/10 px-6 text-sm font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+									>
+										<Check size={16} />
+										<span>Завершить и сохранить</span>
+									</button>
+
+									<button
+										type='button'
+										onClick={resetSession}
+										title='Сбросить'
+										className='flex h-11 w-11 items-center justify-center border border-white/10 bg-transparent text-white/50 transition-colors hover:border-white/20 hover:text-white'
+									>
+										<RotateCcw size={15} />
+									</button>
+								</>
+							)}
+						</div>
+
+						<p className='text-[11px] text-white/30'>
+							Нажмите клавишу Esc или кнопку «Выход», чтобы вернуться.
+						</p>
+					</div>
+				</div>
+			)}
+
+			{/* ========================================================================= */}
+			{/* AUDIO & SOUNDSCAPES SETTINGS MODAL                                        */}
+			{/* ========================================================================= */}
+			{isAudioSettingsOpen && (
+				<div
+					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm'
+					onMouseDown={e => {
+						if (e.target === e.currentTarget) setIsAudioSettingsOpen(false)
+					}}
+				>
+					<div className='w-full max-w-lg border border-white/10 bg-[#141517] p-5 sm:p-6 shadow-2xl'>
+						{/* Modal Header */}
+						<div className='flex items-center justify-between border-b border-white/10 pb-4'>
+							<div className='flex items-center gap-2.5'>
+								<div className='grid h-8 w-8 place-items-center bg-primary/10 text-primary'>
+									<Headphones size={18} />
+								</div>
+								<div>
+									<h3 className='text-base font-semibold text-white'>
+										Звуки и фоны природы
+									</h3>
+									<p className='text-xs text-white/50'>
+										Настройте звуковое окружение и сигналы смены фаз
+									</p>
+								</div>
+							</div>
+							<button
+								type='button'
+								onClick={() => setIsAudioSettingsOpen(false)}
+								className='text-white/40 hover:text-white transition-colors'
+							>
+								<X size={18} />
+							</button>
+						</div>
+
+						{/* Section 1: Soundscapes (Фоны природы) */}
+						<div className='mt-5'>
+							<div className='flex items-center justify-between'>
+								<label className='text-xs font-semibold uppercase tracking-wider text-white/60'>
+									Фоновые звуки природы
+								</label>
+								<span className='text-xs text-primary font-medium'>
+									{SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}
+								</span>
+							</div>
+
+							{/* Soundscape grid buttons */}
+							<div className='mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-2'>
+								{SOUNDSCAPE_OPTIONS.map(opt => {
+									const isSelected = soundscape === opt.id
+									const IconComp = getSoundscapeIcon(opt.id)
+									return (
+										<button
+											key={opt.id}
+											type='button'
+											onClick={() => handleSoundscapeChange(opt.id)}
+											className={`flex flex-col items-start gap-1 border p-2.5 text-left transition-all ${
+												isSelected
+													? 'border-primary bg-primary/15 text-white shadow-sm'
+													: 'border-white/10 bg-[#101112] text-white/70 hover:border-white/20 hover:text-white'
+											}`}
+										>
+											<div className='flex items-center gap-1.5'>
+												<IconComp
+													size={14}
+													className={isSelected ? 'text-primary' : 'text-white/50'}
+												/>
+												<span className='text-xs font-medium'>{opt.label}</span>
+											</div>
+											<span className='text-[10px] text-white/40 line-clamp-1'>
+												{opt.description}
+											</span>
+										</button>
+									)
+								})}
+							</div>
+
+							{/* Soundscape Volume Slider */}
+							{soundscape !== 'none' && (
+								<div className='mt-3 flex items-center gap-3 border border-white/[0.06] bg-[#101112] px-3 py-2'>
+									<Volume2 size={14} className='text-white/50 shrink-0' />
+									<span className='text-xs text-white/60 shrink-0'>Громкость фона:</span>
+									<input
+										type='range'
+										min={0}
+										max={100}
+										value={soundscapeVolume}
+										onChange={e => handleSoundscapeVolumeChange(Number(e.target.value))}
+										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-primary'
+									/>
+									<span className='w-8 text-right font-mono text-xs text-white/60'>
+										{soundscapeVolume}%
+									</span>
+								</div>
+							)}
+						</div>
+
+						{/* Section 2: Cue Styles (Сигналы фаз) */}
+						<div className='mt-6 border-t border-white/[0.08] pt-5'>
+							<div className='flex items-center justify-between'>
+								<label className='text-xs font-semibold uppercase tracking-wider text-white/60'>
+									Звуковой сигнал смены фазы
+								</label>
+								<button
+									type='button'
+									onClick={() => breathingAudio.playTone('inhale')}
+									className='flex items-center gap-1 text-[11px] text-primary hover:underline'
+								>
+									<Play size={11} fill='currentColor' />
+									<span>Проверить звук</span>
+								</button>
+							</div>
+
+							{/* Cue style options */}
+							<div className='mt-2.5 grid grid-cols-2 gap-2'>
+								{CUE_STYLE_OPTIONS.map(opt => {
+									const isSelected = cueStyle === opt.id
+									return (
+										<button
+											key={opt.id}
+											type='button'
+											onClick={() => handleCueStyleChange(opt.id)}
+											className={`flex flex-col items-start gap-0.5 border p-2.5 text-left transition-all ${
+												isSelected
+													? 'border-primary bg-primary/15 text-white shadow-sm'
+													: 'border-white/10 bg-[#101112] text-white/70 hover:border-white/20 hover:text-white'
+											}`}
+										>
+											<div className='flex items-center gap-1.5'>
+												{opt.id === 'tibetan' && <Sparkles size={13} className='text-amber-400' />}
+												{opt.id === 'bell' && <Bell size={13} className='text-sky-400' />}
+												{opt.id === 'soft_sine' && <Activity size={13} className='text-emerald-400' />}
+												{opt.id === 'none' && <VolumeX size={13} className='text-white/40' />}
+												<span className='text-xs font-medium'>{opt.label}</span>
+											</div>
+											<span className='text-[10px] text-white/40'>
+												{opt.description}
+											</span>
+										</button>
+									)
+								})}
+							</div>
+
+							{/* Cue Volume Slider */}
+							{cueStyle !== 'none' && (
+								<div className='mt-3 flex items-center gap-3 border border-white/[0.06] bg-[#101112] px-3 py-2'>
+									<Bell size={14} className='text-white/50 shrink-0' />
+									<span className='text-xs text-white/60 shrink-0'>Громкость сигнала:</span>
+									<input
+										type='range'
+										min={0}
+										max={100}
+										value={cueVolume}
+										onChange={e => handleCueVolumeChange(Number(e.target.value))}
+										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-primary'
+									/>
+									<span className='w-8 text-right font-mono text-xs text-white/60'>
+										{cueVolume}%
+									</span>
+								</div>
+							)}
+						</div>
+
+						{/* Modal Footer */}
+						<div className='mt-6 flex justify-end border-t border-white/10 pt-4'>
+							<button
+								type='button'
+								onClick={() => setIsAudioSettingsOpen(false)}
+								className='border border-primary bg-primary px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
+							>
+								Применить и закрыть
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Confirm Dialog for deleting session */}
 			{sessionToDelete && (

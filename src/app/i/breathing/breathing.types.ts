@@ -9,6 +9,36 @@ import {
 
 export type BreathingPhaseType = 'inhale' | 'holdIn' | 'exhale' | 'holdOut'
 
+export type SoundscapeType = 'none' | 'rain' | 'waves' | 'forest' | 'brown_noise'
+export type CueStyleType = 'tibetan' | 'bell' | 'soft_sine' | 'none'
+
+export interface ISoundscapeOption {
+	id: SoundscapeType
+	label: string
+	description: string
+}
+
+export interface ICueStyleOption {
+	id: CueStyleType
+	label: string
+	description: string
+}
+
+export const SOUNDSCAPE_OPTIONS: ISoundscapeOption[] = [
+	{ id: 'none', label: 'Без фона', description: 'Тишина без фонового звука' },
+	{ id: 'rain', label: 'Шум дождя', description: 'Мягкие капли за окном' },
+	{ id: 'waves', label: 'Океанские волны', description: 'Мерный ритмичный прибой' },
+	{ id: 'forest', label: 'Лесной шелест', description: 'Шёпот деревьев и ветра' },
+	{ id: 'brown_noise', label: 'Глубокий шум', description: 'Коричневый шум для снятия тревоги' }
+]
+
+export const CUE_STYLE_OPTIONS: ICueStyleOption[] = [
+	{ id: 'tibetan', label: 'Поющая чаша', description: 'Глубокий тибетский резонанс' },
+	{ id: 'bell', label: 'Мягкий колокол', description: 'Чистый гармоничный тон 528 Гц' },
+	{ id: 'soft_sine', label: 'Мягкий сигнал', description: 'Медитативный тон 432 Гц' },
+	{ id: 'none', label: 'Без звука фаз', description: 'Только вибрация' }
+]
+
 export interface IBreathingPhase {
 	type: BreathingPhaseType
 	name: string
