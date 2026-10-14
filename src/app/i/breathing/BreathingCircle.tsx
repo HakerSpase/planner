@@ -145,14 +145,14 @@ export function BreathingCircle({
 						</div>
 					) : (
 						<div className='flex flex-col items-center text-center px-3'>
-							<span className='text-[11px] font-medium uppercase tracking-wider text-white/50'>
-								Готовы?
+							<span
+								className='text-xs font-medium tracking-wide'
+								style={{ color: technique.accentColor }}
+							>
+								{technique.shortName || technique.name.split('(')[0]}
 							</span>
-							<span className='mt-1 text-sm font-semibold text-white'>
-								Нажмите «Старт»
-							</span>
-							<span className='mt-1 text-[11px] text-white/40 max-w-[130px] truncate'>
-								{technique.name.split('(')[0]}
+							<span className='mt-1 text-xs text-white/40 font-mono'>
+								{technique.totalCycleSeconds} сек
 							</span>
 						</div>
 					)}
@@ -171,8 +171,8 @@ export function BreathingCircle({
 						</p>
 					</>
 				) : (
-					<p className='text-xs text-white/50'>
-						Сядьте удобно, выпрямите спину и расслабьте плечи.
+					<p className='text-xs text-white/40'>
+						{technique.tagline}
 					</p>
 				)}
 			</div>

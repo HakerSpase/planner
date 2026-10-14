@@ -472,29 +472,10 @@ export default function BreathingPage() {
 	return (
 		<div className='w-full pb-16'>
 			{/* Page Header */}
-			<div className='flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4'>
-				<div>
-					<div className='flex items-center gap-2.5'>
-						<div className='grid h-8 w-8 place-items-center bg-primary/10 text-primary'>
-							<Wind size={20} />
-						</div>
-						<h1 className='text-2xl font-semibold text-white'>
-							Дыхательные практики
-						</h1>
-					</div>
-					<p className='mt-1 text-sm text-white/50'>
-						Снятие тревоги, глубокое расслабление и фокус на основе доказанных дыхательных циклов.
-					</p>
-				</div>
-
-				{/* Quick Stats Pill */}
-				<div className='flex items-center gap-3 border border-white/10 bg-[#121314] px-3.5 py-2 text-xs'>
-					<Sparkles size={14} className='text-primary' />
-					<span className='text-white/60'>Сегодня:</span>
-					<strong className='font-medium text-white'>
-						{todayTotalMinutes} мин ({todaySessions.length} сеанс.)
-					</strong>
-				</div>
+			<div className='border-b border-white/10 pb-4'>
+				<h1 className='text-2xl font-semibold text-white'>
+					Дыхательные практики
+				</h1>
 			</div>
 
 			{/* MOBILE-ONLY: Horizontal quick-picker so the visualizer is immediately on-screen */}
@@ -696,31 +677,27 @@ export default function BreathingPage() {
 					</div>
 
 					{/* Active Technique Information */}
-					<div className='border border-white/[0.08] bg-[#141516] p-5'>
-						<div className='flex items-center gap-2.5'>
+					<div className='border border-white/[0.08] bg-[#141516] p-4 sm:p-5'>
+						<div className='flex items-center gap-2'>
 							<SelectedIcon
-								size={20}
+								size={17}
 								style={{ color: selectedTechnique.accentColor }}
 							/>
-							<h3 className='text-base font-semibold text-white'>
+							<h3 className='text-sm font-medium text-white'>
 								{selectedTechnique.name}
 							</h3>
 						</div>
-						<p className='mt-2 text-xs leading-relaxed text-white/70'>
+						<p className='mt-1.5 text-xs leading-relaxed text-white/60'>
 							{selectedTechnique.description}
 						</p>
 
-						<div className='mt-4 flex flex-wrap gap-2'>
-							{selectedTechnique.benefits.map((b, idx) => (
+						<div className='mt-3 flex flex-wrap gap-1.5 text-[11px] text-white/40 font-mono'>
+							{selectedTechnique.phases.map((p, idx) => (
 								<span
 									key={idx}
-									className='inline-flex items-center gap-1.5 border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-white/80'
+									className='border border-white/[0.08] bg-white/[0.02] px-2 py-0.5'
 								>
-									<span
-										className='h-1.5 w-1.5 rounded-full'
-										style={{ backgroundColor: selectedTechnique.accentColor }}
-									/>
-									{b}
+									{p.name}: {p.seconds}с
 								</span>
 							))}
 						</div>

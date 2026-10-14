@@ -189,7 +189,13 @@ export default function ThoughtsPage() {
 						))}
 						{days.map(day => {
 							const key = iso(day)
-							const isToday = key === todayKey
+							const now = new Date()
+							const isToday =
+								(day.getDate() === now.getDate() &&
+									day.getMonth() === now.getMonth() &&
+									day.getFullYear() === now.getFullYear()) ||
+								key === todayKey ||
+								isSameDay(day, now)
 							const hasEntry = Boolean(entries[key]?.trim())
 							const isSelected = isSameDay(day, selected)
 							const isCurrentMonth = isSameMonth(day, month)
@@ -202,25 +208,29 @@ export default function ThoughtsPage() {
 										setSelected(day)
 									}}
 									aria-pressed={isSelected}
-									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', запись сохранена' : ''}`}
-									className={`group relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isCurrentMonth ? 'text-white/20' : 'text-white/80'} ${isSelected ? 'bg-primary/20 text-white outline outline-1 -outline-offset-1 outline-primary font-medium shadow-sm' : ''} ${isToday && !isSelected ? 'font-semibold text-emerald-300' : ''}`}
+									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}`}
+									className={`group relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isCurrentMonth ? 'text-white/20' : 'text-white/80'} ${isSelected ? 'bg-primary/20 text-white outline outline-1 -outline-offset-1 outline-primary font-medium shadow-sm' : ''}`}
 								>
-									<span className='leading-none'>{format(day, 'd')}</span>
+									<span
+										className={`leading-none ${isToday && !isSelected ? 'font-semibold text-emerald-300' : ''}`}
+									>
+										{format(day, 'd')}
+									</span>
 									{(isToday || hasEntry) && (
 										<span
 											aria-hidden='true'
-											className='pointer-events-none absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1'
+											className='pointer-events-none absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1.5'
 										>
 											{isToday && (
 												<span
 													title='Сегодня'
-													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 shadow-sm'
+													className='block h-2 w-2 shrink-0 rounded-full bg-emerald-400 ring-2 ring-[#141516] shadow-sm shadow-emerald-400/50'
 												/>
 											)}
 											{hasEntry && (
 												<span
 													title='Есть мысль'
-													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-sm'
+													className='block h-2 w-2 shrink-0 rounded-full bg-amber-400 ring-2 ring-[#141516] shadow-sm shadow-amber-400/50'
 												/>
 											)}
 										</span>
@@ -235,29 +245,13 @@ export default function ThoughtsPage() {
 				</section>
 
 				<section className='flex min-h-[420px] flex-col bg-[#141516] p-4 sm:p-5 border border-white/10'>
-					<div className='mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3'>
-						<div>
-							<label
-								htmlFor='daily-thought'
-								className='text-sm font-medium capitalize text-white/90'
-							>
-								{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
-							</label>
-							<p className='mt-0.5 text-xs text-white/40'>
-								Запись сохраняется отдельно для каждого дня
-							</p>
-						</div>
-
-						{selectedHasEntry ? (
-							<span className='inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-0.5 text-xs font-medium text-amber-300'>
-								<span className='h-1.5 w-1.5 rounded-full bg-amber-400' />
-								Запись сохранена
-							</span>
-						) : (
-							<span className='text-xs text-white/35'>
-								Нет записи
-							</span>
-						)}
+					<div className='mb-4 border-b border-white/10 pb-3'>
+						<label
+							htmlFor='daily-thought'
+							className='text-sm font-medium capitalize text-white/90'
+						>
+							{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
+						</label>
 					</div>
 
 					<textarea
