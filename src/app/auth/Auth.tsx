@@ -196,8 +196,8 @@ export function Auth() {
 			)}
 			style={{
 				gridTemplateColumns: compact
-					? 'minmax(0, 1fr) auto auto'
-					: 'minmax(0, 1fr) auto auto 2.8rem'
+					? 'minmax(0, 1fr) 4.5rem 6.2rem'
+					: 'minmax(0, 1fr) 5.5rem 6.8rem 2.6rem'
 			}}
 		>
 			{/* Задача */}
@@ -237,20 +237,20 @@ export function Auth() {
 			</div>
 
 			{/* Дата */}
-			<div className='border-r border-white/[0.08] px-2.5 sm:px-3 py-3 min-w-0 flex items-center justify-center whitespace-nowrap text-[13px] text-white/60 shrink-0'>
+			<div className='border-r border-white/[0.08] px-2 py-3 min-w-0 flex items-center justify-center whitespace-nowrap text-[13px] text-white/60 shrink-0'>
 				<span>{task.date}</span>
 			</div>
 
 			{/* Приоритет */}
 			<div className={cn(
-				'px-2.5 sm:px-3 py-3 min-w-0 flex items-center justify-center shrink-0',
+				'px-2 py-3 min-w-0 flex items-center justify-center shrink-0',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
 				<button
 					type='button'
 					onClick={e => cyclePriority(e, task.id)}
 					className={cn(
-						'px-2 py-[3px] text-xs font-semibold text-white inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0',
+						'w-full max-w-[84px] py-[3px] text-xs font-semibold text-white inline-flex items-center justify-center gap-1 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0 rounded-sm',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
@@ -263,7 +263,7 @@ export function Auth() {
 
 			{/* Удалить */}
 			{!compact && (
-				<div className='px-1.5 py-3 flex items-center justify-center shrink-0'>
+				<div className='px-1 py-3 flex items-center justify-center shrink-0'>
 					<Trash size={15} className='text-white/25 hover:text-white/60 transition-colors' />
 				</div>
 			)}
