@@ -196,14 +196,14 @@ export function Auth() {
 			)}
 			style={{
 				gridTemplateColumns: compact
-					? 'minmax(0,1fr) 5rem 6rem'
-					: 'minmax(0,1.4fr) minmax(0,0.35fr) minmax(0,0.35fr) 2.8rem'
+					? 'minmax(0, 1fr) auto auto'
+					: 'minmax(0, 1fr) auto auto 2.8rem'
 			}}
 		>
 			{/* Задача */}
 			<div className={cn(
-				'border-r border-white/[0.08] min-w-0 overflow-hidden flex flex-col gap-0.5',
-				compact ? 'px-3 py-2.5' : 'px-4 py-3'
+				'border-r border-white/[0.08] min-w-0 overflow-hidden flex flex-col justify-center gap-0.5',
+				compact ? 'px-2.5 py-2.5' : 'px-3.5 py-3'
 			)}>
 				<div className='flex items-center gap-2.5 min-w-0'>
 					<GripVertical size={16} className='text-white/15 shrink-0 -ml-0.5' />
@@ -219,7 +219,7 @@ export function Auth() {
 						{task.isCompleted && <Check size={11} strokeWidth={3} />}
 					</div>
 					<span className={cn(
-						'truncate min-w-0',
+						'truncate min-w-0 block',
 						compact ? 'text-[13px]' : 'text-sm',
 						task.isCompleted ? 'line-through italic text-white/45' : 'text-white/90'
 					)}>
@@ -229,7 +229,7 @@ export function Auth() {
 				{!compact && (
 					<div className='pl-[34px] flex items-center gap-1.5 min-w-0'>
 						<FileText size={13} className='text-white/30 shrink-0' />
-						<span className='text-xs text-white/40 truncate'>
+						<span className='text-xs text-white/40 truncate min-w-0 block'>
 							{task.note || 'Добавить заметку'}
 						</span>
 					</div>
@@ -237,34 +237,34 @@ export function Auth() {
 			</div>
 
 			{/* Дата */}
-			<div className='border-r border-white/[0.08] px-3 py-3 min-w-0 flex items-center whitespace-nowrap text-[13px] text-white/60'>
-				<span className='truncate'>{task.date}</span>
+			<div className='border-r border-white/[0.08] px-2.5 sm:px-3 py-3 min-w-0 flex items-center justify-center whitespace-nowrap text-[13px] text-white/60 shrink-0'>
+				<span>{task.date}</span>
 			</div>
 
 			{/* Приоритет */}
 			<div className={cn(
-				'px-3 py-3 min-w-0 flex items-center',
+				'px-2.5 sm:px-3 py-3 min-w-0 flex items-center justify-center shrink-0',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
 				<button
 					type='button'
 					onClick={e => cyclePriority(e, task.id)}
 					className={cn(
-						'px-2 py-[3px] text-xs font-semibold text-white inline-flex items-center gap-0.5 cursor-pointer hover:opacity-80 transition-opacity',
+						'px-2 py-[3px] text-xs font-semibold text-white inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap shrink-0',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
 					)}
 				>
-					{PRIORITY_LABEL[task.priority]}
-					<ChevronDown size={12} className='opacity-50' />
+					<span>{PRIORITY_LABEL[task.priority]}</span>
+					<ChevronDown size={12} className='opacity-50 shrink-0' />
 				</button>
 			</div>
 
 			{/* Удалить */}
 			{!compact && (
-				<div className='px-2 py-3 flex items-center justify-center'>
-					<Trash size={15} className='text-white/25' />
+				<div className='px-1.5 py-3 flex items-center justify-center shrink-0'>
+					<Trash size={15} className='text-white/25 hover:text-white/60 transition-colors' />
 				</div>
 			)}
 		</div>
@@ -299,7 +299,7 @@ export function Auth() {
 
 			<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30'>
 				{/* ===== ЛЕВАЯ: СПИСОК ЗАДАЧ (только desktop) ===== */}
-				<div className='hidden lg:flex flex-col justify-between p-10 xl:p-14 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
+				<div className='hidden lg:flex flex-col justify-between p-6 lg:p-8 xl:p-14 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
 					<div className='absolute top-0 right-0 w-[460px] h-[460px] bg-[#7551FF]/8 blur-[130px] pointer-events-none rounded-full' />
 
 					{/* Логотип */}
@@ -326,7 +326,7 @@ export function Auth() {
 
 						<div className='text-xl font-semibold py-2.5'>На этой неделе</div>
 
-						<div className='w-full border-b border-white/[0.08]'>
+						<div className='w-full border-b border-white/[0.08] overflow-hidden'>
 							{tasks.map(t => renderTaskRow(t))}
 						</div>
 
