@@ -81,32 +81,6 @@ const INITIAL_TASKS: IPreviewTask[] = [
 	}
 ]
 
-// Сетка переливающихся клеток для фона справа
-const CELLS = [
-	{ x: 0, y: 0, d: '0s', dur: '3.6s', g: 0 },
-	{ x: 2, y: 1, d: '0.6s', dur: '4.2s', g: 1 },
-	{ x: 5, y: 0, d: '1.3s', dur: '3.8s', g: 2 },
-	{ x: 7, y: 2, d: '0.3s', dur: '4.5s', g: 0 },
-	{ x: 1, y: 3, d: '2s', dur: '3.5s', g: 1 },
-	{ x: 4, y: 2, d: '0.9s', dur: '4s', g: 2 },
-	{ x: 6, y: 4, d: '1.7s', dur: '3.9s', g: 0 },
-	{ x: 3, y: 5, d: '2.4s', dur: '4.3s', g: 1 },
-	{ x: 8, y: 1, d: '0.5s', dur: '3.7s', g: 2 },
-	{ x: 1, y: 6, d: '1.1s', dur: '4.1s', g: 0 },
-	{ x: 5, y: 5, d: '2.8s', dur: '3.4s', g: 1 },
-	{ x: 8, y: 6, d: '0.2s', dur: '4.4s', g: 2 },
-	{ x: 3, y: 7, d: '1.5s', dur: '3.6s', g: 0 },
-	{ x: 6, y: 7, d: '2.2s', dur: '4.2s', g: 1 },
-	{ x: 0, y: 5, d: '0.8s', dur: '3.8s', g: 2 },
-	{ x: 7, y: 8, d: '1.9s', dur: '4s', g: 0 },
-	{ x: 2, y: 8, d: '2.6s', dur: '3.5s', g: 1 },
-	{ x: 4, y: 4, d: '0.4s', dur: '4.6s', g: 2 },
-	{ x: 9, y: 3, d: '1.2s', dur: '3.9s', g: 0 },
-	{ x: 9, y: 7, d: '2.1s', dur: '4.1s', g: 1 }
-]
-
-const CELL_SZ = 56 // размер ячейки в viewBox
-
 export function Auth() {
 	const [isLoading, setIsLoading] = useState(false)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -134,7 +108,6 @@ export function Auth() {
 		)
 	}
 
-	// Drag-and-drop: переупорядочивание задач
 	const handleDragStart = (id: string) => setDragId(id)
 	const handleDragOver = (e: React.DragEvent) => e.preventDefault()
 	const handleDrop = (targetId: string) => {
@@ -165,6 +138,7 @@ export function Auth() {
 				sitekey: siteKey,
 				theme: 'dark',
 				action: 'planner_login',
+				size: 'flexible',
 				callback: (token: string) => {
 					setCaptchaError('')
 					setTurnstileToken(token)
@@ -205,7 +179,7 @@ export function Auth() {
 		}
 	}
 
-	/* Рендер одной строки задачи для переиспользования в десктоп и мобайл */
+	/* Строка задачи */
 	const renderTaskRow = (task: IPreviewTask, compact = false) => (
 		<div
 			key={task.id}
@@ -222,74 +196,75 @@ export function Auth() {
 			)}
 			style={{
 				gridTemplateColumns: compact
-					? 'minmax(0,1fr) 4.5rem 5.5rem'
+					? 'minmax(0,1fr) 5rem 6rem'
 					: 'minmax(0,1.4fr) minmax(0,0.35fr) minmax(0,0.35fr) 2.8rem'
 			}}
 		>
-			{/* Колонка: Задача */}
+			{/* Задача */}
 			<div className={cn(
-				'border-r border-white/[0.08] px-2.5 py-2 min-w-0 overflow-hidden flex flex-col gap-0.5',
-				compact ? 'sm:px-3' : 'sm:px-4'
+				'border-r border-white/[0.08] min-w-0 overflow-hidden flex flex-col gap-0.5',
+				compact ? 'px-3 py-2.5' : 'px-4 py-3'
 			)}>
-				<div className='flex items-center gap-2 min-w-0'>
-					<GripVertical size={14} className='text-white/15 shrink-0 -ml-0.5' />
+				<div className='flex items-center gap-2.5 min-w-0'>
+					<GripVertical size={16} className='text-white/15 shrink-0 -ml-0.5' />
 					<div
 						onClick={() => toggleTask(task.id)}
 						className={cn(
-							'w-[15px] h-[15px] shrink-0 border flex items-center justify-center transition-colors cursor-pointer',
+							'w-[17px] h-[17px] shrink-0 border flex items-center justify-center transition-colors cursor-pointer',
 							task.isCompleted
 								? 'border-[#7551FF] bg-[#7551FF] text-white'
 								: 'border-white/25 bg-transparent hover:border-white/50'
 						)}
 					>
-						{task.isCompleted && <Check size={10} strokeWidth={3} />}
+						{task.isCompleted && <Check size={11} strokeWidth={3} />}
 					</div>
 					<span className={cn(
-						'text-[13px] truncate min-w-0',
+						'truncate min-w-0',
+						compact ? 'text-[13px]' : 'text-sm',
 						task.isCompleted ? 'line-through italic text-white/45' : 'text-white/90'
 					)}>
 						{task.name}
 					</span>
 				</div>
 				{!compact && (
-					<div className='pl-[30px] flex items-center gap-1.5 min-w-0'>
-						<FileText size={12} className='text-white/30 shrink-0' />
-						<span className='text-[11px] text-white/40 truncate'>
+					<div className='pl-[34px] flex items-center gap-1.5 min-w-0'>
+						<FileText size={13} className='text-white/30 shrink-0' />
+						<span className='text-xs text-white/40 truncate'>
 							{task.note || 'Добавить заметку'}
 						</span>
 					</div>
 				)}
 			</div>
 
-			{/* Колонка: Дата */}
-			<div className='border-r border-white/[0.08] px-2 py-2 min-w-0 flex items-center whitespace-nowrap text-[12px] text-white/60'>
+			{/* Дата */}
+			<div className='border-r border-white/[0.08] px-3 py-3 min-w-0 flex items-center whitespace-nowrap text-[13px] text-white/60'>
 				<span className='truncate'>{task.date}</span>
 			</div>
 
-			{/* Колонка: Приоритет */}
+			{/* Приоритет */}
 			<div className={cn(
-				'px-2 py-2 min-w-0 flex items-center',
+				'px-3 py-3 min-w-0 flex items-center',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
 				<button
 					type='button'
 					onClick={e => cyclePriority(e, task.id)}
 					className={cn(
-						'px-1.5 py-[2px] text-[11px] font-semibold text-white inline-flex items-center gap-0.5 cursor-pointer hover:opacity-80 transition-opacity',
+						'px-2 py-[3px] text-xs font-semibold text-white inline-flex items-center gap-0.5 cursor-pointer hover:opacity-80 transition-opacity',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
 					)}
 				>
 					{PRIORITY_LABEL[task.priority]}
-					<ChevronDown size={11} className='opacity-50' />
+					<ChevronDown size={12} className='opacity-50' />
 				</button>
 			</div>
 
-			{/* Колонка: Удалить (только на десктопе) */}
+			{/* Удалить */}
 			{!compact && (
-				<div className='px-1.5 py-2 flex items-center justify-center'>
-					<Trash size={14} className='text-white/25' />
+				<div className='px-2 py-3 flex items-center justify-center'>
+					<Trash size={15} className='text-white/25' />
 				</div>
 			)}
 		</div>
@@ -298,13 +273,20 @@ export function Auth() {
 	return (
 		<>
 			<style>{`
-				@keyframes cellPulse {
-					0%,100%{opacity:.04;transform:scale(.92)}
-					50%{opacity:.7;transform:scale(1);filter:drop-shadow(0 0 18px rgba(117,81,255,.5))}
+				@keyframes auroraShift {
+					0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: .4; }
+					33%  { transform: translate(40px, -30px) rotate(120deg) scale(1.15); opacity: .6; }
+					66%  { transform: translate(-20px, 20px) rotate(240deg) scale(.95); opacity: .45; }
+					100% { transform: translate(0, 0) rotate(360deg) scale(1); opacity: .4; }
 				}
-				@keyframes orb {
-					0%,100%{transform:translate(0,0) scale(1);opacity:.3}
-					50%{transform:translate(25px,-18px) scale(1.12);opacity:.55}
+				@keyframes auroraShift2 {
+					0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: .35; }
+					50%  { transform: translate(-35px, 25px) rotate(180deg) scale(1.1); opacity: .55; }
+					100% { transform: translate(0, 0) rotate(360deg) scale(1); opacity: .35; }
+				}
+				@keyframes floatOrb {
+					0%,100% { transform: translateY(0) scale(1); opacity: .3; }
+					50%     { transform: translateY(-20px) scale(1.08); opacity: .5; }
 				}
 			`}</style>
 
@@ -316,191 +298,147 @@ export function Auth() {
 			/>
 
 			<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30'>
-				{/* ============================================ */}
-				{/* ЛЕВАЯ: СПИСОК ЗАДАЧ 1-В-1 (только desktop)    */}
-				{/* ============================================ */}
-				<div className='hidden lg:flex flex-col justify-between p-8 xl:p-12 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
+				{/* ===== ЛЕВАЯ: СПИСОК ЗАДАЧ (только desktop) ===== */}
+				<div className='hidden lg:flex flex-col justify-between p-10 xl:p-14 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
 					<div className='absolute top-0 right-0 w-[460px] h-[460px] bg-[#7551FF]/8 blur-[130px] pointer-events-none rounded-full' />
 
 					{/* Логотип */}
 					<div className='relative z-10 flex items-center gap-3'>
-						<GanttChartSquare color='#7551FF' size={32} />
-						<div className='text-[22px] font-bold tracking-tight relative'>
+						<GanttChartSquare color='#7551FF' size={36} />
+						<div className='text-2xl font-bold tracking-tight relative'>
 							Planner
-							<span className='absolute -top-1 -right-6 text-[10px] text-[#7551FF] opacity-70 rotate-[16deg] font-mono'>
+							<span className='absolute -top-1 -right-7 text-[11px] text-[#7551FF] opacity-70 rotate-[16deg] font-mono'>
 								beta
 							</span>
 						</div>
 					</div>
 
-					{/* Таблица задач */}
-					<div className='relative z-10 my-auto py-4 max-w-2xl w-full'>
-						<div className='mb-4'>
-							<h2 className='text-[22px] font-semibold tracking-tight mb-1'>
+					{/* Задачи */}
+					<div className='relative z-10 my-auto py-6 max-w-2xl w-full'>
+						<div className='mb-5'>
+							<h2 className='text-2xl font-semibold tracking-tight mb-1.5'>
 								Пространство фокуса и продуктивности
 							</h2>
-							<p className='text-[13px] text-white/45 leading-relaxed'>
+							<p className='text-sm text-white/45 leading-relaxed'>
 								Канбан-доска, список задач и тайм-блокинг в едином строгом интерфейсе.
 							</p>
 						</div>
 
-						<div className='text-lg font-semibold py-2'>На этой неделе</div>
+						<div className='text-xl font-semibold py-2.5'>На этой неделе</div>
 
 						<div className='w-full border-b border-white/[0.08]'>
 							{tasks.map(t => renderTaskRow(t))}
 						</div>
 
-						<div className='text-lg font-semibold py-2 mt-2'>На следующей неделе</div>
-						<div className='text-[12px] text-white/25 py-1.5 border-t border-white/[0.08]'>
+						<div className='text-xl font-semibold py-2.5 mt-3'>На следующей неделе</div>
+						<div className='text-xs text-white/25 py-2 border-t border-white/[0.08]'>
 							Добавить задачу...
 						</div>
 					</div>
 
-					<div className='relative z-10 text-[11px] text-white/25'>
+					<div className='relative z-10 text-xs text-white/25'>
 						&copy; 2026 Planner. Все права защищены.
 					</div>
 				</div>
 
-				{/* ============================================ */}
-				{/* ПРАВАЯ: ВХОД + КЛЕТЧАТЫЙ ФОН + МОБАЙЛ        */}
-				{/* ============================================ */}
-				<div className='flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-[#0E0F0F] relative overflow-hidden min-h-screen'>
-					{/* Анимированный клетчатый фон */}
+				{/* ===== ПРАВАЯ: ВХОД + ФОН + МОБАЙЛ ===== */}
+				<div className='flex flex-col p-6 sm:p-10 lg:p-14 bg-[#0E0F0F] relative overflow-hidden min-h-screen'>
+					{/* Завораживающий минималистичный фон: мягкие aurora-градиенты */}
 					<div className='absolute inset-0 pointer-events-none overflow-hidden select-none'>
-						{/* Плавающие сферы свечения */}
+						{/* Тонкая сетка-паттерн */}
+						<div className='absolute inset-0 opacity-[0.03]' style={{
+							backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
+							backgroundSize: '60px 60px'
+						}} />
+
+						{/* Главная aurora — большой размытый кольцевой градиент */}
 						<div
-							className='absolute top-[15%] right-[20%] w-[420px] h-[420px] bg-[#7551FF]/18 blur-[130px] rounded-full'
-							style={{ animation: 'orb 9s ease-in-out infinite' }}
+							className='absolute top-[10%] left-[10%] w-[500px] h-[500px] rounded-full'
+							style={{
+								background: 'conic-gradient(from 0deg, rgba(117,81,255,0.25), rgba(99,102,241,0.15), rgba(168,85,247,0.2), rgba(117,81,255,0.25))',
+								filter: 'blur(80px)',
+								animation: 'auroraShift 18s linear infinite'
+							}}
+						/>
+						{/* Вторая aurora */}
+						<div
+							className='absolute bottom-[5%] right-[5%] w-[400px] h-[400px] rounded-full'
+							style={{
+								background: 'conic-gradient(from 180deg, rgba(139,92,246,0.2), rgba(79,70,229,0.15), rgba(192,132,252,0.18), rgba(139,92,246,0.2))',
+								filter: 'blur(70px)',
+								animation: 'auroraShift2 14s linear infinite'
+							}}
+						/>
+
+						{/* Парящие маленькие сферы — акценты */}
+						<div
+							className='absolute top-[25%] right-[30%] w-[120px] h-[120px] bg-[#7551FF]/25 blur-[50px] rounded-full'
+							style={{ animation: 'floatOrb 6s ease-in-out infinite' }}
 						/>
 						<div
-							className='absolute bottom-[20%] left-[15%] w-[350px] h-[350px] bg-purple-800/18 blur-[110px] rounded-full'
-							style={{ animation: 'orb 11s ease-in-out infinite reverse' }}
+							className='absolute bottom-[35%] left-[25%] w-[90px] h-[90px] bg-indigo-500/20 blur-[40px] rounded-full'
+							style={{ animation: 'floatOrb 8s ease-in-out infinite 2s' }}
 						/>
 						<div
-							className='absolute top-[55%] right-[45%] w-[280px] h-[280px] bg-indigo-600/12 blur-[100px] rounded-full'
-							style={{ animation: 'orb 13s ease-in-out infinite 2s' }}
+							className='absolute top-[60%] right-[15%] w-[70px] h-[70px] bg-purple-400/15 blur-[35px] rounded-full'
+							style={{ animation: 'floatOrb 7s ease-in-out infinite 4s' }}
 						/>
-
-						{/* SVG клетчатая сетка с мерцающими 3D-кубиками */}
-						<svg
-							className='w-full h-full'
-							xmlns='http://www.w3.org/2000/svg'
-							viewBox='0 0 560 560'
-							preserveAspectRatio='xMidYMid slice'
-						>
-							<defs>
-								<pattern id='g' width={CELL_SZ} height={CELL_SZ} patternUnits='userSpaceOnUse'>
-									<path
-										d={`M ${CELL_SZ} 0 L 0 0 0 ${CELL_SZ}`}
-										fill='none'
-										stroke='rgba(255,255,255,0.04)'
-										strokeWidth='1'
-									/>
-								</pattern>
-
-								<linearGradient id='gv' x1='0%' y1='0%' x2='100%' y2='100%'>
-									<stop offset='0%' stopColor='#7551FF' stopOpacity='0.65' />
-									<stop offset='100%' stopColor='#A78BFA' stopOpacity='0.3' />
-								</linearGradient>
-								<linearGradient id='gi' x1='0%' y1='100%' x2='100%' y2='0%'>
-									<stop offset='0%' stopColor='#6366F1' stopOpacity='0.6' />
-									<stop offset='100%' stopColor='#818CF8' stopOpacity='0.25' />
-								</linearGradient>
-								<linearGradient id='gf' x1='100%' y1='0%' x2='0%' y2='100%'>
-									<stop offset='0%' stopColor='#C084FC' stopOpacity='0.55' />
-									<stop offset='100%' stopColor='#7C3AED' stopOpacity='0.2' />
-								</linearGradient>
-
-								<radialGradient id='fm' cx='50%' cy='50%' r='52%'>
-									<stop offset='15%' stopColor='white' stopOpacity='1' />
-									<stop offset='100%' stopColor='white' stopOpacity='0' />
-								</radialGradient>
-								<mask id='rf'>
-									<rect width='100%' height='100%' fill='url(#fm)' />
-								</mask>
-							</defs>
-
-							<rect width='100%' height='100%' fill='url(#g)' mask='url(#rf)' />
-
-							<g mask='url(#rf)'>
-								{CELLS.map((c, i) => {
-									const grads = ['url(#gv)', 'url(#gi)', 'url(#gf)']
-									const cx = c.x * CELL_SZ + CELL_SZ / 2
-									const cy = c.y * CELL_SZ + CELL_SZ / 2
-									return (
-										<rect
-											key={i}
-											x={c.x * CELL_SZ + 2}
-											y={c.y * CELL_SZ + 2}
-											width={CELL_SZ - 4}
-											height={CELL_SZ - 4}
-											rx={4}
-											fill={grads[c.g]}
-											style={{
-												animation: `cellPulse ${c.dur} ease-in-out infinite ${c.d}`,
-												transformOrigin: `${cx}px ${cy}px`
-											}}
-										/>
-									)
-								})}
-							</g>
-						</svg>
 					</div>
 
 					{/* Мобильный логотип */}
-					<div className='lg:hidden relative z-10 flex items-center gap-2.5 mb-4'>
-						<GanttChartSquare color='#7551FF' size={28} />
-						<span className='text-lg font-bold tracking-tight'>Planner</span>
-						<span className='text-[9px] text-[#7551FF] font-mono opacity-70 ml-0.5'>beta</span>
+					<div className='lg:hidden relative z-10 flex items-center gap-2.5 mb-5'>
+						<GanttChartSquare color='#7551FF' size={30} />
+						<span className='text-xl font-bold tracking-tight'>Planner</span>
+						<span className='text-[10px] text-[#7551FF] font-mono opacity-70 ml-0.5'>beta</span>
 					</div>
 
-					{/* ===== МОБИЛЬНАЯ МИНИ-ВИТРИНА ЗАДАЧ ===== */}
-					<div className='lg:hidden relative z-10 mb-5 border border-white/[0.08] bg-[#111213]/80 backdrop-blur-sm'>
-						<div className='flex items-center justify-between px-3 py-2 border-b border-white/[0.08] text-[12px] text-white/50'>
-							<span className='font-semibold text-white/70 uppercase tracking-wider text-[11px]'>На этой неделе</span>
-							<span className='text-[#8b6eff] font-mono'>
+					{/* ===== МОБИЛЬНАЯ ВИТРИНА ЗАДАЧ ===== */}
+					<div className='lg:hidden relative z-10 mb-auto border border-white/[0.08] bg-[#111213]/80 backdrop-blur-sm'>
+						<div className='flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08]'>
+							<span className='font-semibold text-white/70 uppercase tracking-wider text-xs'>На этой неделе</span>
+							<span className='text-[#8b6eff] font-mono text-xs'>
 								{tasks.filter(t => t.isCompleted).length}/{tasks.length}
 							</span>
 						</div>
 						{tasks.slice(0, 3).map(t => renderTaskRow(t, true))}
-						<div className='px-3 py-1.5 text-[11px] text-white/25 border-t border-white/[0.08]'>
+						<div className='px-4 py-2 text-xs text-white/25 border-t border-white/[0.08]'>
 							ещё {tasks.length - 3} задач...
 						</div>
 					</div>
 
-					{/* ===== БЛОК ВХОДА ===== */}
-					<div className='relative z-10 w-full max-w-[340px] mx-auto my-auto flex flex-col items-center text-center'>
-						<h1 className='text-[28px] sm:text-3xl font-semibold tracking-tight text-white mb-7'>
+					{/* ===== БЛОК ВХОДА (по центру) ===== */}
+					<div className='relative z-10 w-full max-w-[380px] mx-auto my-auto flex flex-col items-center text-center py-8 lg:py-0'>
+						<h1 className='text-3xl sm:text-[34px] font-semibold tracking-tight text-white mb-8'>
 							Вход в Planner
 						</h1>
 
-						{/* Turnstile CAPTCHA — контейнер на полную ширину */}
-						<div className='w-full mb-3.5 flex justify-center items-center min-h-[68px]'>
-							<div ref={turnstileContainerRef} id='turnstile-widget' />
+						{/* Turnstile CAPTCHA — по полной ширине контейнера */}
+						<div className='w-full mb-4 flex justify-center items-center min-h-[70px]'>
+							<div ref={turnstileContainerRef} id='turnstile-widget' className='w-full' />
 						</div>
 
 						{captchaError && (
-							<p role='alert' className='w-full mb-3 text-[11px] text-red-400 text-center leading-relaxed'>
+							<p role='alert' className='w-full mb-3 text-xs text-red-400 text-center leading-relaxed'>
 								{captchaError}
 							</p>
 						)}
 
-						{/* Кнопка Google — по ширине контейнера */}
+						{/* Кнопка Google — та же ширина */}
 						<button
 							type='button'
 							onClick={handleGoogleLogin}
 							disabled={isLoading || !turnstileToken}
 							style={{ backgroundColor: '#FFFFFF', color: '#111827' }}
-							className='w-full h-[48px] flex items-center justify-center gap-3 font-semibold text-[13px] transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5'
+							className='w-full h-[52px] flex items-center justify-center gap-3 font-semibold text-sm transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5'
 						>
 							{isLoading ? (
 								<div className='flex items-center gap-2.5'>
-									<Loader2 size={17} className='animate-spin text-neutral-800' />
+									<Loader2 size={18} className='animate-spin text-neutral-800' />
 									<span style={{ color: '#111827' }}>Авторизация...</span>
 								</div>
 							) : (
 								<>
-									<svg className='w-[18px] h-[18px] flex-shrink-0' viewBox='0 0 24 24'>
+									<svg className='w-5 h-5 flex-shrink-0' viewBox='0 0 24 24'>
 										<path fill='#4285F4' d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z' />
 										<path fill='#34A853' d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z' />
 										<path fill='#FBBC05' d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z' />
@@ -513,7 +451,7 @@ export function Auth() {
 					</div>
 
 					{/* Мобильный футер */}
-					<div className='lg:hidden relative z-10 text-center text-[10px] text-white/25 mt-4'>
+					<div className='lg:hidden relative z-10 text-center text-[11px] text-white/25 mt-auto pt-4'>
 						&copy; 2026 Planner
 					</div>
 					<div className='hidden lg:block' />
