@@ -5,7 +5,8 @@ import {
 	BookOpenText,
 	NotebookPen,
 	Settings,
-	Timer
+	Timer,
+	Wind
 } from 'lucide-react'
 
 import { DASHBOARD_PAGES } from '@/config/pages-url.config'
@@ -37,6 +38,11 @@ export const MENU: IMenuItem[] = [
 		icon: NotebookPen,
 		link: DASHBOARD_PAGES.THOUGHTS,
 		name: 'Мысли'
+	},
+	{
+		icon: Wind,
+		link: DASHBOARD_PAGES.BREATHING,
+		name: 'Дыхание'
 	},
 	{
 		icon: Settings,
