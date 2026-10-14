@@ -30,6 +30,7 @@ import {
 } from './breathing.types'
 import { breathingAudio } from './breathing-audio'
 import { BreathingCircle } from './BreathingCircle'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
 	breathingService,
 	type IBreathingSession
@@ -69,6 +70,8 @@ export default function BreathingPage() {
 	// Sessions history
 	const [sessions, setSessions] = useState<IBreathingSession[]>([])
 	const [loadingHistory, setLoadingHistory] = useState<boolean>(true)
+	const [sessionToDelete, setSessionToDelete] = useState<IBreathingSession | null>(null)
+	const [isDeleting, setIsDeleting] = useState<boolean>(false)
 
 	// Internal timing references
 	const sessionStartTimeRef = useRef<number>(0)
@@ -664,7 +667,7 @@ export default function BreathingPage() {
 
 											<button
 												type='button'
-												onClick={() => handleDeleteSession(s.id)}
+												onClick={() => setSessionToDelete(s)}
 												title='Удалить запись'
 												className='ml-1 grid h-7 w-7 place-items-center rounded text-white/30 hover:bg-red-500/10 hover:text-red-400 transition-colors'
 											>
@@ -678,6 +681,24 @@ export default function BreathingPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Confirm Dialog for deleting session */}
+			{sessionToDelete && (
+				<ConfirmDialog
+					open={Boolean(sessionToDelete)}
+					title='Удалить сеанс дыхания?'
+					description={`Запись «${sessionToDelete.technique_name}» (${Math.round(sessionToDelete.duration_seconds / 60) || 1} мин, ${sessionToDelete.cycles_count} ц.) будет безвозвратно удалена из истории.`}
+					confirmLabel='Удалить'
+					isPending={isDeleting}
+					onConfirm={async () => {
+						setIsDeleting(true)
+						await handleDeleteSession(sessionToDelete.id)
+						setIsDeleting(false)
+						setSessionToDelete(null)
+					}}
+					onClose={() => setSessionToDelete(null)}
+				/>
+			)}
 		</div>
 	)
 }
