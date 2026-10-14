@@ -30,7 +30,7 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 
 						{filterTasks(items, value)?.map((item, index) => (
 							<Draggable
-								key={item.id}
+								key={item.clientKey || item.id}
 								draggableId={item.id}
 								index={index}
 								isDragDisabled={item.id.startsWith('draft-')}
@@ -42,7 +42,7 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 										style={provided.draggableProps.style}
 									>
 										<KanbanCard
-											key={item.id}
+											key={item.clientKey || item.id}
 											item={item}
 											setItems={setItems}
 											dragHandleProps={provided.dragHandleProps}

@@ -36,13 +36,10 @@ export function useUpdateTask(key?: string) {
 				if (!current) return current
 				return {
 					...current,
-					data: current.data.map(task => task.id === id ? response.data : task)
+					data: current.data.map(task =>
+						task.id === id ? { ...task, ...response.data } : task
+					)
 				}
-			})
-		},
-		onSettled() {
-			queryClient.invalidateQueries({
-				queryKey: ['tasks']
 			})
 		}
 	})

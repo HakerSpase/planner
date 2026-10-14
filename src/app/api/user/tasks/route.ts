@@ -16,9 +16,10 @@ export async function GET() {
 	const { data, error } = await supabase
 		.from('task')
 		.select(
-			'id,name,note,priority,is_completed,created_at,completed_at,updated_at'
+			'id,name,note,priority,is_completed,created_at,completed_at,updated_at,order'
 		)
 		.eq('user_id', user.id)
+		.order('order', { ascending: true })
 		.order('created_at', { ascending: true })
 
 	if (error) {
@@ -33,7 +34,8 @@ export async function GET() {
 		isCompleted: task.is_completed,
 		completedAt: task.completed_at,
 		createdAt: task.created_at,
-		updatedAt: task.updated_at
+		updatedAt: task.updated_at,
+		order: task.order ?? 0
 	}))
 
 	return NextResponse.json(formatted)
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
 			created_at: body.createdAt
 				? new Date(body.createdAt).toISOString()
 				: new Date().toISOString(),
+			order: typeof body.order === 'number' ? body.order : 0,
 			user_id: user.id
 		})
 		.select()
@@ -80,6 +83,7 @@ export async function POST(request: Request) {
 		isCompleted: data.is_completed,
 		completedAt: data.completed_at,
 		createdAt: data.created_at,
-		updatedAt: data.updated_at
+		updatedAt: data.updated_at,
+		order: data.order ?? 0
 	})
 }

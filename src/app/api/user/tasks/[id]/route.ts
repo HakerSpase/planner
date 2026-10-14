@@ -32,6 +32,7 @@ export async function PUT(
 	// empty timestamp, which previously made the optimistic card jump and roll back.
 	if (body.createdAt !== undefined)
 		updateData.created_at = body.createdAt || null
+	if (body.order !== undefined) updateData.order = body.order
 
 	const { data, error } = await supabase
 		.from('task')
@@ -53,7 +54,8 @@ export async function PUT(
 		isCompleted: data.is_completed,
 		completedAt: data.completed_at,
 		createdAt: data.created_at,
-		updatedAt: data.updated_at
+		updatedAt: data.updated_at,
+		order: data.order ?? 0
 	})
 }
 

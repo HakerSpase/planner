@@ -164,25 +164,36 @@ export default function ThoughtsPage() {
 						))}
 						{days.map(day => {
 							const key = iso(day)
+							const isToday = key === todayKey
+							const hasEntry = Boolean(entries[key]?.trim())
+							const isSelected = isSameDay(day, selected)
+							const isCurrentMonth = isSameMonth(day, month)
+
 							return (
 								<button
 									key={key}
 									onClick={() => setSelected(day)}
-									aria-pressed={isSameDay(day, selected)}
-									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${entries[key]?.trim() ? ', запись сохранена' : ''}`}
-									className={`relative grid aspect-square grid-rows-[1fr_8px] place-items-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isSameMonth(day, month) ? 'text-white/20' : 'text-white/75'} ${isSameDay(day, selected) ? 'bg-emerald-500/15 text-emerald-300 outline outline-1 -outline-offset-1 outline-emerald-400/60' : ''} ${key === todayKey ? 'text-emerald-300' : ''}`}
+									aria-pressed={isSelected}
+									aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', запись сохранена' : ''}`}
+									className={`relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-colors hover:bg-white/[0.06] ${!isCurrentMonth ? 'text-white/20' : 'text-white/80'} ${isSelected ? 'bg-emerald-500/15 text-emerald-300 outline outline-1 -outline-offset-1 outline-emerald-400/60 font-medium' : ''} ${isToday ? 'font-semibold text-emerald-300' : ''}`}
 								>
 									<span className='leading-none'>{format(day, 'd')}</span>
-									{(key === todayKey || entries[key]?.trim()) && (
+									{(isToday || hasEntry) && (
 										<span
 											aria-hidden='true'
-											className='relative -top-[3px] flex h-2 items-center justify-center gap-0.5'
+											className='pointer-events-none absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1'
 										>
-											{key === todayKey && (
-												<span className='block h-[7px] w-[7px] shrink-0 bg-emerald-400' />
+											{isToday && (
+												<span
+													title='Сегодня'
+													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 ring-1 ring-emerald-400/40'
+												/>
 											)}
-											{entries[key]?.trim() && (
-												<span className='block h-[7px] w-[7px] shrink-0 bg-amber-400' />
+											{hasEntry && (
+												<span
+													title='Запись сохранена'
+													className='block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 ring-1 ring-amber-400/40'
+												/>
 											)}
 										</span>
 									)}
@@ -190,11 +201,19 @@ export default function ThoughtsPage() {
 							)
 						})}
 					</div>
-					<p className='mt-4 text-xs text-white/40'>
-						{loading
-							? 'Загружаем записи…'
-							: 'Точка под датой означает, что запись сохранена.'}
-					</p>
+					<div className='mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50'>
+						<div className='flex items-center gap-3'>
+							<span className='flex items-center gap-1.5'>
+								<span className='block h-2 w-2 rounded-full bg-emerald-400' />
+								Сегодня
+							</span>
+							<span className='flex items-center gap-1.5'>
+								<span className='block h-2 w-2 rounded-full bg-amber-400' />
+								Есть мысль
+							</span>
+						</div>
+						{loading && <span>Загружаем записи…</span>}
+					</div>
 				</section>
 				<section className='flex min-h-[420px] flex-col bg-[#141516] p-4 sm:p-5'>
 					<div className='mb-4 border-b border-white/10 pb-3'>

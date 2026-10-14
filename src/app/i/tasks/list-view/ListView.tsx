@@ -11,7 +11,7 @@ import styles from './ListView.module.scss'
 
 export function ListView() {
 	const { items, setItems } = useTasks()
-	const { onDragEnd } = useTaskDnd()
+	const { onDragEnd } = useTaskDnd(items, setItems)
 
 	return (
 		<DragDropContext onDragEnd={onDragEnd}>

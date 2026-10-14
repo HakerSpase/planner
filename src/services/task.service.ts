@@ -20,6 +20,13 @@ class TaskService {
 		return response
 	}
 
+	async updateOrderTask(ids: string[]) {
+		const response = await axiosWithAuth.put(`${this.BASE_URL}/update-order`, {
+			ids
+		})
+		return response
+	}
+
 	async deleteTask(id: string) {
 		const response = await axiosWithAuth.delete(`${this.BASE_URL}/${id}`)
 		return response

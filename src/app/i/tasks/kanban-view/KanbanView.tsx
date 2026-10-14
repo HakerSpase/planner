@@ -1,6 +1,7 @@
 'use client'
 
 import { DragDropContext } from '@hello-pangea/dnd'
+import cn from 'clsx'
 import {
 	type PointerEvent as ReactPointerEvent,
 	useEffect,
@@ -17,10 +18,10 @@ import styles from './KanbanView.module.scss'
 
 export function KanbanView() {
 	const { items, setItems } = useTasks()
-	const { onDragEnd } = useTaskDnd()
+	const { onDragEnd } = useTaskDnd(items, setItems)
 	const [isDraggingTask, setIsDraggingTask] = useState(false)
 	const boardRef = useRef<HTMLDivElement>(null)
-	const touchPositionRef = useRef<{ x: number; y: number } | null>(null)
+	const dragPositionRef = useRef<{ x: number; y: number } | null>(null)
 	const panRef = useRef<{
 		pointerId: number
 		x: number
@@ -31,72 +32,93 @@ export function KanbanView() {
 
 	useEffect(() => {
 		if (!isDraggingTask) return
+
+		const trackPointer = (event: PointerEvent | MouseEvent) => {
+			dragPositionRef.current = { x: event.clientX, y: event.clientY }
+		}
+
 		const trackTouch = (event: TouchEvent) => {
 			const touch = event.touches[0] || event.changedTouches[0]
-			if (touch)
-				touchPositionRef.current = { x: touch.clientX, y: touch.clientY }
+			if (touch) {
+				dragPositionRef.current = { x: touch.clientX, y: touch.clientY }
+			}
 		}
-		const trackPointer = (event: PointerEvent) => {
-			if (event.pointerType === 'touch')
-				touchPositionRef.current = { x: event.clientX, y: event.clientY }
+
+		const clearPosition = () => {
+			dragPositionRef.current = null
 		}
-		const clearTouch = () => {
-			touchPositionRef.current = null
-		}
-		document.addEventListener('touchmove', trackTouch, {
+
+		window.addEventListener('pointermove', trackPointer, {
 			capture: true,
 			passive: true
 		})
-		document.addEventListener('touchend', clearTouch, true)
-		document.addEventListener('touchcancel', clearTouch, true)
-		document.addEventListener('pointermove', trackPointer, true)
+		window.addEventListener('mousemove', trackPointer, {
+			capture: true,
+			passive: true
+		})
+		window.addEventListener('touchmove', trackTouch, {
+			capture: true,
+			passive: true
+		})
+		window.addEventListener('pointerup', clearPosition, true)
+		window.addEventListener('mouseup', clearPosition, true)
+		window.addEventListener('touchend', clearPosition, true)
+		window.addEventListener('touchcancel', clearPosition, true)
 
 		let frame = 0
 		const autoScroll = () => {
-			const point = touchPositionRef.current
+			const point = dragPositionRef.current
 			const board = boardRef.current
 			if (point && board) {
 				const bounds = board.getBoundingClientRect()
 				const pageScroller = board.closest('main')
 				const pageBounds = pageScroller?.getBoundingClientRect()
-				const edge = 64
+				const edge = 90
+
 				if (board.scrollWidth > board.clientWidth) {
-					if (point.x > bounds.right - edge)
-						board.scrollLeft += Math.ceil(
-							((point.x - (bounds.right - edge)) / edge) * 14
-						)
-					else if (point.x < bounds.left + edge)
-						board.scrollLeft -= Math.ceil(
-							((bounds.left + edge - point.x) / edge) * 14
-						)
+					if (point.x > bounds.right - edge) {
+						const distance = point.x - (bounds.right - edge)
+						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
+						board.scrollLeft += Math.round(ratio * 20)
+					} else if (point.x < bounds.left + edge) {
+						const distance = bounds.left + edge - point.x
+						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
+						board.scrollLeft -= Math.round(ratio * 20)
+					}
 				}
+
 				if (pageScroller && pageBounds) {
-					if (point.y > pageBounds.bottom - edge)
-						pageScroller.scrollTop += Math.ceil(
-							((point.y - (pageBounds.bottom - edge)) / edge) * 14
-						)
-					else if (point.y < pageBounds.top + edge)
-						pageScroller.scrollTop -= Math.ceil(
-							((pageBounds.top + edge - point.y) / edge) * 14
-						)
+					if (point.y > pageBounds.bottom - edge) {
+						const distance = point.y - (pageBounds.bottom - edge)
+						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
+						pageScroller.scrollTop += Math.round(ratio * 20)
+					} else if (point.y < pageBounds.top + edge) {
+						const distance = pageBounds.top + edge - point.y
+						const ratio = Math.min(2.5, Math.max(0.1, distance / edge))
+						pageScroller.scrollTop -= Math.round(ratio * 20)
+					}
 				}
 			}
 			frame = window.requestAnimationFrame(autoScroll)
 		}
 		frame = window.requestAnimationFrame(autoScroll)
+
 		return () => {
 			window.cancelAnimationFrame(frame)
-			document.removeEventListener('touchmove', trackTouch, true)
-			document.removeEventListener('touchend', clearTouch, true)
-			document.removeEventListener('touchcancel', clearTouch, true)
-			document.removeEventListener('pointermove', trackPointer, true)
-			touchPositionRef.current = null
+			window.removeEventListener('pointermove', trackPointer, true)
+			window.removeEventListener('mousemove', trackPointer, true)
+			window.removeEventListener('touchmove', trackTouch, true)
+			window.removeEventListener('pointerup', clearPosition, true)
+			window.removeEventListener('mouseup', clearPosition, true)
+			window.removeEventListener('touchend', clearPosition, true)
+			window.removeEventListener('touchcancel', clearPosition, true)
+			dragPositionRef.current = null
 		}
 	}, [isDraggingTask])
 
 	const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
 		if (event.pointerType === 'touch') {
-			touchPositionRef.current = { x: event.clientX, y: event.clientY }
+			dragPositionRef.current = { x: event.clientX, y: event.clientY }
 			return
 		}
 		if (event.button !== 1 && event.button !== 2) return
@@ -113,8 +135,9 @@ export function KanbanView() {
 	}
 
 	const movePan = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (event.pointerType === 'touch' && isDraggingTask)
-			touchPositionRef.current = { x: event.clientX, y: event.clientY }
+		if (event.pointerType === 'touch' && isDraggingTask) {
+			dragPositionRef.current = { x: event.clientX, y: event.clientY }
+		}
 		if (!panRef.current || panRef.current.pointerId !== event.pointerId) return
 		const delta = panRef.current.x - event.clientX
 		event.currentTarget.scrollLeft += delta * 1.7
@@ -142,7 +165,7 @@ export function KanbanView() {
 		>
 			<div
 				ref={boardRef}
-				className={styles.board}
+				className={cn(styles.board, isDraggingTask && styles.dragging)}
 				onPointerDown={startPan}
 				onPointerMove={movePan}
 				onPointerUp={stopPan}

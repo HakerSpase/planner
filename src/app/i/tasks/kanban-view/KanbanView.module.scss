@@ -12,6 +12,9 @@
 		cursor: grabbing;
 		user-select: none;
 	}
+	&.dragging {
+		scroll-snap-type: none !important;
+	}
 	@media (min-width: 1024px) {
 		@apply auto-cols-[15rem] snap-none;
 	}
@@ -43,12 +46,8 @@
 			}
 
 			.cardHeader {
-				@apply mb-2 flex min-w-0 items-center gap-1;
+				@apply mb-2 flex min-w-0 items-center gap-1.5;
 				font-size: 93%;
-
-				> input:last-child {
-					@apply ml-2;
-				}
 			}
 
 			.cardBody,

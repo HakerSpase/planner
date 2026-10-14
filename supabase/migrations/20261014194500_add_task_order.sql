@@ -1,0 +1,2 @@
+ALTER TABLE public.task
+ADD COLUMN IF NOT EXISTS "order" integer NOT NULL DEFAULT 0;

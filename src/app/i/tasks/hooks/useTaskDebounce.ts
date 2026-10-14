@@ -33,7 +33,14 @@ export function useTaskDebounce({ watch, itemId, setItems }: IUseTaskDebounce) {
 				onSuccess(response) {
 					const createdTask = response.data as ITaskResponse
 					setItems(current =>
-						current?.map(task => (task.id === itemId ? createdTask : task))
+						current?.map(task =>
+							task.id === itemId
+								? {
+										...createdTask,
+										clientKey: task.clientKey || task.id
+									}
+								: task
+						)
 					)
 					if (draftRevision.current > requestRevision) {
 						updateTask({ id: createdTask.id, data: latestDraftData.current })

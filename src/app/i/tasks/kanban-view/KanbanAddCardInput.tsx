@@ -12,16 +12,19 @@ export function KanbanAddCardInput({
 	filterDate
 }: IKanbanAddCardInput) {
 	const addCard = () => {
+		const draftId = `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`
 		setItems(prev => {
 			if (!prev) return
 
 			return [
 				...prev,
 				{
-					id: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+					id: draftId,
+					clientKey: draftId,
 					name: '',
 					isCompleted: false,
-					createdAt: filterDate
+					createdAt: filterDate,
+					order: (prev.length || 0) + 1
 				}
 			]
 		})

@@ -37,11 +37,13 @@ body {
 	color-scheme: dark;
 }
 
-/* Planner uses square, quiet surfaces throughout the interface. */
-*,
-*::before,
-*::after {
-	border-radius: 0 !important;
+/* Planner uses square, quiet surfaces throughout the interface, but allows explicit circular elements like indicator dots. */
+*:not(.rounded-full):not([data-rounded]) {
+	border-radius: 0;
+}
+
+.rounded-full {
+	border-radius: 9999px !important;
 }
 
 *::-webkit-scrollbar {

@@ -13,6 +13,10 @@ export interface ITaskResponse extends Omit<IBase, 'createdAt'> {
 	note?: string | null
 	priority?: EnumTaskPriority
 	isCompleted: boolean
+	order?: number
+	clientKey?: string
 }
 
-export type TypeTaskFormState = Partial<Omit<ITaskResponse, 'id' | 'updatedAt'>>
+export type TypeTaskFormState = Partial<
+	Omit<ITaskResponse, 'id' | 'updatedAt' | 'clientKey'>
+>
