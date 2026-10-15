@@ -510,13 +510,13 @@ export default function BreathingPage() {
 			</div>
 
 			{/* Responsive 2-Column Grid on Desktop */}
-			<div className='mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12 items-stretch'>
+			<div className='mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12 items-start'>
 				{/* MAIN / LEFT COLUMN: Visualizer Stage (lg:col-span-8) */}
 				<div className='flex flex-col lg:col-span-8'>
-					{/* Interactive Breathing Stage */}
-					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl h-full min-h-[560px]'>
+					{/* Interactive Breathing Stage - Stable fixed desktop height */}
+					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl lg:h-[570px] min-h-[570px]'>
 						{/* Slot 1: Top Bar - Responsive layout preventing collisions on mobile */}
-						<div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3 shrink-0'>
+						<div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3 shrink-0 min-h-[44px]'>
 							<div className='flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0'>
 								<span className='text-sm sm:text-base font-medium text-white tracking-wide truncate'>
 									{selectedTechnique.name}
@@ -617,7 +617,7 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Slot 2 & 3: Visualizer and Flow Stepper */}
-						<div className='flex-1 flex flex-col items-center justify-center relative py-4 sm:py-6'>
+						<div className='flex-1 flex flex-col items-center justify-center relative py-2 sm:py-4'>
 							<BreathingCircle
 								technique={selectedTechnique}
 								currentPhase={currentPhase}
@@ -630,10 +630,10 @@ export default function BreathingPage() {
 							/>
 						</div>
 
-						{/* Slot 4: Duration / Status & Action Buttons - Responsive without overlap */}
-						<div className='flex flex-col items-center gap-3.5 border-t border-white/[0.06] pt-3.5 shrink-0 w-full'>
-							{/* Duration Selector or Active Status */}
-							<div className='flex items-center justify-center w-full'>
+						{/* Slot 4: Duration / Status & Action Buttons - Stable height */}
+						<div className='flex flex-col items-center justify-between gap-3 border-t border-white/[0.06] pt-3 shrink-0 w-full min-h-[88px]'>
+							{/* Sub-row 1: Duration Selector or Active Status - Fixed height container */}
+							<div className='h-7 flex items-center justify-center w-full'>
 								{!isActive ? (
 									<div className='flex items-center gap-1.5 flex-wrap justify-center'>
 										<span className='text-[10px] uppercase tracking-wider text-white/40 mr-1 font-mono'>
@@ -646,7 +646,7 @@ export default function BreathingPage() {
 													key={dur.seconds}
 													type='button'
 													onClick={() => setTargetDurationSeconds(dur.seconds)}
-													className={`border px-2.5 py-1 text-xs transition-colors ${
+													className={`border px-2.5 py-0.5 text-xs transition-colors ${
 														isSelected
 															? 'border-primary bg-primary/20 text-white font-medium'
 															: 'border-white/10 bg-transparent text-white/50 hover:text-white/80 hover:border-white/25'
@@ -658,7 +658,7 @@ export default function BreathingPage() {
 										})}
 									</div>
 								) : (
-									<div className='text-xs font-mono text-white/40 flex items-center gap-2 py-0.5'>
+									<div className='text-xs font-mono text-white/40 flex items-center gap-2'>
 										<span className='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse' />
 										<span>Практика активна</span>
 										<span>•</span>
@@ -671,8 +671,8 @@ export default function BreathingPage() {
 								)}
 							</div>
 
-							{/* Action Buttons */}
-							<div className='flex items-center justify-center gap-3 w-full pb-1'>
+							{/* Sub-row 2: Action Buttons */}
+							<div className='h-10 flex items-center justify-center gap-3 w-full pb-0.5'>
 								{!isActive ? (
 									<button
 										type='button'
@@ -730,7 +730,7 @@ export default function BreathingPage() {
 
 				{/* SIDEBAR / RIGHT COLUMN: Catalog of Techniques & History (lg:col-span-4) */}
 				<div
-					className={`flex flex-col gap-4 lg:col-span-4 transition-opacity duration-300 ${
+					className={`flex flex-col gap-4 lg:col-span-4 transition-opacity duration-500 ease-in-out ${
 						isActive ? 'opacity-40 pointer-events-none' : 'opacity-100'
 					}`}
 				>
@@ -756,8 +756,8 @@ export default function BreathingPage() {
 										onClick={() => selectTechnique(tech)}
 										className={`group w-full flex items-start gap-3 py-3 px-2.5 text-left transition-colors ${
 											isSelected
-												? 'bg-white/[0.04] border-l-2 border-primary -ml-[1px]'
-												: 'hover:bg-white/[0.015] border-l-2 border-transparent'
+												? 'bg-white/[0.04]'
+												: 'hover:bg-white/[0.02]'
 										}`}
 									>
 										{/* Bare icon vector without background box */}
@@ -878,12 +878,12 @@ export default function BreathingPage() {
 			{/* ========================================================================= */}
 			{isZenMode && (
 				<div className='fixed inset-0 z-[120] flex flex-col justify-between bg-[#08090b] p-6 sm:p-10 select-none overflow-hidden'>
-					{/* Dynamic Atmospheric Breathing Glow backdrop */}
+					{/* Deep Graphite Ambient Backdrop with Subtle Vignette */}
 					<div
-						className='absolute inset-0 pointer-events-none transition-opacity duration-1000 ease-out'
+						className='absolute inset-0 pointer-events-none'
 						style={{
-							background: `radial-gradient(circle 650px at 50% 50%, ${selectedTechnique.accentColor}18, transparent 75%)`,
-							opacity: isActive ? (isPaused ? 0.35 : 0.85) : 0.4
+							background:
+								'radial-gradient(ellipse 90% 80% at 50% 50%, #0d0e12 0%, #08090b 100%)'
 						}}
 					/>
 
@@ -956,8 +956,17 @@ export default function BreathingPage() {
 						</div>
 					</div>
 
-					{/* Zen Center: Visualizer Circle */}
-					<div className='relative z-10 flex flex-1 items-center justify-center py-4'>
+					{/* Zen Center: Instruction ABOVE the breathing form + Visualizer Circle */}
+					<div className='relative z-10 flex flex-1 flex-col items-center justify-center py-2'>
+						{/* Phase instruction hint ABOVE the central form */}
+						<div className='h-8 shrink-0 flex items-center justify-center mb-4 sm:mb-6'>
+							<p className='text-sm sm:text-base font-medium text-white/85 tracking-wide text-center transition-opacity duration-300'>
+								{isActive
+									? (isPaused ? 'Пауза' : currentPhase.hint)
+									: selectedTechnique.tagline}
+							</p>
+						</div>
+
 						<BreathingCircle
 							technique={selectedTechnique}
 							currentPhase={currentPhase}

@@ -152,6 +152,35 @@ export function BreathingCircle({
 
 	return (
 		<div className='relative flex flex-col items-center justify-center select-none py-1 w-full'>
+			{/* Multi-layered Volumetric Atmospheric Backlight in Zen Mode */}
+			{isZen && (
+				<div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
+					{/* Layer 1: Expansive Deep Field Bloom (Soft diffuse atmospheric light) */}
+					<div
+						className='absolute rounded-full blur-[72px] transition-all duration-300 ease-out will-change-transform'
+						style={{
+							width: '600px',
+							height: '600px',
+							background: `radial-gradient(circle, ${accentColor} 0%, ${accentColor}18 45%, transparent 70%)`,
+							opacity: 0.14 + expansion * 0.22,
+							transform: `scale(${0.88 + expansion * 0.24})`
+						}}
+					/>
+
+					{/* Layer 2: Medium Resonant Core Aura (Volumetric body glow) */}
+					<div
+						className='absolute rounded-full blur-[42px] transition-all duration-300 ease-out will-change-transform'
+						style={{
+							width: '420px',
+							height: '420px',
+							background: `radial-gradient(circle, ${accentColor} 0%, ${accentColor}35 50%, transparent 75%)`,
+							opacity: 0.2 + expansion * 0.28,
+							transform: `scale(${0.92 + expansion * 0.18})`
+						}}
+					/>
+				</div>
+			)}
+
 			{/* Scaled living canvas area */}
 			<div
 				className={`relative flex items-center justify-center shrink-0 transition-all duration-300 ${
@@ -247,13 +276,12 @@ export function BreathingCircle({
 									{Math.ceil(phaseRemainingSeconds)}
 								</span>
 
-								<span
-									className={`text-white/40 uppercase tracking-widest font-mono ${
-										isZen ? 'text-xs' : 'text-[10px]'
-									}`}
-								>
-									секунд
-								</span>
+								{/* Time label omitted in Zen mode to remove visual clutter */}
+								{!isZen && (
+									<span className='text-[10px] text-white/40 uppercase tracking-widest font-mono'>
+										секунд
+									</span>
+								)}
 							</>
 						) : (
 							<>
@@ -285,20 +313,14 @@ export function BreathingCircle({
 				</div>
 			</div>
 
-			{/* Phase instruction hint */}
-			<div
-				className={`min-h-[24px] max-w-lg px-4 text-center flex items-center justify-center transition-all duration-300 ${
-					isZen ? 'mt-4 sm:mt-6' : 'mt-2'
-				}`}
-			>
-				<p
-					className={`font-medium text-white/70 transition-opacity duration-300 ${
-						isZen ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'
-					}`}
-				>
-					{isActive ? currentPhase.hint : technique.tagline}
-				</p>
-			</div>
+			{/* Phase instruction hint (normal mode only; in Zen mode rendered above the circle) */}
+			{!isZen && (
+				<div className='min-h-[24px] max-w-lg px-4 text-center flex items-center justify-center mt-2'>
+					<p className='text-xs sm:text-sm font-medium text-white/70 truncate transition-opacity duration-300'>
+						{isActive ? currentPhase.hint : technique.tagline}
+					</p>
+				</div>
+			)}
 
 			{/* Clean Connected Flow Stepper (Omitted in Zen Mode to prevent clutter) */}
 			{!isZen && (
