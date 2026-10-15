@@ -508,17 +508,23 @@ export default function BreathingPage() {
 				<div className='flex flex-col gap-6 lg:col-span-7 xl:col-span-8'>
 					{/* Interactive Breathing Stage */}
 					<div className='relative overflow-hidden border border-white/10 bg-[#121314] p-5 sm:p-8 shadow-2xl'>
-						{/* Top bar with timer & toggles */}
-						<div className='flex items-center justify-between border-b border-white/[0.07] pb-4'>
-							<div className='flex items-center gap-4 text-xs font-mono text-white/70'>
-								<span className='flex items-center gap-1.5'>
-									<Clock size={13} className='text-white/40' />
-									<strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
-									{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
+						{/* Top bar with technique name, timer & toggles */}
+						<div className='flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] pb-4'>
+							<div className='flex items-center gap-3'>
+								<span className='text-sm font-semibold text-white'>
+									{selectedTechnique.name}
 								</span>
-								<span>
-									Циклов: <strong className='text-white'>{completedCycles}</strong>
-								</span>
+								<div className='h-3 w-px bg-white/15' />
+								<div className='flex items-center gap-3 text-xs font-mono text-white/60'>
+									<span className='flex items-center gap-1.5'>
+										<Clock size={13} className='text-white/40' />
+										<strong className='text-white/90'>{formatTime(totalElapsedSeconds)}</strong>
+										{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
+									</span>
+									<span>
+										Циклы: <strong className='text-white/90'>{completedCycles}</strong>
+									</span>
+								</div>
 							</div>
 
 							{/* Feedback & Mode Toggles */}
@@ -586,6 +592,7 @@ export default function BreathingPage() {
 						<BreathingCircle
 							technique={selectedTechnique}
 							currentPhase={currentPhase}
+							currentPhaseIndex={currentPhaseIndex}
 							phaseRemainingSeconds={phaseRemainingSeconds}
 							phaseProgress={phaseProgress}
 							isActive={isActive}
@@ -666,35 +673,6 @@ export default function BreathingPage() {
 									</button>
 								</>
 							)}
-						</div>
-					</div>
-
-					{/* Active Technique Information */}
-					<div className='border border-white/[0.08] bg-[#141516] p-4 sm:p-5'>
-						<div className='flex items-center justify-between gap-2'>
-							<h3 className='text-sm font-semibold text-white'>
-								{selectedTechnique.name}
-							</h3>
-							<span
-								className='text-xs font-mono'
-								style={{ color: selectedTechnique.accentColor }}
-							>
-								{selectedTechnique.totalCycleSeconds} сек
-							</span>
-						</div>
-						<p className='mt-1.5 text-xs leading-relaxed text-white/60'>
-							{selectedTechnique.description}
-						</p>
-
-						<div className='mt-3 flex flex-wrap gap-1.5 text-[11px] text-white/40 font-mono'>
-							{selectedTechnique.phases.map((p, idx) => (
-								<span
-									key={idx}
-									className='border border-white/[0.08] bg-white/[0.02] px-2 py-0.5'
-								>
-									{p.name}: {p.seconds}с
-								</span>
-							))}
 						</div>
 					</div>
 				</div>
@@ -891,6 +869,7 @@ export default function BreathingPage() {
 						<BreathingCircle
 							technique={selectedTechnique}
 							currentPhase={currentPhase}
+							currentPhaseIndex={currentPhaseIndex}
 							phaseRemainingSeconds={phaseRemainingSeconds}
 							phaseProgress={phaseProgress}
 							isActive={isActive}

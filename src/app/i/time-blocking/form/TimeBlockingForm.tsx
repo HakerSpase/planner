@@ -1,4 +1,5 @@
 import { Controller, SubmitHandler, useFormContext } from 'react-hook-form'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/buttons/Button'
 import { Field } from '@/components/ui/fields/Field'
@@ -28,16 +29,29 @@ export function TimeBlockingForm() {
 	const { createTimeBlock, isPending } = useCreateTimeBlock()
 
 	const onSubmit: SubmitHandler<TypeTimeBlockFormState> = data => {
+		if (!data.name?.trim()) {
+			toast.error('Введите название тайм-блока')
+			return
+		}
+
+		const totalMinutes = Number(data.duration || 0)
+		if (totalMinutes < 1) {
+			toast.error('Укажите длительность (не менее 1 минуты)')
+			return
+		}
+
 		const { color, id, ...rest } = data
-		const dto = { ...rest, color: color || undefined }
+		const dto = { ...rest, color: color || undefined, duration: totalMinutes }
 
 		if (id) {
 			updateTimeBlock({
 				id,
 				data: dto
 			})
+			toast.success('Тайм-блок обновлён')
 		} else {
 			createTimeBlock(dto)
+			toast.success('Тайм-блок создан')
 		}
 
 		reset({
@@ -49,28 +63,54 @@ export function TimeBlockingForm() {
 		})
 	}
 
+	const onError = (formErrors: typeof errors) => {
+		if (formErrors.name) {
+			toast.error('Введите название тайм-блока')
+			return
+		}
+		if (formErrors.duration) {
+			toast.error(formErrors.duration.message || 'Укажите длительность (не менее 1 минуты)')
+			return
+		}
+	}
+
 	return (
 		<form
-			onSubmit={handleSubmit(onSubmit)}
+			onSubmit={handleSubmit(onSubmit, onError)}
 			className='w-full min-w-0 max-w-xl border-t border-white/[0.08] pt-5 sm:border-t-0 sm:pt-0'
 		>
 			<Field
 				{...register('name', {
-					required: true
+					required: 'Введите название тайм-блока',
+					validate: value => Boolean(value?.trim()) || 'Введите название тайм-блока'
 				})}
 				id='name'
 				label='Название:'
 				placeholder='Введите название:'
+				state={errors.name ? 'error' : undefined}
 				extra='mb-4'
 			/>
+			{errors.name?.message && (
+				<p className='-mt-2 mb-3 text-xs text-red-400'>
+					{errors.name.message}
+				</p>
+			)}
 
 			<input
 				type='hidden'
 				{...register('duration', {
-					required: true,
-					min: 1,
-					max: 1440,
-					validate: value => Number.isInteger(value) || 'Укажите длительность'
+					required: 'Укажите длительность (не менее 1 минуты)',
+					min: {
+						value: 1,
+						message: 'Укажите длительность (не менее 1 минуты)'
+					},
+					max: {
+						value: 1440,
+						message: 'Максимальная длительность — 24 часа'
+					},
+					validate: value =>
+						(Number(value) >= 1 && Number.isInteger(Number(value))) ||
+						'Укажите длительность (не менее 1 минуты)'
 				})}
 			/>
 			<fieldset className='mb-4'>
@@ -92,7 +132,7 @@ export function TimeBlockingForm() {
 				<p className='mt-1 text-xs text-white/40'>{duration} мин. всего</p>
 			</fieldset>
 			{errors.duration?.message && (
-				<p className='-mt-3 mb-4 text-xs text-red-300'>
+				<p className='-mt-2 mb-4 text-xs text-red-400'>
 					{errors.duration.message}
 				</p>
 			)}
