@@ -3,7 +3,6 @@
 import cn from 'clsx'
 import {
 	Check,
-	ChevronDown,
 	FileText,
 	GanttChartSquare,
 	GripVertical,
@@ -240,14 +239,13 @@ export function Auth() {
 			)}>
 				<span
 					className={cn(
-						'flex items-center justify-between w-[82px] min-w-[82px] max-w-[82px] py-[3px] px-2 text-xs font-semibold text-white whitespace-nowrap shrink-0 rounded-sm select-none',
+						'flex items-center justify-center w-[76px] min-w-[76px] max-w-[76px] py-[3px] px-2 text-xs font-semibold text-white whitespace-nowrap shrink-0 rounded-sm select-none',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
 					)}
 				>
-					<span>{PRIORITY_LABEL[task.priority]}</span>
-					<ChevronDown size={12} className='opacity-50 shrink-0' />
+					{PRIORITY_LABEL[task.priority]}
 				</span>
 			</div>
 
