@@ -452,8 +452,6 @@ export default function BreathingPage() {
 		todaySessions.reduce((acc, s) => acc + s.duration_seconds, 0) / 60
 	)
 
-	const SelectedIcon = selectedTechnique.icon
-
 	const getSoundscapeIcon = (type: SoundscapeType) => {
 		switch (type) {
 			case 'rain':
@@ -486,22 +484,17 @@ export default function BreathingPage() {
 				<div className='mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-none'>
 					{BREATHING_TECHNIQUES.map(tech => {
 						const isSelected = tech.id === selectedTechnique.id
-						const TechIcon = tech.icon
 						return (
 							<button
 								key={tech.id}
 								type='button'
 								onClick={() => selectTechnique(tech)}
-								className={`flex shrink-0 items-center gap-2 border px-3 py-2 text-xs font-medium transition-all ${
+								className={`flex shrink-0 items-center border px-3 py-2 text-xs font-medium transition-all ${
 									isSelected
 										? 'border-primary bg-primary/15 text-white shadow-md'
 										: 'border-white/10 bg-[#141516] text-white/70 hover:border-white/20'
 								}`}
 							>
-								<TechIcon
-									size={14}
-									style={{ color: isSelected ? tech.accentColor : 'rgba(255,255,255,0.5)' }}
-								/>
 								<span>{tech.shortName || tech.name.split('(')[0]}</span>
 							</button>
 						)
@@ -678,14 +671,16 @@ export default function BreathingPage() {
 
 					{/* Active Technique Information */}
 					<div className='border border-white/[0.08] bg-[#141516] p-4 sm:p-5'>
-						<div className='flex items-center gap-2'>
-							<SelectedIcon
-								size={17}
-								style={{ color: selectedTechnique.accentColor }}
-							/>
-							<h3 className='text-sm font-medium text-white'>
+						<div className='flex items-center justify-between gap-2'>
+							<h3 className='text-sm font-semibold text-white'>
 								{selectedTechnique.name}
 							</h3>
+							<span
+								className='text-xs font-mono'
+								style={{ color: selectedTechnique.accentColor }}
+							>
+								{selectedTechnique.totalCycleSeconds} сек
+							</span>
 						</div>
 						<p className='mt-1.5 text-xs leading-relaxed text-white/60'>
 							{selectedTechnique.description}
@@ -714,35 +709,19 @@ export default function BreathingPage() {
 						<div className='mt-3 flex flex-col gap-2'>
 							{BREATHING_TECHNIQUES.map(tech => {
 								const isSelected = tech.id === selectedTechnique.id
-								const TechIcon = tech.icon
 								return (
 									<button
 										key={tech.id}
 										type='button'
 										onClick={() => selectTechnique(tech)}
-										className={`flex items-start gap-3 border p-3 text-left transition-all ${
+										className={`flex items-start border p-3.5 text-left transition-all ${
 											isSelected
 												? 'border-primary/60 bg-[#1a1c1e] shadow-md shadow-black/30'
 												: 'border-white/[0.07] bg-[#111213] hover:border-white/20 hover:bg-[#161718]'
 										}`}
 									>
-										<div
-											className='mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded border'
-											style={{
-												borderColor: isSelected ? `${tech.accentColor}60` : 'rgba(255,255,255,0.08)',
-												backgroundColor: isSelected ? `${tech.accentColor}18` : 'rgba(255,255,255,0.02)'
-											}}
-										>
-											<TechIcon
-												size={15}
-												style={{
-													color: isSelected ? tech.accentColor : 'rgba(255,255,255,0.6)'
-												}}
-											/>
-										</div>
-
 										<div className='min-w-0 flex-1'>
-											<div className='flex items-center justify-between gap-1'>
+											<div className='flex items-center justify-between gap-1.5'>
 												<span
 													className='text-xs font-semibold truncate'
 													style={{
@@ -758,10 +737,10 @@ export default function BreathingPage() {
 													/>
 												)}
 											</div>
-											<p className='mt-0.5 line-clamp-1 text-[11px] text-white/50'>
+											<p className='mt-1 line-clamp-1 text-[11px] text-white/50'>
 												{tech.tagline}
 											</p>
-											<span className='mt-1 inline-block text-[10px] text-white/35'>
+											<span className='mt-1.5 inline-block text-[10px] text-white/35 font-mono'>
 												Цикл: {tech.totalCycleSeconds} сек
 											</span>
 										</div>
@@ -852,27 +831,16 @@ export default function BreathingPage() {
 
 					{/* Zen Header */}
 					<div className='relative z-10 flex items-center justify-between border-b border-white/[0.08] pb-4'>
-						<div className='flex items-center gap-3'>
-							<div
-								className='grid h-9 w-9 place-items-center rounded border'
-								style={{
-									borderColor: `${selectedTechnique.accentColor}50`,
-									backgroundColor: `${selectedTechnique.accentColor}15`
-								}}
-							>
-								<SelectedIcon size={18} style={{ color: selectedTechnique.accentColor }} />
-							</div>
-							<div>
-								<h2 className='text-sm sm:text-base font-semibold text-white'>
-									{selectedTechnique.name}
-								</h2>
-								<p className='text-xs text-white/40 font-mono'>
-									Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
-									{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
-									{' • '}
-									Цикл: <strong className='text-white'>{completedCycles + 1}</strong>
-								</p>
-							</div>
+						<div>
+							<h2 className='text-sm sm:text-base font-semibold text-white'>
+								{selectedTechnique.name}
+							</h2>
+							<p className='text-xs text-white/40 font-mono mt-0.5'>
+								Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
+								{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
+								{' • '}
+								Цикл: <strong className='text-white'>{completedCycles + 1}</strong>
+							</p>
 						</div>
 
 						{/* Quick Zen Actions */}
@@ -1006,18 +974,13 @@ export default function BreathingPage() {
 					<div className='w-full max-w-lg border border-white/10 bg-[#141517] p-5 sm:p-6 shadow-2xl'>
 						{/* Modal Header */}
 						<div className='flex items-center justify-between border-b border-white/10 pb-4'>
-							<div className='flex items-center gap-2.5'>
-								<div className='grid h-8 w-8 place-items-center bg-primary/10 text-primary'>
-									<Headphones size={18} />
-								</div>
-								<div>
-									<h3 className='text-base font-semibold text-white'>
-										Звуки и фоны природы
-									</h3>
-									<p className='text-xs text-white/50'>
-										Настройте звуковое окружение и сигналы смены фаз
-									</p>
-								</div>
+							<div>
+								<h3 className='text-base font-semibold text-white'>
+									Звуки и фоны природы
+								</h3>
+								<p className='text-xs text-white/50 mt-0.5'>
+									Настройте звуковое окружение и сигналы смены фаз
+								</p>
 							</div>
 							<button
 								type='button'

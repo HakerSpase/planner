@@ -25,112 +25,107 @@ export function BreathingCircle({
 }: BreathingCircleProps) {
 	// Size calculations for SVG ring
 	const size = 320
-	const strokeWidth = 5
+	const strokeWidth = 3
 	const radius = (size - strokeWidth * 2) / 2
 	const circumference = 2 * Math.PI * radius
 	const strokeDashoffset = circumference * (1 - Math.max(0, Math.min(1, phaseProgress)))
 
 	// Calculate orb scale based on breathing phase
-	// Inhale: 1 -> 1.38
-	// HoldIn: 1.38
-	// Exhale: 1.38 -> 1.0
-	// HoldOut: 1.0
 	let targetScale = 1
 	if (!isActive) {
 		targetScale = 1
 	} else if (currentPhase.type === 'inhale') {
-		targetScale = 1 + phaseProgress * 0.38
+		targetScale = 1 + phaseProgress * 0.32
 	} else if (currentPhase.type === 'holdIn') {
-		targetScale = 1.38
+		targetScale = 1.32
 	} else if (currentPhase.type === 'exhale') {
-		targetScale = 1.38 - phaseProgress * 0.38
+		targetScale = 1.32 - phaseProgress * 0.32
 	} else if (currentPhase.type === 'holdOut') {
 		targetScale = 1.0
 	}
 
+	const accentColor = currentPhase.color || technique.accentColor
+
 	return (
-		<div className='relative flex flex-col items-center justify-center py-3 sm:py-6'>
-			{/* Ambient pulsating background glow */}
+		<div className='relative flex flex-col items-center justify-center py-4 sm:py-7'>
+			{/* Soft atmospheric breathing ambient glow (expands and contracts with breath) */}
 			<div
-				className='pointer-events-none absolute h-64 w-64 sm:h-80 sm:w-80 rounded-full transition-all duration-700 blur-3xl opacity-20'
+				className='pointer-events-none absolute h-72 w-72 sm:h-96 sm:w-96 rounded-full transition-all duration-700 blur-[80px]'
 				style={{
-					backgroundColor: technique.accentColor,
-					opacity: isActive ? (currentPhase.type === 'inhale' ? 0.4 : 0.22) : 0.14,
-					transform: `scale(${targetScale * 1.3})`
+					backgroundColor: accentColor,
+					opacity: isActive ? (currentPhase.type === 'inhale' ? 0.32 : 0.18) : 0.12,
+					transform: `scale(${targetScale * 1.25})`
 				}}
 			/>
 
 			{/* Center Visualizer Container */}
 			<div className='relative flex h-[280px] w-[280px] sm:h-[320px] sm:w-[320px] items-center justify-center'>
-				{/* SVG Progress Ring */}
+				{/* SVG Progress Ring: Clean, elegant, minimal track */}
 				<svg
 					className='absolute inset-0 h-full w-full -rotate-90 transform'
 					viewBox={`0 0 ${size} ${size}`}
 				>
-					{/* Track */}
+					{/* Minimal Track */}
 					<circle
 						cx={size / 2}
 						cy={size / 2}
 						r={radius}
 						fill='none'
-						stroke='rgba(255, 255, 255, 0.08)'
+						stroke='rgba(255, 255, 255, 0.05)'
 						strokeWidth={strokeWidth}
 					/>
-					{/* Animated Progress */}
-					<circle
-						cx={size / 2}
-						cy={size / 2}
-						r={radius}
-						fill='none'
-						stroke={currentPhase.color || technique.accentColor}
-						strokeWidth={strokeWidth}
-						strokeDasharray={circumference}
-						strokeDashoffset={strokeDashoffset}
-						strokeLinecap='round'
-						className='transition-[stroke-dashoffset] duration-100 ease-linear'
-					/>
+					{/* Animated Smooth Progress Arc */}
+					{isActive && (
+						<circle
+							cx={size / 2}
+							cy={size / 2}
+							r={radius}
+							fill='none'
+							stroke={accentColor}
+							strokeWidth={strokeWidth}
+							strokeDasharray={circumference}
+							strokeDashoffset={strokeDashoffset}
+							strokeLinecap='round'
+							className='transition-[stroke-dashoffset] duration-100 ease-linear'
+							style={{
+								filter: `drop-shadow(0 0 6px ${accentColor}80)`
+							}}
+						/>
+					)}
 				</svg>
 
-				{/* Outer Ethereal Ring */}
+				{/* Soft breathing halo behind the core orb */}
 				<div
-					className='pointer-events-none absolute rounded-full border transition-all duration-300 ease-out'
+					className='pointer-events-none absolute rounded-full transition-all duration-500 ease-out'
 					style={{
 						width: '210px',
 						height: '210px',
-						borderColor: `${technique.accentColor}35`,
-						backgroundColor: `${technique.accentColor}08`,
-						transform: `scale(${targetScale * 1.08})`
+						background: `radial-gradient(circle, ${accentColor}25 0%, ${accentColor}06 60%, transparent 80%)`,
+						transform: `scale(${targetScale * 1.15})`
 					}}
 				/>
 
-				{/* Middle Harmonic Aura */}
+				{/* Core Breathing Orb: Smooth, layered, meditative depth */}
 				<div
-					className='pointer-events-none absolute rounded-full border border-dashed transition-all duration-300 ease-out'
+					className='relative flex flex-col items-center justify-center rounded-full transition-all duration-300 ease-out backdrop-blur-md'
 					style={{
-						width: '190px',
-						height: '190px',
-						borderColor: `${technique.accentColor}25`,
-						transform: `scale(${targetScale})`
-					}}
-				/>
-
-				{/* Core Breathing Orb */}
-				<div
-					className='relative flex flex-col items-center justify-center rounded-full border border-white/10 bg-[#141517] shadow-2xl transition-all duration-300 ease-out'
-					style={{
-						width: '175px',
-						height: '175px',
+						width: '180px',
+						height: '180px',
+						background: isActive
+							? `radial-gradient(circle at 50% 35%, #1d1f23 0%, #111214 100%)`
+							: `radial-gradient(circle at 50% 35%, #1b1c1f 0%, #101112 100%)`,
+						border: `1px solid ${isActive ? `${accentColor}40` : 'rgba(255, 255, 255, 0.08)'}`,
 						boxShadow: isActive
-							? `0 0 45px ${technique.accentColor}35, inset 0 0 25px ${technique.accentColor}20`
-							: '0 10px 30px rgba(0,0,0,0.5)',
+							? `0 0 40px ${accentColor}30, 0 16px 48px rgba(0,0,0,0.6), inset 0 0 30px ${accentColor}18`
+							: '0 12px 36px rgba(0,0,0,0.5)',
 						transform: `scale(${targetScale})`
 					}}
 				>
 					{isActive ? (
-						<div className='flex flex-col items-center text-center px-3'>
+						<div className='flex flex-col items-center text-center px-4'>
 							<span
-								className='text-xs font-semibold uppercase tracking-wider'
-								style={{ color: currentPhase.color || technique.accentColor }}
+								className='text-[11px] sm:text-xs font-semibold uppercase tracking-widest'
+								style={{ color: accentColor }}
 							>
 								{isPaused ? 'Пауза' : currentPhase.name}
 							</span>
@@ -139,19 +134,21 @@ export function BreathingCircle({
 								{Math.ceil(phaseRemainingSeconds)}
 							</span>
 
-							<span className='text-[10px] sm:text-[11px] text-white/50 uppercase tracking-widest'>
+							<span className='text-[10px] text-white/45 uppercase tracking-wider font-mono'>
 								сек
 							</span>
 						</div>
 					) : (
-						<div className='flex flex-col items-center text-center px-3'>
+						<div className='flex flex-col items-center text-center px-4'>
 							<span
-								className='text-xs font-medium tracking-wide'
-								style={{ color: technique.accentColor }}
+								className='text-xs sm:text-sm font-medium tracking-wide text-white/90'
 							>
 								{technique.shortName || technique.name.split('(')[0]}
 							</span>
-							<span className='mt-1 text-xs text-white/40 font-mono'>
+							<span
+								className='mt-1 text-xs font-mono font-medium'
+								style={{ color: technique.accentColor }}
+							>
 								{technique.totalCycleSeconds} сек
 							</span>
 						</div>
@@ -160,7 +157,7 @@ export function BreathingCircle({
 			</div>
 
 			{/* Phase instruction hint below orb */}
-			<div className='mt-4 sm:mt-5 min-h-[46px] max-w-md px-4 text-center'>
+			<div className='mt-5 min-h-[46px] max-w-md px-4 text-center'>
 				{isActive ? (
 					<>
 						<p className='text-sm sm:text-base font-medium text-white transition-opacity duration-300'>
@@ -171,7 +168,7 @@ export function BreathingCircle({
 						</p>
 					</>
 				) : (
-					<p className='text-xs text-white/40'>
+					<p className='text-xs text-white/45 leading-relaxed'>
 						{technique.tagline}
 					</p>
 				)}

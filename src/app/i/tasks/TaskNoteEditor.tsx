@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, FileText, Pencil, X } from 'lucide-react'
+import { Check, FileText, Pencil } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -95,24 +95,14 @@ export function TaskNoteEditor({ value = '', onChange }: TaskNoteEditorProps) {
 										Изменения сохраняются автоматически
 									</p>
 								</div>
-								<div className='flex items-center gap-1'>
-									<button
-										type='button'
-										onClick={close}
-										className='inline-flex h-9 items-center gap-1.5 border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-white transition-colors hover:bg-primary/20'
-									>
-										<Check size={14} />
-										<span>Готово</span>
-									</button>
-									<button
-										type='button'
-										onClick={close}
-										className='grid h-9 w-9 shrink-0 place-items-center text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white'
-										aria-label='Закрыть редактор заметки'
-									>
-										<X size={18} />
-									</button>
-								</div>
+								<button
+									type='button'
+									onClick={close}
+									className='inline-flex h-9 items-center gap-1.5 border border-primary/40 bg-primary/10 px-3.5 text-xs font-medium text-white transition-colors hover:bg-primary/20'
+								>
+									<Check size={14} />
+									<span>Готово</span>
+								</button>
 							</header>
 
 							<textarea
