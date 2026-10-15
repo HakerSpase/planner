@@ -234,8 +234,8 @@ export function Auth() {
 
 			{/* Приоритет */}
 			<div className={cn(
-				'py-3 flex items-center justify-center shrink-0 overflow-hidden',
-				compact ? 'px-2' : 'px-3',
+				'py-3 flex items-center justify-start shrink-0 overflow-hidden',
+				compact ? 'px-3' : 'px-4',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
 				<span
