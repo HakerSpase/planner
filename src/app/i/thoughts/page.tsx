@@ -224,13 +224,13 @@ export default function ThoughtsPage() {
 											{isToday && (
 												<span
 													title='Сегодня'
-													className='block h-2 w-2 shrink-0 rounded-full bg-emerald-400 ring-2 ring-[#141516] shadow-sm shadow-emerald-400/50'
+													className='block h-2 w-2 shrink-0 rounded-full bg-emerald-400'
 												/>
 											)}
 											{hasEntry && (
 												<span
 													title='Есть мысль'
-													className='block h-2 w-2 shrink-0 rounded-full bg-amber-400 ring-2 ring-[#141516] shadow-sm shadow-amber-400/50'
+													className='block h-2 w-2 shrink-0 rounded-full bg-amber-400'
 												/>
 											)}
 										</span>
@@ -239,9 +239,19 @@ export default function ThoughtsPage() {
 							)
 						})}
 					</div>
-					{loading && (
-						<p className='mt-3 text-xs text-white/40'>Загружаем записи…</p>
-					)}
+					<div className='mt-3.5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/50'>
+						<div className='flex items-center gap-3.5'>
+							<span className='flex items-center gap-1.5'>
+								<span className='block h-2 w-2 shrink-0 rounded-full bg-emerald-400' />
+								Сегодня
+							</span>
+							<span className='flex items-center gap-1.5'>
+								<span className='block h-2 w-2 shrink-0 rounded-full bg-amber-400' />
+								Есть мысль
+							</span>
+						</div>
+						{loading && <span className='text-white/40'>Загружаем записи…</span>}
+					</div>
 				</section>
 
 				<section className='flex min-h-[420px] flex-col bg-[#141516] p-4 sm:p-5 border border-white/10'>
