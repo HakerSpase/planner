@@ -232,14 +232,15 @@ export function Auth() {
 				<span>{task.date}</span>
 			</div>
 
-			{/* Приоритет (все бейджи строго одной ширины, не касаются границ колонок, менять нельзя) */}
+			{/* Приоритет */}
 			<div className={cn(
-				'py-3 min-w-0 flex items-center justify-center shrink-0 px-2 sm:px-3',
+				'py-3 flex items-center justify-center shrink-0 overflow-hidden',
+				compact ? 'px-2' : 'px-3',
 				!compact && 'border-r border-white/[0.08]'
 			)}>
 				<span
 					className={cn(
-						'w-[82px] py-[3px] px-2 text-xs font-semibold text-white inline-flex items-center justify-between whitespace-nowrap shrink-0 rounded-sm select-none',
+						'flex items-center justify-between w-[82px] min-w-[82px] max-w-[82px] py-[3px] px-2 text-xs font-semibold text-white whitespace-nowrap shrink-0 rounded-sm select-none',
 						task.priority === 'high' && 'bg-red-400/60',
 						task.priority === 'medium' && 'bg-orange-400/70',
 						task.priority === 'low' && 'bg-blue-400/70'
