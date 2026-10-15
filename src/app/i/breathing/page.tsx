@@ -514,7 +514,7 @@ export default function BreathingPage() {
 				{/* MAIN / LEFT COLUMN: Visualizer Stage (lg:col-span-8) */}
 				<div className='flex flex-col lg:col-span-8'>
 					{/* Interactive Breathing Stage - Stable fixed desktop height */}
-					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl lg:h-[570px] min-h-[570px]'>
+					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl lg:h-[570px] min-h-[570px] overflow-hidden'>
 						{/* Slot 1: Top Bar - Responsive layout preventing collisions on mobile */}
 						<div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3 shrink-0 min-h-[44px]'>
 							<div className='flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0'>
@@ -617,7 +617,7 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Slot 2 & 3: Visualizer and Flow Stepper */}
-						<div className='flex-1 flex flex-col items-center justify-center relative py-2 sm:py-4'>
+						<div className='flex-1 flex flex-col items-center justify-center relative py-1 min-h-0'>
 							<BreathingCircle
 								technique={selectedTechnique}
 								currentPhase={currentPhase}
@@ -631,7 +631,7 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Slot 4: Duration / Status & Action Buttons - Inline single row */}
-						<div className='min-h-[56px] shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-3.5 w-full'>
+						<div className='shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-4 w-full'>
 							{/* Left: Duration Selector or Active Status */}
 							{!isActive ? (
 								<div className='flex items-center gap-1.5 flex-wrap justify-center sm:justify-start'>
@@ -732,7 +732,7 @@ export default function BreathingPage() {
 						isActive ? 'opacity-40 pointer-events-none' : 'opacity-100'
 					}`}
 				>
-					<div className='border border-white/[0.08] bg-[#111215] p-4 shadow-xl lg:h-[570px] flex flex-col justify-between'>
+					<div className='border border-white/[0.08] bg-[#111215] p-4 shadow-xl lg:h-[570px] flex flex-col'>
 						{/* Tab Navigation Header */}
 						<div className='flex items-center justify-between pb-3 border-b border-white/[0.06] shrink-0'>
 							<div className='flex items-center gap-1 bg-white/[0.03] p-0.5 border border-white/[0.08]'>
@@ -780,78 +780,56 @@ export default function BreathingPage() {
 							</span>
 						</div>
 
-						{/* Tab Content: Catalog View */}
+						{/* Tab Content: Catalog View (Clean list without duplicate bottom history button) */}
 						{sidebarTab === 'catalog' && (
-							<div className='flex-1 flex flex-col justify-between overflow-hidden pt-1'>
-								<div className='divide-y divide-white/[0.04] overflow-y-auto pr-1'>
-									{BREATHING_TECHNIQUES.map(tech => {
-										const isSelected = tech.id === selectedTechnique.id
-										const IconComp = tech.icon
-										return (
-											<button
-												key={tech.id}
-												type='button'
-												onClick={() => selectTechnique(tech)}
-												className={`group w-full flex items-start gap-3 py-3 px-2.5 text-left transition-colors ${
-													isSelected
-														? 'bg-white/[0.04] border-l-2 border-primary -ml-[1px]'
-														: 'hover:bg-white/[0.015] border-l-2 border-transparent'
-												}`}
-											>
-												<div className='mt-0.5 shrink-0'>
-													<IconComp
-														size={16}
-														style={{ color: isSelected ? tech.accentColor : undefined }}
-														className={`transition-colors ${
-															isSelected ? '' : 'text-white/40 group-hover:text-white/70'
+							<div className='flex-1 overflow-y-auto pr-1 divide-y divide-white/[0.04] pt-1'>
+								{BREATHING_TECHNIQUES.map(tech => {
+									const isSelected = tech.id === selectedTechnique.id
+									const IconComp = tech.icon
+									return (
+										<button
+											key={tech.id}
+											type='button'
+											onClick={() => selectTechnique(tech)}
+											className={`group w-full flex items-start gap-3 py-3 px-2.5 text-left transition-colors ${
+												isSelected
+													? 'bg-white/[0.04] border-l-2 border-primary -ml-[1px]'
+													: 'hover:bg-white/[0.015] border-l-2 border-transparent'
+											}`}
+										>
+											<div className='mt-0.5 shrink-0'>
+												<IconComp
+													size={16}
+													style={{ color: isSelected ? tech.accentColor : undefined }}
+													className={`transition-colors ${
+														isSelected ? '' : 'text-white/40 group-hover:text-white/70'
+													}`}
+												/>
+											</div>
+
+											<div className='min-w-0 flex-1'>
+												<div className='flex items-center justify-between gap-2'>
+													<span
+														className={`text-xs transition-colors truncate ${
+															isSelected
+																? 'font-semibold text-white'
+																: 'font-medium text-white/70 group-hover:text-white'
 														}`}
-													/>
+														style={{ color: isSelected ? tech.accentColor : undefined }}
+													>
+														{tech.name}
+													</span>
+													<span className='text-[11px] font-mono text-white/40 shrink-0'>
+														{tech.totalCycleSeconds}с
+													</span>
 												</div>
-
-												<div className='min-w-0 flex-1'>
-													<div className='flex items-center justify-between gap-2'>
-														<span
-															className={`text-xs transition-colors truncate ${
-																isSelected
-																	? 'font-semibold text-white'
-																	: 'font-medium text-white/70 group-hover:text-white'
-															}`}
-															style={{ color: isSelected ? tech.accentColor : undefined }}
-														>
-															{tech.name}
-														</span>
-														<span className='text-[11px] font-mono text-white/40 shrink-0'>
-															{tech.totalCycleSeconds}с
-														</span>
-													</div>
-													<p className='mt-1 text-[11px] text-white/45 leading-relaxed line-clamp-2'>
-														{tech.description}
-													</p>
-												</div>
-											</button>
-										)
-									})}
-								</div>
-
-								{/* Bottom Quick Switch to History */}
-								<div className='pt-2.5 mt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-white/50 shrink-0'>
-									<div className='flex items-center gap-1.5'>
-										<History size={13} className='text-white/40' />
-										<span>
-											Сегодня:{' '}
-											<strong className='text-white/80 font-mono'>
-												{todayTotalMinutes} мин
-											</strong>
-										</span>
-									</div>
-									<button
-										type='button'
-										onClick={() => setSidebarTab('history')}
-										className='text-primary hover:underline text-xs font-medium'
-									>
-										История ({sessions.length}) →
-									</button>
-								</div>
+												<p className='mt-1 text-[11px] text-white/45 leading-relaxed line-clamp-2'>
+													{tech.description}
+												</p>
+											</div>
+										</button>
+									)
+								})}
 							</div>
 						)}
 

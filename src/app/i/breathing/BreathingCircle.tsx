@@ -186,7 +186,7 @@ export function BreathingCircle({
 				className={`relative flex items-center justify-center shrink-0 transition-all duration-300 ${
 					isZen
 						? 'h-[320px] w-[320px] sm:h-[440px] sm:w-[440px] md:h-[500px] md:w-[500px]'
-						: 'h-[300px] w-[300px] sm:h-[340px] sm:w-[340px]'
+						: 'h-[270px] w-[270px] sm:h-[290px] sm:w-[290px]'
 				}`}
 			>
 				<svg
@@ -315,7 +315,7 @@ export function BreathingCircle({
 
 			{/* Phase instruction hint (normal mode only; in Zen mode rendered above the circle) */}
 			{!isZen && (
-				<div className='min-h-[24px] max-w-lg px-4 text-center flex items-center justify-center mt-2'>
+				<div className='min-h-[22px] max-w-lg px-4 text-center flex items-center justify-center mt-1.5'>
 					<p className='text-xs sm:text-sm font-medium text-white/70 truncate transition-opacity duration-300'>
 						{isActive ? currentPhase.hint : technique.tagline}
 					</p>
@@ -324,7 +324,7 @@ export function BreathingCircle({
 
 			{/* Clean Connected Flow Stepper (Omitted in Zen Mode to prevent clutter) */}
 			{!isZen && (
-				<div className='min-h-[32px] flex items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-2'>
+				<div className='min-h-[30px] flex items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-1.5'>
 					{technique.phases.map((phase, idx) => {
 						const isCurrent = isActive && currentPhaseIndex === idx
 						const isPast = isActive && currentPhaseIndex > idx
