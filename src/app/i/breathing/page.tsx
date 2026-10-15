@@ -469,29 +469,26 @@ export default function BreathingPage() {
 
 	return (
 		<div className='w-full pb-16'>
-			{/* Page Editorial Header */}
-			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.06] pb-4'>
+			{/* Page Header */}
+			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-white/[0.08] pb-4'>
 				<div>
-					<h1 className='text-2xl font-light tracking-tight text-white'>
+					<h1 className='text-2xl font-semibold text-white'>
 						Дыхательные практики
 					</h1>
-					<p className='mt-0.5 text-xs text-white/45'>
-						Осознанное дыхание для ясности ума, спокойствия и восстановления баланса
+					<p className='mt-1 text-xs text-white/50'>
+						Осознанное дыхание для концентрации, ясности ума и восстановления баланса
 					</p>
 				</div>
 				{todayTotalMinutes > 0 && (
-					<div className='flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1 text-xs text-violet-300'>
-						<Sparkles size={13} className='text-violet-400' />
-						<span>
-							Сегодня: <strong className='text-white'>{todayTotalMinutes} мин</strong>
-						</span>
+					<div className='text-xs text-white/50 font-mono'>
+						Сегодня: <strong className='text-white/80'>{todayTotalMinutes} мин</strong>
 					</div>
 				)}
 			</div>
 
-			{/* MOBILE-ONLY: Horizontal quick-picker */}
-			<div className='mt-4 lg:hidden'>
-				<div className='flex gap-2 overflow-x-auto pb-1 scrollbar-none'>
+			{/* MOBILE-ONLY: Horizontal quick-picker without vertical scrollbar */}
+			<div className='mt-3 lg:hidden overflow-hidden'>
+				<div className='flex gap-2 overflow-x-auto overflow-y-hidden touch-pan-x scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1'>
 					{BREATHING_TECHNIQUES.map(tech => {
 						const isSelected = tech.id === selectedTechnique.id
 						return (
@@ -499,10 +496,10 @@ export default function BreathingPage() {
 								key={tech.id}
 								type='button'
 								onClick={() => selectTechnique(tech)}
-								className={`flex shrink-0 items-center rounded-full px-3.5 py-1.5 text-xs transition-all ${
+								className={`flex shrink-0 items-center px-3 py-1.5 text-xs transition-colors border ${
 									isSelected
-										? 'bg-violet-600 text-white font-medium shadow-sm'
-										: 'bg-white/[0.04] text-white/60 hover:text-white'
+										? 'border-primary bg-primary/20 text-white font-medium'
+										: 'border-white/10 bg-[#131417] text-white/60 hover:text-white'
 								}`}
 							>
 								<span>{tech.shortName || tech.name.split('(')[0]}</span>
@@ -516,10 +513,10 @@ export default function BreathingPage() {
 			<div className='mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12 items-start'>
 				{/* MAIN / LEFT COLUMN: Visualizer Stage (lg:col-span-8) */}
 				<div className='flex flex-col gap-6 lg:col-span-8'>
-					{/* Interactive Breathing Stage */}
-					<div className='relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#111216]/90 p-5 sm:p-7 shadow-2xl backdrop-blur-md'>
-						{/* Top Bar with technique name, timer & quick toggles */}
-						<div className='relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4'>
+					{/* Interactive Breathing Stage - Rigorously Stable Height */}
+					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl min-h-[540px]'>
+						{/* Slot 1: Top Bar (Exact h-10 shrink-0) */}
+						<div className='h-10 shrink-0 flex items-center justify-between border-b border-white/[0.06] pb-3'>
 							<div className='flex items-center gap-3'>
 								<span className='text-base font-medium text-white tracking-wide'>
 									{selectedTechnique.name}
@@ -555,16 +552,16 @@ export default function BreathingPage() {
 								</div>
 							</div>
 
-							{/* Feedback & Mode Quick Pill Toggles */}
+							{/* Feedback & Mode Controls */}
 							<div className='flex items-center gap-1.5'>
 								{/* Zen Mode Button */}
 								<button
 									type='button'
 									onClick={toggleZenMode}
 									title='Полноэкранный дзен-режим (Esc)'
-									className='flex h-8 items-center gap-1.5 rounded-full bg-white/[0.04] px-3 text-xs text-white/70 transition-colors hover:bg-violet-500/15 hover:text-white'
+									className='flex h-8 items-center gap-1.5 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20 px-2.5 text-xs text-white/70 transition-colors'
 								>
-									<Maximize2 size={13} className='text-violet-400' />
+									<Maximize2 size={13} className='text-primary' />
 									<span className='hidden sm:inline'>Дзен</span>
 								</button>
 
@@ -573,10 +570,10 @@ export default function BreathingPage() {
 									type='button'
 									onClick={() => setIsAudioSettingsOpen(true)}
 									title='Настройки звука и природы'
-									className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-colors ${
+									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
 										soundscape !== 'none'
-											? 'bg-violet-500/20 text-violet-300 font-medium'
-											: 'bg-white/[0.04] text-white/60 hover:text-white hover:bg-white/[0.08]'
+											? 'border-primary/50 bg-primary/15 text-primary font-medium'
+											: 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white hover:border-white/20'
 									}`}
 								>
 									<Headphones size={13} />
@@ -592,10 +589,10 @@ export default function BreathingPage() {
 									type='button'
 									onClick={toggleVibration}
 									title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
-									className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs transition-colors ${
+									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
 										vibrationEnabled
-											? 'bg-violet-500/20 text-violet-300 font-medium'
-											: 'bg-white/[0.03] text-white/40 hover:text-white'
+											? 'border-primary/50 bg-primary/15 text-primary font-medium'
+											: 'border-white/10 bg-transparent text-white/40 hover:text-white hover:border-white/20'
 									}`}
 								>
 									<Smartphone size={13} />
@@ -607,10 +604,10 @@ export default function BreathingPage() {
 									type='button'
 									onClick={toggleSound}
 									title={soundEnabled ? 'Звук включен' : 'Звук выключен'}
-									className={`flex h-8 w-8 items-center justify-center rounded-full text-xs transition-colors ${
+									className={`flex h-8 w-8 items-center justify-center border text-xs transition-colors ${
 										soundEnabled
-											? 'bg-violet-500/20 text-violet-300'
-											: 'bg-white/[0.03] text-white/40 hover:text-white'
+											? 'border-primary/50 bg-primary/15 text-primary'
+											: 'border-white/10 bg-transparent text-white/40 hover:text-white hover:border-white/20'
 									}`}
 								>
 									{soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
@@ -618,8 +615,8 @@ export default function BreathingPage() {
 							</div>
 						</div>
 
-						{/* Hero Singular Organic Breathing Form */}
-						<div className='relative z-10'>
+						{/* Slot 2 & 3: Visualizer and Flow Stepper (Exact h-[384px] shrink-0) */}
+						<div className='h-[384px] shrink-0 flex flex-col items-center justify-center relative'>
 							<BreathingCircle
 								technique={selectedTechnique}
 								currentPhase={currentPhase}
@@ -632,106 +629,122 @@ export default function BreathingPage() {
 							/>
 						</div>
 
-						{/* Duration Segmented Selector (Visible when Idle) */}
-						{!isActive && (
-							<div className='relative z-10 mt-3 flex items-center justify-center gap-1 flex-wrap'>
-								<span className='text-[11px] uppercase tracking-wider text-white/40 mr-1.5 font-mono'>
-									Время:
-								</span>
-								{DURATIONS.map(dur => {
-									const isSelected = targetDurationSeconds === dur.seconds
-									return (
-										<button
-											key={dur.seconds}
-											type='button'
-											onClick={() => setTargetDurationSeconds(dur.seconds)}
-											className={`px-3 py-1 rounded-full text-xs transition-colors ${
-												isSelected
-													? 'bg-white/10 text-white font-medium border border-white/20'
-													: 'text-white/45 hover:text-white/80 hover:bg-white/[0.03]'
-											}`}
-										>
-											{dur.label}
-										</button>
-									)
-								})}
+						{/* Slot 4: Duration / Status & Action Buttons (Exact h-[84px] shrink-0) */}
+						<div className='h-[84px] shrink-0 flex flex-col items-center justify-between border-t border-white/[0.06] pt-3'>
+							{/* Sub-row 1: Duration Selector or Active Status (Exact h-6) */}
+							<div className='h-6 flex items-center justify-center'>
+								{!isActive ? (
+									<div className='flex items-center gap-1.5 flex-wrap justify-center'>
+										<span className='text-[10px] uppercase tracking-wider text-white/40 mr-1 font-mono'>
+											Время:
+										</span>
+										{DURATIONS.map(dur => {
+											const isSelected = targetDurationSeconds === dur.seconds
+											return (
+												<button
+													key={dur.seconds}
+													type='button'
+													onClick={() => setTargetDurationSeconds(dur.seconds)}
+													className={`border px-2 py-0.5 text-xs transition-colors ${
+														isSelected
+															? 'border-primary bg-primary/20 text-white font-medium'
+															: 'border-white/10 bg-transparent text-white/50 hover:text-white/80 hover:border-white/25'
+													}`}
+												>
+													{dur.label}
+												</button>
+											)
+										})}
+									</div>
+								) : (
+									<div className='text-xs font-mono text-white/40 flex items-center gap-2'>
+										<span className='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse' />
+										<span>Практика активна</span>
+										<span>•</span>
+										<span>
+											{targetDurationSeconds > 0
+												? `Цель: ${Math.round(targetDurationSeconds / 60)} мин`
+												: 'Без ограничений по времени'}
+										</span>
+									</div>
+								)}
 							</div>
-						)}
 
-						{/* Action Buttons */}
-						<div className='relative z-10 mt-4 flex items-center justify-center'>
-							{!isActive ? (
-								<button
-									type='button'
-									onClick={startSession}
-									className='group flex h-11 items-center gap-2.5 rounded-full bg-violet-600 hover:bg-violet-500 px-8 text-sm font-medium text-white shadow-lg shadow-violet-600/25 transition-all duration-200 active:scale-95'
-								>
-									<Play size={15} fill='currentColor' className='transition-transform group-hover:scale-105' />
-									<span>Начать практику</span>
-								</button>
-							) : (
-								<div className='flex items-center gap-2.5'>
-									{isPaused ? (
-										<button
-											type='button'
-											onClick={resumeSession}
-											className='flex h-10 items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 px-6 text-xs font-semibold text-white shadow-md transition-all'
-										>
-											<Play size={14} fill='currentColor' />
-											<span>Продолжить</span>
-										</button>
-									) : (
-										<button
-											type='button'
-											onClick={pauseSession}
-											className='flex h-10 items-center gap-2 rounded-full bg-white/[0.08] hover:bg-white/[0.14] px-6 text-xs font-medium text-white transition-colors'
-										>
-											<Pause size={14} />
-											<span>Пауза</span>
-										</button>
-									)}
-
+							{/* Sub-row 2: Action Buttons (Exact h-10) */}
+							<div className='h-10 flex items-center justify-center gap-3'>
+								{!isActive ? (
 									<button
 										type='button'
-										onClick={finishSession}
-										className='flex h-10 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-5 text-xs font-medium text-emerald-300 transition-colors'
+										onClick={startSession}
+										className='flex h-10 items-center gap-2 border border-primary bg-primary px-7 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
 									>
-										<Check size={14} />
-										<span>Завершить</span>
+										<Play size={14} fill='currentColor' />
+										<span>Начать практику</span>
 									</button>
+								) : (
+									<>
+										{isPaused ? (
+											<button
+												type='button'
+												onClick={resumeSession}
+												className='flex h-10 items-center gap-2 border border-primary bg-primary px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
+											>
+												<Play size={14} fill='currentColor' />
+												<span>Продолжить</span>
+											</button>
+										) : (
+											<button
+												type='button'
+												onClick={pauseSession}
+												className='flex h-10 items-center gap-2 border border-white/20 bg-white/10 px-6 text-xs font-medium text-white transition-colors hover:bg-white/15'
+											>
+												<Pause size={14} />
+												<span>Пауза</span>
+											</button>
+										)}
 
-									<button
-										type='button'
-										onClick={resetSession}
-										title='Сбросить'
-										className='flex h-10 w-10 items-center justify-center rounded-full text-white/40 hover:bg-white/[0.08] hover:text-white transition-colors'
-									>
-										<RotateCcw size={14} />
-									</button>
-								</div>
-							)}
+										<button
+											type='button'
+											onClick={finishSession}
+											className='flex h-10 items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+										>
+											<Check size={14} />
+											<span>Завершить</span>
+										</button>
+
+										<button
+											type='button'
+											onClick={resetSession}
+											title='Сбросить'
+											className='grid h-10 w-10 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
+										>
+											<RotateCcw size={14} />
+										</button>
+									</>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
 
-				{/* SIDEBAR / RIGHT COLUMN: Open Catalog of Techniques & Collapsible History (lg:col-span-4) */}
+				{/* SIDEBAR / RIGHT COLUMN: Catalog of Techniques & History (lg:col-span-4) */}
 				<div
 					className={`flex flex-col gap-4 lg:col-span-4 transition-all duration-700 ${
 						isActive ? 'opacity-25 pointer-events-none' : 'opacity-100'
 					}`}
 				>
-					{/* Open Catalog of Breathing Techniques */}
-					<div className='py-1'>
+					{/* Catalog of Breathing Techniques */}
+					<div className='border border-white/[0.08] bg-[#111215] p-4 shadow-xl'>
 						<div className='flex items-center justify-between pb-2.5 border-b border-white/[0.06]'>
-							<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+							<span className='text-xs font-semibold uppercase tracking-wider text-white/50'>
 								Каталог практик
 							</span>
-							<span className='text-[11px] text-white/30 font-mono'>
+							<span className='text-[11px] text-white/35 font-mono'>
 								{BREATHING_TECHNIQUES.length} техник
 							</span>
 						</div>
 
-						<div className='divide-y divide-white/[0.04]'>
+						<div className='divide-y divide-white/[0.04] mt-1'>
 							{BREATHING_TECHNIQUES.map(tech => {
 								const isSelected = tech.id === selectedTechnique.id
 								const IconComp = tech.icon
@@ -740,8 +753,8 @@ export default function BreathingPage() {
 										key={tech.id}
 										type='button'
 										onClick={() => selectTechnique(tech)}
-										className={`group w-full flex items-start gap-3 py-3 px-1.5 text-left transition-colors ${
-											isSelected ? 'bg-white/[0.03] rounded-xl' : 'hover:bg-white/[0.015]'
+										className={`group w-full flex items-start gap-3 py-3 px-2 text-left transition-colors ${
+											isSelected ? 'bg-white/[0.03]' : 'hover:bg-white/[0.015]'
 										}`}
 									>
 										{/* Bare icon vector without background box */}
@@ -749,28 +762,20 @@ export default function BreathingPage() {
 											<IconComp
 												size={16}
 												style={{ color: isSelected ? tech.accentColor : undefined }}
-												className={`transition-colors ${isSelected ? '' : 'text-white/35 group-hover:text-white/60'}`}
+												className={`transition-colors ${isSelected ? '' : 'text-white/40 group-hover:text-white/70'}`}
 											/>
 										</div>
 
 										<div className='min-w-0 flex-1'>
 											<div className='flex items-center justify-between gap-2'>
-												<div className='flex items-center gap-2 min-w-0'>
-													{isSelected && (
-														<span
-															className='h-1.5 w-1.5 rounded-full shrink-0 shadow-sm'
-															style={{ backgroundColor: tech.accentColor }}
-														/>
-													)}
-													<span
-														className={`text-xs font-medium truncate transition-colors ${
-															isSelected ? 'text-white font-semibold' : 'text-white/80 group-hover:text-white'
-														}`}
-														style={{ color: isSelected ? tech.accentColor : undefined }}
-													>
-														{tech.name}
-													</span>
-												</div>
+												<span
+													className={`text-xs transition-colors truncate ${
+														isSelected ? 'font-semibold text-white' : 'font-medium text-white/70 group-hover:text-white'
+													}`}
+													style={{ color: isSelected ? tech.accentColor : undefined }}
+												>
+													{tech.name}
+												</span>
 												<span className='text-[11px] font-mono text-white/40 shrink-0'>
 													{tech.totalCycleSeconds}с
 												</span>
@@ -786,11 +791,11 @@ export default function BreathingPage() {
 					</div>
 
 					{/* Collapsible Session History */}
-					<div className='border-t border-white/[0.06] pt-3'>
+					<div className='border border-white/[0.08] bg-[#111215] p-3 shadow-xl'>
 						<button
 							type='button'
 							onClick={() => setIsHistoryOpen(prev => !prev)}
-							className='flex w-full items-center justify-between py-2 px-1 text-left hover:bg-white/[0.02] rounded-lg transition-colors'
+							className='flex w-full items-center justify-between py-1.5 px-2 text-left hover:bg-white/[0.02] transition-colors'
 						>
 							<div className='flex items-center gap-2'>
 								<History size={15} className='text-white/40' />
@@ -824,7 +829,7 @@ export default function BreathingPage() {
 										{sessions.map(s => (
 											<div
 												key={s.id}
-												className='group flex items-center justify-between py-2 text-xs transition-colors hover:bg-white/[0.02]'
+												className='group flex items-center justify-between py-2 px-1 text-xs transition-colors hover:bg-white/[0.02]'
 											>
 												<div className='min-w-0 flex-1 pr-2'>
 													<p className='truncate font-medium text-white/80'>
@@ -850,7 +855,7 @@ export default function BreathingPage() {
 														type='button'
 														onClick={() => setSessionToDelete(s)}
 														title='Удалить запись'
-														className='grid h-6 w-6 place-items-center rounded text-white/25 hover:bg-red-500/10 hover:text-red-400 transition-colors'
+														className='grid h-6 w-6 place-items-center border border-transparent text-white/25 hover:border-red-500/20 hover:text-red-400 transition-colors'
 													>
 														<Trash2 size={12} />
 													</button>
@@ -900,13 +905,13 @@ export default function BreathingPage() {
 								type='button'
 								onClick={() => setIsAudioSettingsOpen(true)}
 								title='Настройки звука и фона природы'
-								className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs transition-colors ${
+								className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
 									soundscape !== 'none' || soundEnabled
-										? 'bg-violet-500/20 text-violet-300 font-medium'
-										: 'bg-white/[0.04] text-white/50 hover:text-white'
+										? 'border-primary/50 bg-primary/15 text-primary font-medium'
+										: 'border-white/10 bg-white/[0.04] text-white/50 hover:text-white'
 								}`}
 							>
-								<Headphones size={14} />
+								<Headphones size={13} />
 								<span className='hidden sm:inline'>
 									{soundscape === 'none'
 										? 'Звук'
@@ -918,29 +923,29 @@ export default function BreathingPage() {
 								type='button'
 								onClick={toggleVibration}
 								title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
-								className={`flex h-9 w-9 items-center justify-center rounded-full text-xs transition-colors ${
+								className={`flex h-8 w-8 items-center justify-center border text-xs transition-colors ${
 									vibrationEnabled
-										? 'bg-violet-500/20 text-violet-300'
-										: 'bg-white/[0.04] text-white/40 hover:text-white'
+										? 'border-primary/50 bg-primary/15 text-primary'
+										: 'border-white/10 bg-white/[0.04] text-white/40 hover:text-white'
 								}`}
 							>
-								<Smartphone size={14} />
+								<Smartphone size={13} />
 							</button>
 
 							<button
 								type='button'
 								onClick={toggleZenMode}
 								title='Выйти из дзен-режима (Esc)'
-								className='flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-4 text-xs font-medium text-white transition-colors hover:bg-white/15'
+								className='flex h-8 items-center gap-1.5 border border-white/20 bg-white/10 px-3 text-xs font-medium text-white transition-colors hover:bg-white/15'
 							>
-								<Minimize2 size={14} />
+								<Minimize2 size={13} />
 								<span className='hidden sm:inline'>Выход (Esc)</span>
 							</button>
 						</div>
 					</div>
 
 					{/* Zen Center: Visualizer Circle */}
-					<div className='relative z-10 flex flex-1 items-center justify-center py-6'>
+					<div className='relative z-10 flex flex-1 items-center justify-center py-4'>
 						<BreathingCircle
 							technique={selectedTechnique}
 							currentPhase={currentPhase}
@@ -954,15 +959,15 @@ export default function BreathingPage() {
 					</div>
 
 					{/* Zen Bottom Controls */}
-					<div className='relative z-10 flex flex-col items-center gap-3 border-t border-white/[0.06] pt-5'>
+					<div className='relative z-10 flex flex-col items-center gap-3 border-t border-white/[0.06] pt-4'>
 						<div className='flex flex-wrap items-center justify-center gap-3'>
 							{!isActive ? (
 								<button
 									type='button'
 									onClick={startSession}
-									className='flex h-11 items-center gap-2.5 rounded-full bg-violet-600 hover:bg-violet-500 px-8 text-sm font-medium text-white shadow-lg shadow-violet-600/25 transition-all active:scale-95'
+									className='flex h-10 items-center gap-2 border border-primary bg-primary px-7 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
 								>
-									<Play size={16} fill='currentColor' />
+									<Play size={15} fill='currentColor' />
 									<span>Начать практику</span>
 								</button>
 							) : (
@@ -971,18 +976,18 @@ export default function BreathingPage() {
 										<button
 											type='button'
 											onClick={resumeSession}
-											className='flex h-10 items-center gap-2 rounded-full bg-violet-600 px-6 text-xs font-semibold text-white transition-all hover:bg-violet-500'
+											className='flex h-10 items-center gap-2 border border-primary bg-primary px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
 										>
-											<Play size={15} fill='currentColor' />
+											<Play size={14} fill='currentColor' />
 											<span>Продолжить</span>
 										</button>
 									) : (
 										<button
 											type='button'
 											onClick={pauseSession}
-											className='flex h-10 items-center gap-2 rounded-full bg-white/10 px-6 text-xs font-medium text-white transition-colors hover:bg-white/15'
+											className='flex h-10 items-center gap-2 border border-white/20 bg-white/10 px-6 text-xs font-medium text-white transition-colors hover:bg-white/15'
 										>
-											<Pause size={15} />
+											<Pause size={14} />
 											<span>Пауза</span>
 										</button>
 									)}
@@ -990,9 +995,9 @@ export default function BreathingPage() {
 									<button
 										type='button'
 										onClick={finishSession}
-										className='flex h-10 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+										className='flex h-10 items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
 									>
-										<Check size={15} />
+										<Check size={14} />
 										<span>Завершить и сохранить</span>
 									</button>
 
@@ -1000,7 +1005,7 @@ export default function BreathingPage() {
 										type='button'
 										onClick={resetSession}
 										title='Сбросить'
-										className='flex h-10 w-10 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white'
+										className='grid h-10 w-10 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
 									>
 										<RotateCcw size={14} />
 									</button>
@@ -1020,20 +1025,20 @@ export default function BreathingPage() {
 			{/* ========================================================================= */}
 			{isAudioSettingsOpen && (
 				<div
-					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md'
+					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm'
 					onMouseDown={e => {
 						if (e.target === e.currentTarget) setIsAudioSettingsOpen(false)
 					}}
 				>
-					<div className='w-full max-w-lg rounded-3xl border border-white/[0.08] bg-[#121317] p-6 sm:p-7 shadow-2xl'>
+					<div className='w-full max-w-lg border border-white/10 bg-[#141517] p-5 sm:p-6 shadow-2xl'>
 						{/* Modal Header */}
-						<div className='flex items-center justify-between border-b border-white/[0.06] pb-4'>
+						<div className='flex items-center justify-between border-b border-white/10 pb-4'>
 							<div>
-								<h3 className='text-base font-semibold text-white'>
+								<h3 className='text-sm sm:text-base font-semibold text-white'>
 									Звуковое окружение
 								</h3>
 								<p className='text-xs text-white/50 mt-0.5'>
-									Настройте атмосферные фоны природы и медитативные сигналы смены фаз
+									Настройте фоны природы и звуковые сигналы фаз
 								</p>
 							</div>
 							<button
@@ -1045,18 +1050,17 @@ export default function BreathingPage() {
 							</button>
 						</div>
 
-						{/* Section 1: Soundscapes (Фоны природы) */}
+						{/* Section 1: Soundscapes */}
 						<div className='mt-5'>
 							<div className='flex items-center justify-between'>
 								<label className='text-xs font-semibold uppercase tracking-wider text-white/60'>
 									Фоновые звуки природы
 								</label>
-								<span className='text-xs text-violet-300 font-medium'>
+								<span className='text-xs text-primary font-medium'>
 									{SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}
 								</span>
 							</div>
 
-							{/* Soundscape grid buttons */}
 							<div className='mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-2'>
 								{SOUNDSCAPE_OPTIONS.map(opt => {
 									const isSelected = soundscape === opt.id
@@ -1066,16 +1070,16 @@ export default function BreathingPage() {
 											key={opt.id}
 											type='button'
 											onClick={() => handleSoundscapeChange(opt.id)}
-											className={`flex flex-col items-start gap-1 rounded-2xl p-3 text-left transition-all ${
+											className={`flex flex-col items-start gap-1 border p-2.5 text-left transition-colors ${
 												isSelected
-													? 'bg-violet-600/25 border border-violet-500/40 text-white shadow-sm'
-													: 'bg-white/[0.03] border border-transparent text-white/70 hover:bg-white/[0.06] hover:text-white'
+													? 'border-primary bg-primary/15 text-white'
+													: 'border-white/10 bg-[#101112] text-white/70 hover:border-white/20 hover:text-white'
 											}`}
 										>
 											<div className='flex items-center gap-1.5'>
 												<IconComp
 													size={14}
-													className={isSelected ? 'text-violet-300' : 'text-white/50'}
+													className={isSelected ? 'text-primary' : 'text-white/50'}
 												/>
 												<span className='text-xs font-medium'>{opt.label}</span>
 											</div>
@@ -1087,9 +1091,9 @@ export default function BreathingPage() {
 								})}
 							</div>
 
-							{/* Soundscape Volume Slider */}
+							{/* Soundscape Volume */}
 							{soundscape !== 'none' && (
-								<div className='mt-3.5 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3.5 py-2.5'>
+								<div className='mt-3 flex items-center gap-3 border border-white/[0.06] bg-[#101112] px-3 py-2'>
 									<Volume2 size={14} className='text-white/50 shrink-0' />
 									<span className='text-xs text-white/60 shrink-0'>Громкость фона:</span>
 									<input
@@ -1098,7 +1102,7 @@ export default function BreathingPage() {
 										max={100}
 										value={soundscapeVolume}
 										onChange={e => handleSoundscapeVolumeChange(Number(e.target.value))}
-										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-violet-500 rounded-full'
+										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-primary'
 									/>
 									<span className='w-8 text-right font-mono text-xs text-white/60'>
 										{soundscapeVolume}%
@@ -1107,23 +1111,22 @@ export default function BreathingPage() {
 							)}
 						</div>
 
-						{/* Section 2: Cue Styles (Сигналы фаз) */}
-						<div className='mt-6 border-t border-white/[0.06] pt-5'>
+						{/* Section 2: Cue Styles */}
+						<div className='mt-5 border-t border-white/[0.08] pt-4'>
 							<div className='flex items-center justify-between'>
 								<label className='text-xs font-semibold uppercase tracking-wider text-white/60'>
-									Звуковой сигнал смены фазы
+									Сигнал смены фазы
 								</label>
 								<button
 									type='button'
 									onClick={() => breathingAudio.playTone('inhale')}
-									className='flex items-center gap-1 text-[11px] text-violet-400 hover:underline'
+									className='flex items-center gap-1 text-[11px] text-primary hover:underline'
 								>
 									<Play size={11} fill='currentColor' />
 									<span>Проверить звук</span>
 								</button>
 							</div>
 
-							{/* Cue style options */}
 							<div className='mt-2.5 grid grid-cols-2 gap-2'>
 								{CUE_STYLE_OPTIONS.map(opt => {
 									const isSelected = cueStyle === opt.id
@@ -1132,16 +1135,16 @@ export default function BreathingPage() {
 											key={opt.id}
 											type='button'
 											onClick={() => handleCueStyleChange(opt.id)}
-											className={`flex flex-col items-start gap-0.5 rounded-2xl p-3 text-left transition-all ${
+											className={`flex flex-col items-start gap-0.5 border p-2 text-left transition-colors ${
 												isSelected
-													? 'bg-violet-600/25 border border-violet-500/40 text-white shadow-sm'
-													: 'bg-white/[0.03] border border-transparent text-white/70 hover:bg-white/[0.06] hover:text-white'
+													? 'border-primary bg-primary/15 text-white'
+													: 'border-white/10 bg-[#101112] text-white/70 hover:border-white/20 hover:text-white'
 											}`}
 										>
 											<div className='flex items-center gap-1.5'>
-												{opt.id === 'tibetan' && <Sparkles size={13} className='text-amber-300' />}
-												{opt.id === 'bell' && <Bell size={13} className='text-sky-300' />}
-												{opt.id === 'soft_sine' && <Activity size={13} className='text-emerald-300' />}
+												{opt.id === 'tibetan' && <Sparkles size={13} className='text-amber-400' />}
+												{opt.id === 'bell' && <Bell size={13} className='text-sky-400' />}
+												{opt.id === 'soft_sine' && <Activity size={13} className='text-emerald-400' />}
 												{opt.id === 'none' && <VolumeX size={13} className='text-white/40' />}
 												<span className='text-xs font-medium'>{opt.label}</span>
 											</div>
@@ -1153,9 +1156,9 @@ export default function BreathingPage() {
 								})}
 							</div>
 
-							{/* Cue Volume Slider */}
+							{/* Cue Volume */}
 							{cueStyle !== 'none' && (
-								<div className='mt-3.5 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3.5 py-2.5'>
+								<div className='mt-3 flex items-center gap-3 border border-white/[0.06] bg-[#101112] px-3 py-2'>
 									<Bell size={14} className='text-white/50 shrink-0' />
 									<span className='text-xs text-white/60 shrink-0'>Громкость сигнала:</span>
 									<input
@@ -1164,7 +1167,7 @@ export default function BreathingPage() {
 										max={100}
 										value={cueVolume}
 										onChange={e => handleCueVolumeChange(Number(e.target.value))}
-										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-violet-500 rounded-full'
+										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/20 accent-primary'
 									/>
 									<span className='w-8 text-right font-mono text-xs text-white/60'>
 										{cueVolume}%
@@ -1174,11 +1177,11 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Modal Footer */}
-						<div className='mt-6 flex justify-end border-t border-white/[0.06] pt-4'>
+						<div className='mt-5 flex justify-end border-t border-white/10 pt-4'>
 							<button
 								type='button'
 								onClick={() => setIsAudioSettingsOpen(false)}
-								className='rounded-full bg-violet-600 px-6 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-violet-500 shadow-lg shadow-violet-600/20'
+								className='border border-primary bg-primary px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
 							>
 								Применить и закрыть
 							</button>
