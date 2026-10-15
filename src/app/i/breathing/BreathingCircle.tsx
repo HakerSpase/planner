@@ -13,6 +13,7 @@ export interface BreathingCircleProps {
 	isActive: boolean
 	isPaused: boolean
 	cycleCount: number
+	isZen?: boolean
 }
 
 // Catmull-Rom spline to smooth Cubic Bézier closed loop
@@ -48,7 +49,8 @@ export function BreathingCircle({
 	phaseProgress,
 	isActive,
 	isPaused,
-	cycleCount
+	cycleCount,
+	isZen = false
 }: BreathingCircleProps) {
 	// Raw progress in [0, 1]
 	let rawExpansion = 0
@@ -80,8 +82,8 @@ export function BreathingCircle({
 	const accentColor = currentPhase.color || technique.accentColor || '#a78bfa'
 
 	// Sized with a comfortable minimum radius (rMin = 114 -> diameter 228px)
-	// so that text (max-width 170px) is guaranteed to stay comfortably inside
-	// with generous 29px padding even at the most compact exhale/pause phase.
+	// so that text is guaranteed to stay comfortably inside
+	// even at the most compact exhale/pause phase.
 	const { outerPath, auraPath } = useMemo(() => {
 		const cx = 200
 		const cy = 200
@@ -142,16 +144,22 @@ export function BreathingCircle({
 
 	// Dynamic, calm atmospheric lighting behind the form
 	const auraOpacity = useMemo(() => {
-		if (!isActive) return 0.09
-		if (currentPhase.type === 'holdIn') return 0.28
-		if (currentPhase.type === 'holdOut') return 0.1
-		return 0.1 + expansion * 0.18
-	}, [isActive, currentPhase.type, expansion])
+		if (!isActive) return isZen ? 0.12 : 0.09
+		if (currentPhase.type === 'holdIn') return isZen ? 0.32 : 0.28
+		if (currentPhase.type === 'holdOut') return isZen ? 0.12 : 0.1
+		return (isZen ? 0.12 : 0.1) + expansion * (isZen ? 0.22 : 0.18)
+	}, [isActive, currentPhase.type, expansion, isZen])
 
 	return (
-		<div className='relative flex flex-col items-center justify-center select-none py-1'>
-			{/* Fixed-size canvas area (320px) ensuring zero vertical jumps */}
-			<div className='relative flex h-[310px] w-[310px] items-center justify-center shrink-0'>
+		<div className='relative flex flex-col items-center justify-center select-none py-1 w-full'>
+			{/* Scaled living canvas area */}
+			<div
+				className={`relative flex items-center justify-center shrink-0 transition-all duration-300 ${
+					isZen
+						? 'h-[320px] w-[320px] sm:h-[440px] sm:w-[440px] md:h-[500px] md:w-[500px]'
+						: 'h-[300px] w-[300px] sm:h-[340px] sm:w-[340px]'
+				}`}
+			>
 				<svg
 					viewBox='0 0 400 400'
 					className='absolute inset-0 h-full w-full pointer-events-none'
@@ -213,38 +221,62 @@ export function BreathingCircle({
 					<path d={outerPath} fill='url(#innerCoreLight)' />
 				</svg>
 
-				{/* 4. Independent Stable Text Layer: Centered and strictly bounded (max-w-[170px]) */}
-				<div className='absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none'>
-					<div className='w-full max-w-[170px] flex flex-col items-center justify-center'>
+				{/* 4. Independent Stable Text Layer: Centered and bounded */}
+				<div className='absolute inset-0 flex flex-col items-center justify-center text-center px-4 pointer-events-none'>
+					<div
+						className={`w-full flex flex-col items-center justify-center ${
+							isZen ? 'max-w-[240px] sm:max-w-[280px]' : 'max-w-[170px]'
+						}`}
+					>
 						{isActive ? (
 							<>
 								<span
-									className='text-xs font-semibold uppercase tracking-[0.2em] transition-colors duration-300 truncate w-full'
+									className={`font-semibold uppercase tracking-[0.2em] transition-colors duration-300 truncate w-full ${
+										isZen ? 'text-xs sm:text-sm' : 'text-xs'
+									}`}
 									style={{ color: accentColor }}
 								>
 									{isPaused ? 'Пауза' : currentPhase.name}
 								</span>
 
-								<span className='text-5xl font-extralight tracking-tight text-white font-sans tabular-nums leading-none my-1.5'>
+								<span
+									className={`font-extralight tracking-tight text-white font-sans tabular-nums leading-none my-1.5 sm:my-2 ${
+										isZen ? 'text-7xl sm:text-8xl md:text-9xl' : 'text-5xl sm:text-6xl'
+									}`}
+								>
 									{Math.ceil(phaseRemainingSeconds)}
 								</span>
 
-								<span className='text-[10px] text-white/40 uppercase tracking-widest font-mono'>
+								<span
+									className={`text-white/40 uppercase tracking-widest font-mono ${
+										isZen ? 'text-xs' : 'text-[10px]'
+									}`}
+								>
 									секунд
 								</span>
 							</>
 						) : (
 							<>
-								<span className='text-sm font-medium text-white/95 tracking-wide truncate w-full'>
+								<span
+									className={`font-medium text-white/95 tracking-wide truncate w-full ${
+										isZen ? 'text-base sm:text-lg' : 'text-sm'
+									}`}
+								>
 									{technique.shortName || technique.name.split('(')[0]}
 								</span>
 								<span
-									className='mt-1 text-xs font-mono font-medium'
+									className={`font-mono font-medium ${
+										isZen ? 'mt-1.5 text-sm' : 'mt-1 text-xs'
+									}`}
 									style={{ color: technique.accentColor }}
 								>
 									{technique.totalCycleSeconds}с цикл
 								</span>
-								<span className='mt-2 text-[10px] text-white/40 tracking-wider uppercase font-mono'>
+								<span
+									className={`text-white/40 tracking-wider uppercase font-mono ${
+										isZen ? 'mt-3 text-xs' : 'mt-2 text-[10px]'
+									}`}
+								>
 									Готовы к практике
 								</span>
 							</>
@@ -253,66 +285,73 @@ export function BreathingCircle({
 				</div>
 			</div>
 
-			{/* Phase instruction hint (Fixed height 20px ensuring zero vertical jump) */}
-			<div className='h-5 max-w-md px-4 text-center flex items-center justify-center overflow-hidden mt-2'>
-				<p className='text-xs sm:text-sm font-medium text-white/70 truncate transition-opacity duration-300'>
+			{/* Phase instruction hint */}
+			<div
+				className={`min-h-[24px] max-w-lg px-4 text-center flex items-center justify-center transition-all duration-300 ${
+					isZen ? 'mt-4 sm:mt-6' : 'mt-2'
+				}`}
+			>
+				<p
+					className={`font-medium text-white/70 transition-opacity duration-300 ${
+						isZen ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'
+					}`}
+				>
 					{isActive ? currentPhase.hint : technique.tagline}
 				</p>
 			</div>
 
-			{/* Clean Connected Flow Stepper (Fixed height 32px ensuring zero vertical jump) */}
-			<div className='h-8 flex items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-2'>
-				{technique.phases.map((phase, idx) => {
-					const isCurrent = isActive && currentPhaseIndex === idx
-					const isPast = isActive && currentPhaseIndex > idx
-					return (
-						<div
-							key={idx}
-							className='flex items-center gap-1.5'
-						>
-							<div
-								className={`relative overflow-hidden flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors duration-200 ${
-									isCurrent
-										? 'bg-white/[0.08] text-white border border-white/20'
-										: isPast
-											? 'text-white/35 border border-transparent'
-											: 'text-white/50 border border-transparent hover:text-white/70'
-								}`}
-							>
-								<span
-									className='h-1.5 w-1.5 shrink-0'
-									style={{
-										backgroundColor: isCurrent ? accentColor : 'rgba(255, 255, 255, 0.2)'
-									}}
-								/>
-								<span
-									className='font-medium'
-									style={{ color: isCurrent ? accentColor : undefined }}
+			{/* Clean Connected Flow Stepper (Omitted in Zen Mode to prevent clutter) */}
+			{!isZen && (
+				<div className='min-h-[32px] flex items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-2'>
+					{technique.phases.map((phase, idx) => {
+						const isCurrent = isActive && currentPhaseIndex === idx
+						const isPast = isActive && currentPhaseIndex > idx
+						return (
+							<div key={idx} className='flex items-center gap-1.5'>
+								<div
+									className={`relative overflow-hidden flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors duration-200 ${
+										isCurrent
+											? 'bg-white/[0.08] text-white border border-white/20'
+											: isPast
+												? 'text-white/35 border border-transparent'
+												: 'text-white/50 border border-transparent hover:text-white/70'
+									}`}
 								>
-									{phase.name}
-								</span>
-								<span className='font-mono text-[10px] opacity-60'>{phase.seconds}с</span>
-
-								{/* Subtle linear progress fill on active step */}
-								{isCurrent && (
-									<div
-										className='absolute bottom-0 left-0 h-[2px] transition-all duration-100 ease-linear'
+									<span
+										className='h-1.5 w-1.5 shrink-0'
 										style={{
-											width: `${Math.min(100, Math.max(0, phaseProgress * 100))}%`,
-											backgroundColor: accentColor
+											backgroundColor: isCurrent ? accentColor : 'rgba(255, 255, 255, 0.2)'
 										}}
 									/>
+									<span
+										className='font-medium'
+										style={{ color: isCurrent ? accentColor : undefined }}
+									>
+										{phase.name}
+									</span>
+									<span className='font-mono text-[10px] opacity-60'>{phase.seconds}с</span>
+
+									{/* Subtle linear progress fill on active step */}
+									{isCurrent && (
+										<div
+											className='absolute bottom-0 left-0 h-[2px] transition-all duration-100 ease-linear'
+											style={{
+												width: `${Math.min(100, Math.max(0, phaseProgress * 100))}%`,
+												backgroundColor: accentColor
+											}}
+										/>
+									)}
+								</div>
+
+								{/* Divider dot between phases */}
+								{idx < technique.phases.length - 1 && (
+									<span className='text-[10px] text-white/20 select-none'>•</span>
 								)}
 							</div>
-
-							{/* Subtle divider dot between phases */}
-							{idx < technique.phases.length - 1 && (
-								<span className='text-[10px] text-white/20 select-none'>•</span>
-							)}
-						</div>
-					)
-				})}
-			</div>
+						)
+					})}
+				</div>
+			)}
 		</div>
 	)
 }
