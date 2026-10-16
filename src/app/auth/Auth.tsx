@@ -10,7 +10,7 @@ import {
 	Trash
 } from 'lucide-react'
 import Script from 'next/script'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 declare global {
@@ -88,6 +88,27 @@ export function Auth() {
 
 	const [tasks, setTasks] = useState<IPreviewTask[]>(INITIAL_TASKS)
 	const [dragId, setDragId] = useState<string | null>(null)
+
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+		const params = new URLSearchParams(window.location.search)
+		const error = params.get('error')
+		if (error) {
+			if (error === 'captcha_required') {
+				toast.error('Сессия проверки безопасности истекла. Пожалуйста, подтвердите проверку и попробуйте снова.')
+			} else if (error === 'oauth_failed') {
+				toast.error('Не удалось завершить вход через Google. Пожалуйста, попробуйте ещё раз.')
+			} else if (error === 'access_denied') {
+				toast.error('Вход через Google был отменён.')
+			} else if (error === 'no_code') {
+				toast.error('Код авторизации не был получен от сервиса входа. Попробуйте снова.')
+			} else {
+				toast.error(`Ошибка авторизации: ${error}`)
+			}
+			const newUrl = window.location.pathname
+			window.history.replaceState({}, '', newUrl)
+		}
+	}, [])
 
 	const toggleTask = (id: string) => {
 		setTasks(prev =>

@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { DASHBOARD_PAGES } from './config/pages-url.config'
@@ -10,10 +10,17 @@ const SUPABASE_KEY =
 	'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsbnFvem9hbG16Ym9xeXBnYmNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MTA0NjYsImV4cCI6MjEwNzM4NjQ2Nn0.qSGsOjQwouqFjHlXq8au1zq5RIT-pYD32Vnw5r-MoPA'
 
 export async function middleware(request: NextRequest) {
-	const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
+	const pathname = request.nextUrl.pathname
+
+	// Allow auth callback route handler to execute directly without middleware interference
+	if (pathname.startsWith('/auth/callback')) {
+		return NextResponse.next()
+	}
+
+	const isAuthPage = pathname.startsWith('/auth')
 
 	try {
-		let response = NextResponse.next({
+		let supabaseResponse = NextResponse.next({
 			request: {
 				headers: request.headers
 			}
@@ -21,26 +28,19 @@ export async function middleware(request: NextRequest) {
 
 		const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
 			cookies: {
-				get(name: string) {
-					return request.cookies.get(name)?.value
+				getAll() {
+					return request.cookies.getAll()
 				},
-				set(name: string, value: string, options: CookieOptions) {
-					request.cookies.set({ name, value, ...options })
-					response = NextResponse.next({
+				setAll(cookiesToSet) {
+					cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+					supabaseResponse = NextResponse.next({
 						request: {
 							headers: request.headers
 						}
 					})
-					response.cookies.set({ name, value, ...options })
-				},
-				remove(name: string, options: CookieOptions) {
-					request.cookies.set({ name, value: '', ...options })
-					response = NextResponse.next({
-						request: {
-							headers: request.headers
-						}
-					})
-					response.cookies.set({ name, value: '', ...options })
+					cookiesToSet.forEach(({ name, value, options }) =>
+						supabaseResponse.cookies.set(name, value, options)
+					)
 				}
 			}
 		})
@@ -50,20 +50,27 @@ export async function middleware(request: NextRequest) {
 		} = await supabase.auth.getUser()
 
 		if (isAuthPage && user) {
-			return NextResponse.redirect(new URL(DASHBOARD_PAGES.HOME, request.url))
+			const redirectResponse = NextResponse.redirect(new URL(DASHBOARD_PAGES.HOME, request.url))
+			supabaseResponse.cookies.getAll().forEach(cookie => {
+				redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+			})
+			return redirectResponse
 		}
 
 		if (isAuthPage) {
-			return response
+			return supabaseResponse
 		}
 
 		if (!user) {
-			return NextResponse.redirect(new URL('/auth', request.url))
+			const redirectResponse = NextResponse.redirect(new URL('/auth', request.url))
+			supabaseResponse.cookies.getAll().forEach(cookie => {
+				redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+			})
+			return redirectResponse
 		}
 
-		return response
+		return supabaseResponse
 	} catch (error) {
-		// В случае непредвиденной ошибки в middleware отдаем страницу дальше
 		console.error('Middleware error:', error)
 		if (isAuthPage) {
 			return NextResponse.next()
