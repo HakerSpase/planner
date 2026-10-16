@@ -322,58 +322,7 @@ export function BreathingCircle({
 				</div>
 			)}
 
-			{/* Clean Connected Flow Stepper (Omitted in Zen Mode and hidden on mobile to avoid visual clutter) */}
-			{!isZen && (
-				<div className='hidden sm:flex min-h-[30px] items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-1.5'>
-					{technique.phases.map((phase, idx) => {
-						const isCurrent = isActive && currentPhaseIndex === idx
-						const isPast = isActive && currentPhaseIndex > idx
-						return (
-							<div key={idx} className='flex items-center gap-1.5'>
-								<div
-									className={`relative overflow-hidden flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors duration-200 ${
-										isCurrent
-											? 'bg-white/[0.08] text-white border border-white/20'
-											: isPast
-												? 'text-white/35 border border-transparent'
-												: 'text-white/50 border border-transparent hover:text-white/70'
-									}`}
-								>
-									<span
-										className='h-1.5 w-1.5 shrink-0'
-										style={{
-											backgroundColor: isCurrent ? accentColor : 'rgba(255, 255, 255, 0.2)'
-										}}
-									/>
-									<span
-										className='font-medium'
-										style={{ color: isCurrent ? accentColor : undefined }}
-									>
-										{phase.name}
-									</span>
-									<span className='font-mono text-[10px] opacity-60'>{phase.seconds}с</span>
 
-									{/* Subtle linear progress fill on active step */}
-									{isCurrent && (
-										<div
-											className='absolute bottom-0 left-0 h-[2px] transition-all duration-100 ease-linear'
-											style={{
-												width: `${Math.min(100, Math.max(0, phaseProgress * 100))}%`,
-												backgroundColor: accentColor
-											}}
-										/>
-									)}
-								</div>
-
-								{/* Divider dot between phases */}
-								{idx < technique.phases.length - 1 && (
-									<span className='text-[10px] text-white/20 select-none'>•</span>
-								)}
-							</div>
-						)
-					})}
-				</div>
-			)}
 		</div>
 	)
 }
