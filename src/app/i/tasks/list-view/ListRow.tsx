@@ -96,6 +96,7 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 						<DatePicker
 							onChange={onChange}
 							value={value || ''}
+							position='left'
 						/>
 					)}
 				/>
@@ -126,12 +127,13 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 							: setIsDeleteConfirmOpen(true)
 					}
 					disabled={isCreating}
-					className='grid h-10 w-10 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100'
+					aria-label='Удалить задачу'
+					className='grid h-9 w-9 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100 text-white/50 hover:text-white'
 				>
 					{isCreating || isDeletePending ? (
-						<Loader size={17} />
+						<Loader size={16} />
 					) : (
-						<Trash size={17} />
+						<Trash size={16} />
 					)}
 				</button>
 			</div>

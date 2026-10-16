@@ -29,8 +29,8 @@ export function SingleSelect({
 	return (
 		<div
 			className={cn(
-				'relative min-w-0',
-				isColorSelect ? 'w-full' : 'w-max max-w-full'
+				'relative min-w-0 inline-flex items-center gap-1 max-w-full',
+				isColorSelect && 'w-full'
 			)}
 			ref={ref}
 		>
@@ -40,7 +40,7 @@ export function SingleSelect({
 				aria-haspopup='listbox'
 				onClick={() => setIsShow(!isShow)}
 				className={cn(
-					'flex min-h-9 items-center gap-2 text-left',
+					'flex min-h-9 items-center gap-1.5 text-left max-w-full',
 					isColorSelect ? 'w-full border border-border px-3' : 'max-w-full'
 				)}
 			>
@@ -65,7 +65,7 @@ export function SingleSelect({
 					<Badge>Выберите</Badge>
 				)}
 				<ChevronDown
-					size={15}
+					size={14}
 					className='shrink-0 text-white/40'
 				/>
 			</button>
@@ -73,8 +73,11 @@ export function SingleSelect({
 				<button
 					type='button'
 					aria-label='Сбросить выбор'
-					className='absolute -right-5 top-1/2 -translate-y-1/2 p-1 text-white/35 hover:text-white'
-					onClick={() => onChange('')}
+					className='grid h-6 w-6 place-items-center text-white/35 hover:text-white transition-colors shrink-0'
+					onClick={e => {
+						e.stopPropagation()
+						onChange('')
+					}}
 				>
 					<X size={13} />
 				</button>

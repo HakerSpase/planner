@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
 import LocalizedFormat from 'dayjs/plugin/localizedFormat'
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DayPicker, type SelectSingleEventHandler } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
@@ -24,14 +24,34 @@ interface IDatePicker {
 export function DatePicker({
 	onChange,
 	value,
-	position = 'right'
+	position = 'left'
 }: IDatePicker) {
 	const [selected, setSelected] = useState<Date>()
 	const { isShow, setIsShow, ref } = useOutside(false)
+	const popupRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		setSelected(value ? new Date(value) : undefined)
 	}, [value])
+
+	// Auto-clamp calendar popup within the visible viewport on mobile & desktop
+	useEffect(() => {
+		if (isShow && popupRef.current) {
+			const el = popupRef.current
+			el.style.transform = ''
+			const rect = el.getBoundingClientRect()
+			const safetyMargin = 8
+			const viewportWidth = window.innerWidth
+
+			if (rect.left < safetyMargin) {
+				const shift = safetyMargin - rect.left
+				el.style.transform = `translateX(${shift}px)`
+			} else if (rect.right > viewportWidth - safetyMargin) {
+				const shift = rect.right - (viewportWidth - safetyMargin)
+				el.style.transform = `translateX(-${shift}px)`
+			}
+		}
+	}, [isShow])
 
 	const handleDaySelect: SelectSingleEventHandler = date => {
 		const ISOdate = date?.toISOString()
@@ -47,11 +67,12 @@ export function DatePicker({
 
 	return (
 		<div
-			className='relative inline-flex min-w-0 items-center gap-1'
+			className='relative inline-flex min-w-0 items-center gap-1 max-w-full'
 			ref={ref}
 		>
 			<button
-				className='min-w-0 text-left'
+				type='button'
+				className='min-w-0 truncate text-left'
 				onClick={() => setIsShow(!isShow)}
 			>
 				{value ? dayjs(value).locale('ru').format('LL') : 'Выберите дату'}
@@ -68,12 +89,13 @@ export function DatePicker({
 			)}
 			{isShow && (
 				<div
+					ref={popupRef}
 					className={cn(
-						'absolute p-2.5 slide bg-sidebar z-10 shadow border border-white/10',
-						position === 'left' ? '-left-4' : ' -right-4'
+						'absolute p-2.5 slide bg-sidebar z-50 shadow-2xl border border-white/10 max-w-[calc(100vw-1rem)]',
+						position === 'right' ? 'left-0 sm:left-auto sm:right-0' : 'left-0'
 					)}
 					style={{
-						top: 'calc(100% + .7rem)'
+						top: 'calc(100% + .5rem)'
 					}}
 				>
 					<DayPicker

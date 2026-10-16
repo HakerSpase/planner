@@ -1,27 +1,27 @@
 .table {
-	@apply w-full;
+	@apply w-full min-w-0;
 
 	.header {
 		display: grid;
-		grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.4fr) minmax(0, 0.4fr) 3.5rem;
+		grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(110px, 8.5rem) 3.25rem;
 	}
 
 	.header,
 	.parentsWrapper .row,
 	.parentsWrapper .colHeading {
-		@apply border-t border-border text-left w-auto;
+		@apply border-t border-border text-left w-full min-w-0;
 
 		> div {
-			@apply border-r border-border px-2 py-2 sm:px-4 min-w-0;
+			@apply border-r border-border px-2 py-2 sm:px-3 min-w-0;
 
 			&:last-child {
-				@apply border-0;
+				@apply border-0 p-0 flex items-center justify-center;
 			}
 		}
 	}
 
 	.header > div {
-		@apply whitespace-nowrap;
+		@apply whitespace-nowrap text-xs uppercase tracking-wider text-white/40 font-mono py-2.5;
 	}
 
 	.parentsWrapper {
@@ -39,9 +39,9 @@
 		}
 
 		.row {
-			@apply font-normal relative;
+			@apply font-normal relative w-full min-w-0;
 			display: grid;
-			grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.4fr) minmax(0, 0.4fr) 3.5rem;
+			grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(110px, 8.5rem) 3.25rem;
 
 			> div:first-child {
 				@apply min-w-0 overflow-hidden;
@@ -116,6 +116,9 @@
 						grid-row: 2;
 						align-self: start;
 						justify-self: end;
+						display: flex;
+						align-items: center;
+						justify-content: flex-end;
 					}
 				}
 			}
