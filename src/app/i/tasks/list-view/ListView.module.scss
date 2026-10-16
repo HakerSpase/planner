@@ -42,9 +42,17 @@
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(115px, 8.5rem) 3.25rem;
 
+			> div {
+				@apply flex items-start;
+			}
+
 			> div:first-child {
-				@apply min-w-0 overflow-hidden;
+				@apply min-w-0 overflow-hidden block;
 				white-space: normal;
+			}
+
+			> div:last-child {
+				@apply border-0 p-0 py-2 flex items-start justify-center;
 			}
 
 			> div:not(:first-child) {

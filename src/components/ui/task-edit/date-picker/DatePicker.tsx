@@ -72,7 +72,7 @@ export function DatePicker({
 		>
 			<button
 				type='button'
-				className='min-w-0 truncate text-left'
+				className='min-h-9 flex items-center min-w-0 truncate text-left text-sm'
 				onClick={() => setIsShow(!isShow)}
 			>
 				{value ? dayjs(value).locale('ru').format('LL') : 'Выберите дату'}

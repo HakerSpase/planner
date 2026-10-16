@@ -1,8 +1,11 @@
 import {
 	Activity,
 	Flame,
+	Heart,
 	Moon,
+	Sparkles,
 	Square,
+	Triangle,
 	Zap,
 	type LucideIcon
 } from 'lucide-react'
@@ -246,6 +249,114 @@ export const BREATHING_TECHNIQUES: IBreathingTechnique[] = [
 				hint: 'Пауза перед вдохом',
 				seconds: 2,
 				color: '#e11d48'
+			}
+		]
+	},
+	{
+		id: '4-2-6',
+		name: 'Анти-тревога (4-2-6)',
+		shortName: 'Релакс 4-2-6',
+		tagline: 'Удлинённый выдох для быстрой перезагрузки нервной системы',
+		description:
+			'Вдох на 4 секунды, мягкая задержка на 2 секунды и медленный выдох на 6 секунд. Удлинённый выдох стимулирует блуждающий нерв, снижает пульс и снимает стресс.',
+		icon: Heart,
+		benefits: ['Снижает пульс', 'Снимает тревожность и панику', 'Активирует блуждающий нерв'],
+		accentColor: '#14b8a6',
+		bgGlow: 'rgba(20, 184, 166, 0.3)',
+		totalCycleSeconds: 12,
+		phases: [
+			{
+				type: 'inhale',
+				name: 'Вдох',
+				hint: 'Глубокий спокойный вдох',
+				seconds: 4,
+				color: '#14b8a6'
+			},
+			{
+				type: 'holdIn',
+				name: 'Пауза',
+				hint: 'Мягкая задержка',
+				seconds: 2,
+				color: '#2dd4bf'
+			},
+			{
+				type: 'exhale',
+				name: 'Выдох',
+				hint: 'Длинный плавный выдох',
+				seconds: 6,
+				color: '#0d9488'
+			}
+		]
+	},
+	{
+		id: 'triangle',
+		name: 'Треугольное дыхание (4-4-4)',
+		shortName: 'Треугольник 4-4',
+		tagline: 'Йогическая пранаяма для баланса и чистой концентрации',
+		description:
+			'Трёхфазный цикл: равный вдох, задержка и выдох без паузы внизу. Легче переносится, чем квадрат, помогает быстро войти в состояние фокуса и ясного ума.',
+		icon: Triangle,
+		benefits: ['Ясность мышления', 'Плавная концентрация', 'Комфорт без паузы на выдохе'],
+		accentColor: '#3b82f6',
+		bgGlow: 'rgba(59, 130, 246, 0.3)',
+		totalCycleSeconds: 12,
+		phases: [
+			{
+				type: 'inhale',
+				name: 'Вдох',
+				hint: 'Осознанный ровный вдох',
+				seconds: 4,
+				color: '#3b82f6'
+			},
+			{
+				type: 'holdIn',
+				name: 'Задержка',
+				hint: 'Задержка с полными лёгкими',
+				seconds: 4,
+				color: '#60a5fa'
+			},
+			{
+				type: 'exhale',
+				name: 'Выдох',
+				hint: 'Спокойный равномерный выдох',
+				seconds: 4,
+				color: '#2563eb'
+			}
+		]
+	},
+	{
+		id: 'zen',
+		name: 'Глубокий дзен (4-4-8)',
+		shortName: 'Дзен 4-4-8',
+		tagline: 'Максимальное вечернее расслабление после тяжелого дня',
+		description:
+			'Вдох на 4 секунды, задержка на 4 секунды и вдвое более длинный выдох на 8 секунд. Освобождает голову от мысленного шума, расслабляет мышцы лица и настраивает на глубокий сон.',
+		icon: Sparkles,
+		benefits: ['Снимает ментальный шум', 'Глубокое расслабление тела', 'Подготовка к медитации'],
+		accentColor: '#a855f7',
+		bgGlow: 'rgba(168, 85, 247, 0.3)',
+		totalCycleSeconds: 16,
+		phases: [
+			{
+				type: 'inhale',
+				name: 'Вдох',
+				hint: 'Плавный вдох носом',
+				seconds: 4,
+				color: '#a855f7'
+			},
+			{
+				type: 'holdIn',
+				name: 'Пауза',
+				hint: 'Мягкая задержка',
+				seconds: 4,
+				color: '#c084fc'
+			},
+			{
+				type: 'exhale',
+				name: 'Выдох',
+				hint: 'Очень долгий мягкий выдох',
+				seconds: 8,
+				color: '#9333ea'
 			}
 		]
 	}
