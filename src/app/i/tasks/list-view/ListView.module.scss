@@ -3,12 +3,11 @@
 
 	.header {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(110px, 8.5rem) 3.25rem;
+		grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(115px, 8.5rem) 3.25rem;
 	}
 
 	.header,
-	.parentsWrapper .row,
-	.parentsWrapper .colHeading {
+	.parentsWrapper .row {
 		@apply border-t border-border text-left w-full min-w-0;
 
 		> div {
@@ -26,22 +25,22 @@
 
 	.parentsWrapper {
 		.colHeading {
-			@apply hover:bg-transparent whitespace-nowrap;
+			@apply border-t border-border hover:bg-transparent whitespace-nowrap text-left w-full min-w-0;
 			background-color: #0e0f0f;
 
 			> div {
-				@apply font-semibold text-xl py-3 border-0;
+				@apply font-semibold text-xl py-3 px-2 sm:px-3 border-0 text-left;
 			}
 		}
 
 		.addRow {
-			@apply py-2 px-4 border-t border-border;
+			@apply py-2 px-2 sm:px-3 border-t border-border;
 		}
 
 		.row {
 			@apply font-normal relative w-full min-w-0;
 			display: grid;
-			grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(110px, 8.5rem) 3.25rem;
+			grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(115px, 8.5rem) 3.25rem;
 
 			> div:first-child {
 				@apply min-w-0 overflow-hidden;
@@ -87,7 +86,7 @@
 				@apply mt-4 border-t border-border;
 
 				> div {
-					@apply py-2 text-base;
+					@apply py-2 px-2 text-base text-left;
 				}
 			}
 

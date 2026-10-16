@@ -15,13 +15,15 @@ interface ISingleSelect {
 	onChange: (value: string) => void
 	value: string
 	isColorSelect?: boolean
+	isClearable?: boolean
 }
 
 export function SingleSelect({
 	data,
 	onChange,
 	value,
-	isColorSelect
+	isColorSelect,
+	isClearable = false
 }: ISingleSelect) {
 	const { isShow, setIsShow, ref } = useOutside(false)
 	const selected = data.find(item => item.value === value)
@@ -69,7 +71,7 @@ export function SingleSelect({
 					className='shrink-0 text-white/40'
 				/>
 			</button>
-			{selected && !isColorSelect && (
+			{isClearable && selected && !isColorSelect && (
 				<button
 					type='button'
 					aria-label='Сбросить выбор'
