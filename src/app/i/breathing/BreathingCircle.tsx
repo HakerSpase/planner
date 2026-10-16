@@ -315,16 +315,16 @@ export function BreathingCircle({
 
 			{/* Phase instruction hint (normal mode only; in Zen mode rendered above the circle) */}
 			{!isZen && (
-				<div className='min-h-[22px] max-w-lg px-4 text-center flex items-center justify-center mt-1.5'>
-					<p className='text-xs sm:text-sm font-medium text-white/70 truncate transition-opacity duration-300'>
+				<div className='min-h-[28px] w-full max-w-sm sm:max-w-md px-3 sm:px-4 text-center flex items-center justify-center mt-1.5 min-w-0'>
+					<p className='text-xs sm:text-sm font-medium text-white/70 text-center leading-relaxed break-words line-clamp-2 transition-opacity duration-300'>
 						{isActive ? currentPhase.hint : technique.tagline}
 					</p>
 				</div>
 			)}
 
-			{/* Clean Connected Flow Stepper (Omitted in Zen Mode to prevent clutter) */}
+			{/* Clean Connected Flow Stepper (Omitted in Zen Mode and hidden on mobile to avoid visual clutter) */}
 			{!isZen && (
-				<div className='min-h-[30px] flex items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-1.5'>
+				<div className='hidden sm:flex min-h-[30px] items-center justify-center gap-1.5 flex-wrap px-2 max-w-lg mt-1.5'>
 					{technique.phases.map((phase, idx) => {
 						const isCurrent = isActive && currentPhaseIndex === idx
 						const isPast = isActive && currentPhaseIndex > idx

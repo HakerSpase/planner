@@ -1000,8 +1000,8 @@ export default function BreathingPage() {
 					{/* Zen Center: Instruction ABOVE the breathing form + Visualizer Circle */}
 					<div className='relative z-10 flex flex-1 flex-col items-center justify-center py-2'>
 						{/* Phase instruction hint ABOVE the central form */}
-						<div className='h-8 shrink-0 flex items-center justify-center mb-4 sm:mb-6'>
-							<p className='text-sm sm:text-base font-medium text-white/85 tracking-wide text-center transition-opacity duration-300'>
+						<div className='min-h-[32px] w-full max-w-sm sm:max-w-md px-4 shrink-0 flex items-center justify-center mb-4 sm:mb-6 min-w-0'>
+							<p className='text-xs sm:text-base font-medium text-white/85 tracking-wide text-center leading-relaxed break-words line-clamp-2 transition-opacity duration-300'>
 								{isActive
 									? (isPaused ? 'Пауза' : currentPhase.hint)
 									: selectedTechnique.tagline}
