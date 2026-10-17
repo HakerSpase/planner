@@ -636,8 +636,8 @@ export default function BreathingPage() {
 							/>
 						</div>
 
-						{/* Slot 4: Duration / Status & Action Buttons - Inline single row */}
-						<div className='relative shrink-0 flex flex-row items-center justify-between gap-2.5 border-t border-white/[0.06] pt-4 w-full'>
+						{/* Slot 4: Duration / Status & Action Buttons - Responsive */}
+						<div className='relative shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/[0.06] pt-4 w-full'>
 							{/* Top edge luminous session progress indicator */}
 							{isActive && targetDurationSeconds > 0 && (
 								<div className='absolute top-0 left-0 h-[2px] w-full bg-white/[0.05] overflow-hidden'>
@@ -650,54 +650,45 @@ export default function BreathingPage() {
 								</div>
 							)}
 
-							{/* Left: Duration Selector (opens modal window) or Active Status Timer */}
+							{/* Left: Duration Selector (opens modal window) or Active Stopwatch Timer */}
 							{!isActive ? (
 								<button
 									type='button'
 									onClick={() => setIsDurationModalOpen(true)}
-									className='flex h-9 items-center gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20 px-3 py-1 text-xs text-white/85 transition-colors shrink-0'
+									className='flex h-9 items-center justify-between sm:justify-start gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20 px-3.5 py-1 text-xs text-white/85 transition-colors w-full sm:w-auto shrink-0'
 									title='Выбрать время сеанса в отдельном окне'
 								>
-									<Clock size={13} className='text-primary' />
-									<span className='text-white/45 font-mono'>Время:</span>
-									<span className='font-medium text-white'>
-										{targetDurationSeconds > 0
-											? `${Math.round(targetDurationSeconds / 60)} мин`
-											: 'Без лимита'}
-									</span>
-									<ChevronDown size={12} className='text-white/40 ml-0.5' />
+									<div className='flex items-center gap-2'>
+										<Clock size={13} className='text-primary' />
+										<span className='text-white/45 font-mono'>Время:</span>
+										<span className='font-medium text-white'>
+											{targetDurationSeconds > 0
+												? `${Math.round(targetDurationSeconds / 60)} мин`
+												: 'Без лимита'}
+										</span>
+									</div>
+									<ChevronDown size={12} className='text-white/40 ml-1' />
 								</button>
 							) : (
-								<div className='flex items-center gap-3 sm:gap-4 min-w-0'>
-									{/* Main digital session stopwatch */}
-									<div className='flex items-baseline gap-1.5 font-mono'>
-										<span className='text-base sm:text-lg font-semibold text-white tracking-tight'>
-											{formatTime(totalElapsedSeconds)}
+								<div className='flex items-baseline gap-1.5 font-mono whitespace-nowrap shrink-0'>
+									<span className='text-base sm:text-lg font-semibold text-white tracking-tight'>
+										{formatTime(totalElapsedSeconds)}
+									</span>
+									{targetDurationSeconds > 0 && (
+										<span className='text-xs text-white/40 font-normal'>
+											/ {formatTime(targetDurationSeconds)}
 										</span>
-										{targetDurationSeconds > 0 && (
-											<span className='text-xs text-white/40 font-normal'>
-												/ {formatTime(targetDurationSeconds)}
-											</span>
-										)}
-									</div>
-
-									{/* Current cycle counter */}
-									<div className='flex items-center gap-1 text-xs font-mono text-white/50'>
-										<span>Цикл:</span>
-										<span className='text-white/80 font-medium'>
-											{completedCycles + 1}
-										</span>
-									</div>
+									)}
 								</div>
 							)}
 
-							{/* Right: Action Buttons (Inline with time on desktop) */}
-							<div className='flex items-center gap-2 shrink-0'>
+							{/* Right: Action Buttons */}
+							<div className='flex items-center gap-2 w-full sm:w-auto'>
 								{!isActive ? (
 									<button
 										type='button'
 										onClick={startSession}
-										className='flex h-9 items-center gap-2 border border-primary bg-primary px-6 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
+										className='flex h-9 items-center justify-center gap-2 border border-primary bg-primary px-6 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90 w-full sm:w-auto'
 									>
 										<Play size={13} fill='currentColor' />
 										<span>Начать практику</span>
@@ -708,7 +699,7 @@ export default function BreathingPage() {
 											<button
 												type='button'
 												onClick={resumeSession}
-												className='flex h-9 items-center gap-2 border border-primary bg-primary px-5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 shadow-sm'
+												className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-primary bg-primary px-3 sm:px-5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 shadow-sm'
 											>
 												<Play size={13} fill='currentColor' />
 												<span>Продолжить</span>
@@ -717,7 +708,7 @@ export default function BreathingPage() {
 											<button
 												type='button'
 												onClick={pauseSession}
-												className='flex h-9 items-center gap-2 border border-white/20 bg-white/10 px-5 text-xs font-medium text-white transition-colors hover:bg-white/15'
+												className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-white/20 bg-white/10 px-3 sm:px-5 text-xs font-medium text-white transition-colors hover:bg-white/15'
 											>
 												<Pause size={13} />
 												<span>Пауза</span>
@@ -727,7 +718,7 @@ export default function BreathingPage() {
 										<button
 											type='button'
 											onClick={finishSession}
-											className='flex h-9 items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-4 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+											className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3 sm:px-4 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
 										>
 											<Check size={13} />
 											<span>Завершить</span>
@@ -737,7 +728,7 @@ export default function BreathingPage() {
 											type='button'
 											onClick={resetSession}
 											title='Сбросить'
-											className='grid h-9 w-9 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
+											className='grid h-9 w-9 shrink-0 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
 										>
 											<RotateCcw size={13} />
 										</button>
@@ -950,13 +941,9 @@ export default function BreathingPage() {
 									<>
 										Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
 										{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
-										{' • '}
-										Цикл: <strong className='text-white'>{completedCycles + 1}</strong>
 									</>
 								) : (
 									<>
-										Цикл: <strong className='text-white'>{selectedTechnique.totalCycleSeconds}с</strong>
-										{' • '}
 										<span>Длительность: </span>
 										<button
 											type='button'
