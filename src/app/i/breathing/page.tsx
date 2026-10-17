@@ -668,8 +668,7 @@ export default function BreathingPage() {
 									<ChevronDown size={12} className='text-white/40 ml-0.5' />
 								</button>
 							) : (
-								<div className='flex items-center gap-2.5 sm:gap-3.5 min-w-0'>
-
+								<div className='flex items-center gap-3 sm:gap-4 min-w-0'>
 									{/* Main digital session stopwatch */}
 									<div className='flex items-baseline gap-1.5 font-mono'>
 										<span className='text-base sm:text-lg font-semibold text-white tracking-tight'>
@@ -682,26 +681,12 @@ export default function BreathingPage() {
 										)}
 									</div>
 
-									{/* Remaining time countdown (if target set) */}
-									{targetDurationSeconds > 0 ? (
-										<div className='hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-white/45 border-l border-white/10 pl-3'>
-											<span>Осталось:</span>
-											<span className='text-white/85 font-medium'>
-												{formatTime(Math.max(0, targetDurationSeconds - totalElapsedSeconds))}
-											</span>
-										</div>
-									) : (
-										<div className='hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-white/45 border-l border-white/10 pl-3'>
-											<span>Без лимита</span>
-										</div>
-									)}
-
 									{/* Current cycle counter */}
-									<div className='hidden md:flex items-center gap-1 text-[11px] font-mono text-white/50 border border-white/[0.08] bg-white/[0.02] px-2 py-0.5'>
+									<div className='flex items-center gap-1 text-xs font-mono text-white/50'>
 										<span>Цикл:</span>
-										<strong className='text-white font-medium'>
+										<span className='text-white/80 font-medium'>
 											{completedCycles + 1}
-										</strong>
+										</span>
 									</div>
 								</div>
 							)}
