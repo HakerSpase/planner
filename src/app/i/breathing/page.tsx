@@ -931,12 +931,12 @@ export default function BreathingPage() {
 					/>
 
 					{/* Zen Header */}
-					<div className='relative z-10 flex items-center justify-between border-b border-white/[0.06] pb-4'>
-						<div>
-							<h2 className='text-base font-medium text-white'>
-								{selectedTechnique.name}
+					<div className='relative z-10 flex items-center justify-between border-b border-white/[0.06] pb-4 gap-3'>
+						<div className='min-w-0 flex-1 pr-2'>
+							<h2 className='text-sm sm:text-base font-medium text-white [hyphens:none]'>
+								{selectedTechnique.name.replace(/-/g, '\u2011')}
 							</h2>
-							<p className='text-xs text-white/40 font-mono mt-0.5'>
+							<p className='text-xs text-white/40 font-mono mt-0.5 whitespace-nowrap'>
 								{isActive ? (
 									<>
 										Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
@@ -961,7 +961,7 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Quick Zen Actions */}
-						<div className='flex items-center gap-2'>
+						<div className='flex items-center gap-2 shrink-0'>
 							<button
 								type='button'
 								onClick={() => setIsAudioSettingsOpen(true)}
@@ -1065,7 +1065,7 @@ export default function BreathingPage() {
 										<button
 											type='button'
 											onClick={resumeSession}
-											className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-primary bg-primary px-3 sm:px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90 whitespace-nowrap shrink-0'
+											className='flex h-10 items-center justify-center gap-2 border border-primary bg-primary px-3.5 sm:px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90 whitespace-nowrap shrink-0'
 										>
 											<Play size={14} fill='currentColor' />
 											<span>Продолжить</span>
@@ -1074,7 +1074,7 @@ export default function BreathingPage() {
 										<button
 											type='button'
 											onClick={pauseSession}
-											className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-white/20 bg-white/10 px-3 sm:px-6 text-xs font-medium text-white transition-colors hover:bg-white/15 whitespace-nowrap shrink-0'
+											className='flex h-10 items-center justify-center gap-2 border border-white/20 bg-white/10 px-3.5 sm:px-6 text-xs font-medium text-white transition-colors hover:bg-white/15 whitespace-nowrap shrink-0'
 										>
 											<Pause size={14} />
 											<span>Пауза</span>
@@ -1084,10 +1084,12 @@ export default function BreathingPage() {
 									<button
 										type='button'
 										onClick={finishSession}
-										className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3 sm:px-5 text-[11px] sm:text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 whitespace-nowrap'
+										className='flex h-10 items-center justify-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3.5 sm:px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 whitespace-nowrap shrink-0'
 									>
 										<Check size={14} className='shrink-0' />
-										<span>Завершить и сохранить</span>
+										<span>
+											Завершить<span className='hidden sm:inline'> и сохранить</span>
+										</span>
 									</button>
 
 									<button
