@@ -553,45 +553,10 @@ export default function BreathingPage() {
 					<div className='relative flex flex-col justify-between border border-white/[0.08] bg-[#111215] p-5 sm:p-6 shadow-xl lg:h-[570px] min-h-[570px] overflow-hidden'>
 						{/* Slot 1: Top Bar - Responsive layout preventing collisions on mobile */}
 						<div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3 shrink-0 min-h-[44px]'>
-							<div className='flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0'>
+							<div className='flex items-center min-w-0'>
 								<span className='text-sm sm:text-base font-medium text-white tracking-wide truncate'>
 									{selectedTechnique.name}
 								</span>
-								<div className='hidden sm:block h-3 w-px bg-white/15' />
-
-								{/* State-consistent session info */}
-								<div className='flex items-center gap-2 text-xs font-mono text-white/50'>
-									{isActive ? (
-										<>
-											<span className='flex items-center gap-1.5'>
-												<Clock size={13} className='text-white/40' />
-												<strong className='text-white/90'>{formatTime(totalElapsedSeconds)}</strong>
-												{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
-											</span>
-											<span>•</span>
-											<span>
-												Цикл: <strong className='text-white/90'>{completedCycles + 1}</strong>
-											</span>
-										</>
-									) : (
-										<>
-											<span>
-												Цикл: <strong className='text-white/80'>{selectedTechnique.totalCycleSeconds}с</strong>
-											</span>
-											<span>•</span>
-											<button
-												type='button'
-												onClick={() => setIsDurationModalOpen(true)}
-												className='hover:text-white underline decoration-dotted transition-colors cursor-pointer'
-												title='Нажмите, чтобы изменить длительность сеанса'
-											>
-												{targetDurationSeconds > 0
-													? `${Math.round(targetDurationSeconds / 60)} мин`
-													: 'Без лимита'}
-											</button>
-										</>
-									)}
-								</div>
 							</div>
 
 							{/* Feedback & Mode Controls */}
@@ -703,22 +668,7 @@ export default function BreathingPage() {
 									<ChevronDown size={12} className='text-white/40 ml-0.5' />
 								</button>
 							) : (
-								<div className='flex flex-wrap items-center gap-2.5 sm:gap-3.5'>
-									{/* Status badge */}
-									<div
-										className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium border transition-colors ${
-											isPaused
-												? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-												: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-										}`}
-									>
-										<span
-											className={`h-1.5 w-1.5 rounded-full ${
-												isPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'
-											}`}
-										/>
-										<span>{isPaused ? 'На паузе' : 'Идёт сеанс'}</span>
-									</div>
+								<div className='flex items-center gap-2.5 sm:gap-3.5 min-w-0'>
 
 									{/* Main digital session stopwatch */}
 									<div className='flex items-baseline gap-1.5 font-mono'>
@@ -858,13 +808,13 @@ export default function BreathingPage() {
 								</button>
 							</div>
 
-							<span className='text-[11px] text-white/40 font-mono'>
-								{sidebarTab === 'catalog'
-									? `${BREATHING_TECHNIQUES.length} техник`
-									: todayTotalMinutes > 0
+							{sidebarTab === 'history' && (
+								<span className='text-[11px] text-white/40 font-mono'>
+									{todayTotalMinutes > 0
 										? `сегодня ${todayTotalMinutes} мин`
 										: `${sessions.length} сеансов`}
-							</span>
+								</span>
+							)}
 						</div>
 
 						{/* Tab Content: Catalog View (Clean list without duplicate bottom history button) */}
