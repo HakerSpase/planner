@@ -10,7 +10,7 @@ import {
 	subYears
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useProfile } from '@/hooks/useProfile'
 
@@ -32,6 +32,24 @@ export function ActivityCalendar() {
 	const [chartWidth, setChartWidth] = useState(0)
 	const chartRef = useRef<HTMLDivElement>(null)
 	const { data: profile } = useProfile()
+
+	// Mouse drag-to-scroll state & refs (supports right-click and left-click)
+	const isMouseDownRef = useRef(false)
+	const mouseButtonRef = useRef<number | null>(null)
+	const startXRef = useRef(0)
+	const startScrollLeftRef = useRef(0)
+	const hasDraggedRef = useRef(false)
+	const [isDragging, setIsDragging] = useState(false)
+
+	// Sleek auto-fading scrollbar indicator state
+	const [scrollState, setScrollState] = useState({
+		scrollLeft: 0,
+		scrollWidth: 0,
+		clientWidth: 0
+	})
+	const [isScrollbarVisible, setIsScrollbarVisible] = useState(false)
+	const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
 	const deviceTimeZone = useMemo(
 		() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
 		[]
@@ -78,15 +96,112 @@ export function ActivityCalendar() {
 				(7 * 24 * 60 * 60 * 1000)
 		) || 0) + 1
 
+	// Update scroll dimensions for custom fading scrollbar
+	const updateScrollState = useCallback(() => {
+		const el = chartRef.current
+		if (!el) return
+		setScrollState({
+			scrollLeft: el.scrollLeft,
+			scrollWidth: el.scrollWidth,
+			clientWidth: el.clientWidth
+		})
+	}, [])
+
+	const showScrollbarTemporarily = useCallback(() => {
+		setIsScrollbarVisible(true)
+		if (scrollTimeoutRef.current) {
+			clearTimeout(scrollTimeoutRef.current)
+		}
+		scrollTimeoutRef.current = setTimeout(() => {
+			setIsScrollbarVisible(false)
+		}, 1200)
+	}, [])
+
+	const handleScroll = useCallback(() => {
+		updateScrollState()
+		showScrollbarTemporarily()
+	}, [updateScrollState, showScrollbarTemporarily])
+
 	useEffect(() => {
 		const element = chartRef.current
 		if (!element) return
-		const observer = new ResizeObserver(([entry]) =>
+		const observer = new ResizeObserver(([entry]) => {
 			setChartWidth(entry.contentRect.width)
-		)
+			updateScrollState()
+		})
 		observer.observe(element)
 		return () => observer.disconnect()
-	}, [])
+	}, [updateScrollState])
+
+	// Auto-scroll to the right (to today) on mount or when period changes
+	useEffect(() => {
+		const el = chartRef.current
+		if (!el) return
+		const timer = setTimeout(() => {
+			if (el) {
+				el.scrollLeft = el.scrollWidth - el.clientWidth
+				updateScrollState()
+			}
+		}, 50)
+		return () => clearTimeout(timer)
+	}, [period, weeks.length, chartWidth, updateScrollState])
+
+	// Window mousemove / mouseup for smooth right-click and left-click drag scrolling
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!isMouseDownRef.current) return
+			const container = chartRef.current
+			if (!container) return
+
+			const dx = e.clientX - startXRef.current
+			if (Math.abs(dx) > 3) {
+				hasDraggedRef.current = true
+				setIsDragging(true)
+				document.body.style.userSelect = 'none'
+			}
+			container.scrollLeft = startScrollLeftRef.current - dx
+			updateScrollState()
+			showScrollbarTemporarily()
+		}
+
+		const handleMouseUp = () => {
+			if (isMouseDownRef.current) {
+				isMouseDownRef.current = false
+				mouseButtonRef.current = null
+				setIsDragging(false)
+				document.body.style.userSelect = ''
+			}
+		}
+
+		window.addEventListener('mousemove', handleMouseMove)
+		window.addEventListener('mouseup', handleMouseUp)
+		return () => {
+			window.removeEventListener('mousemove', handleMouseMove)
+			window.removeEventListener('mouseup', handleMouseUp)
+			document.body.style.userSelect = ''
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current)
+			}
+		}
+	}, [updateScrollState, showScrollbarTemporarily])
+
+	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+		// Support left-click (0) and right-click (2)
+		if (e.button !== 0 && e.button !== 2) return
+		const container = chartRef.current
+		if (!container) return
+
+		isMouseDownRef.current = true
+		mouseButtonRef.current = e.button
+		startXRef.current = e.clientX
+		startScrollLeftRef.current = container.scrollLeft
+		hasDraggedRef.current = false
+	}
+
+	const handleContextMenu = (e: React.MouseEvent) => {
+		// Prevent context menu when right-clicking on chart so dragging is smooth
+		e.preventDefault()
+	}
 
 	const sizingWeekCount = ninetyDayWeekCount
 	const cellSize = Math.min(
@@ -129,6 +244,16 @@ export function ActivityCalendar() {
 					: count <= 6
 						? 'bg-[#26a641]'
 						: 'bg-[#d6e685]'
+
+	// Calculate custom scrollbar dimensions
+	const canScroll = scrollState.scrollWidth > scrollState.clientWidth + 4
+	const thumbWidth = canScroll
+		? Math.max(32, (scrollState.clientWidth / scrollState.scrollWidth) * scrollState.clientWidth)
+		: 0
+	const maxScroll = Math.max(1, scrollState.scrollWidth - scrollState.clientWidth)
+	const scrollRatio = Math.min(1, Math.max(0, scrollState.scrollLeft / maxScroll))
+	const maxThumbTranslate = Math.max(0, scrollState.clientWidth - thumbWidth)
+	const thumbLeft = scrollRatio * maxThumbTranslate
 
 	return (
 		<section
@@ -173,11 +298,21 @@ export function ActivityCalendar() {
 
 			<div
 				ref={chartRef}
-				className='mt-5 w-full min-w-0 overflow-x-auto overscroll-x-contain pb-2'
+				onScroll={handleScroll}
+				onMouseDown={handleMouseDown}
+				onContextMenu={handleContextMenu}
+				className={`mt-5 w-full min-w-0 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+					canScroll
+						? isDragging
+							? 'cursor-grabbing select-none'
+							: 'cursor-grab select-none'
+						: 'cursor-default'
+				}`}
 				tabIndex={0}
-				aria-label='Сетка активности. На годовом периоде прокручивайте по горизонтали'
+				aria-label='Сетка активности. Перетаскивайте левой или правой кнопкой мыши для прокрутки'
 			>
-				<div className='w-max'>
+				{/* Generous right padding (pr-6 sm:pr-8) ensures rightmost cells and outline are never clipped */}
+				<div className='w-max pr-6 sm:pr-8 pl-1 py-1'>
 					<div className='mb-2 flex gap-2'>
 						<span
 							className='sticky left-0 z-20 w-[26px] shrink-0 bg-[#141516]'
@@ -243,7 +378,7 @@ export function ActivityCalendar() {
 													? `${isToday ? 'Сегодня, ' : ''}${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} событий`
 													: undefined
 											}
-											className={`z-0 block transition-colors ${isInRange ? intensity(count) : 'bg-transparent'} ${isToday ? 'z-10 bg-emerald-500/50 outline outline-2 outline-emerald-300 outline-offset-1' : ''}`}
+											className={`z-0 block transition-colors ${isInRange ? intensity(count) : 'bg-transparent'} ${isToday ? 'relative z-10 bg-emerald-500/50 outline outline-2 outline-emerald-300 outline-offset-1' : ''}`}
 											style={{ width: cellSize, height: cellSize }}
 										/>
 									)
@@ -254,7 +389,24 @@ export function ActivityCalendar() {
 				</div>
 			</div>
 
-			<div className='mt-2 flex items-center justify-end gap-1.5 text-[10px] text-white/40'>
+			{/* Auto-fading sleek scroll indicator: appears only while scrolling/dragging, then gently fades out */}
+			{canScroll && (
+				<div
+					className={`mt-2 h-1 w-full rounded-full bg-white/[0.05] overflow-hidden transition-opacity duration-500 ease-out ${
+						isScrollbarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+					}`}
+				>
+					<div
+						className='h-full bg-white/35 rounded-full'
+						style={{
+							width: `${thumbWidth}px`,
+							transform: `translateX(${thumbLeft}px)`
+						}}
+					/>
+				</div>
+			)}
+
+			<div className='mt-2.5 flex items-center justify-end gap-1.5 text-[10px] text-white/40'>
 				<span>Меньше</span>
 				{[0, 1, 2, 4, 7].map(value => (
 					<span
