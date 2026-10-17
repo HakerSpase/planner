@@ -920,7 +920,7 @@ export default function BreathingPage() {
 			{/* FULLSCREEN ZEN MODE OVERLAY                                               */}
 			{/* ========================================================================= */}
 			{isZenMode && (
-				<div className='fixed inset-0 z-[120] flex flex-col justify-between bg-[#08090b] p-6 sm:p-10 select-none overflow-hidden'>
+				<div className='fixed inset-0 z-[120] flex flex-col justify-between bg-[#08090b] px-4 py-6 sm:p-10 select-none overflow-hidden'>
 					{/* Deep Graphite Ambient Backdrop with Subtle Vignette */}
 					<div
 						className='absolute inset-0 pointer-events-none'
@@ -1060,12 +1060,12 @@ export default function BreathingPage() {
 									</button>
 								</div>
 							) : (
-								<div className='flex items-center gap-2.5'>
+								<div className='flex items-center gap-2 sm:gap-2.5 max-w-full'>
 									{isPaused ? (
 										<button
 											type='button'
 											onClick={resumeSession}
-											className='flex h-10 items-center gap-2 border border-primary bg-primary px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
+											className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-primary bg-primary px-3 sm:px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90 whitespace-nowrap shrink-0'
 										>
 											<Play size={14} fill='currentColor' />
 											<span>Продолжить</span>
@@ -1074,7 +1074,7 @@ export default function BreathingPage() {
 										<button
 											type='button'
 											onClick={pauseSession}
-											className='flex h-10 items-center gap-2 border border-white/20 bg-white/10 px-6 text-xs font-medium text-white transition-colors hover:bg-white/15'
+											className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-white/20 bg-white/10 px-3 sm:px-6 text-xs font-medium text-white transition-colors hover:bg-white/15 whitespace-nowrap shrink-0'
 										>
 											<Pause size={14} />
 											<span>Пауза</span>
@@ -1084,9 +1084,9 @@ export default function BreathingPage() {
 									<button
 										type='button'
 										onClick={finishSession}
-										className='flex h-10 items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
+										className='flex h-10 items-center justify-center gap-1.5 sm:gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3 sm:px-5 text-[11px] sm:text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 whitespace-nowrap'
 									>
-										<Check size={14} />
+										<Check size={14} className='shrink-0' />
 										<span>Завершить и сохранить</span>
 									</button>
 
@@ -1094,7 +1094,7 @@ export default function BreathingPage() {
 										type='button'
 										onClick={resetSession}
 										title='Сбросить'
-										className='grid h-10 w-10 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
+										className='grid h-10 w-10 shrink-0 place-items-center border border-white/10 bg-transparent text-white/40 hover:border-white/25 hover:text-white transition-colors'
 									>
 										<RotateCcw size={14} />
 									</button>
@@ -1231,10 +1231,30 @@ export default function BreathingPage() {
 											}`}
 										>
 											<div className='flex items-center gap-1.5'>
-												{opt.id === 'tibetan' && <Sparkles size={13} className='text-amber-400' />}
-												{opt.id === 'bell' && <Bell size={13} className='text-sky-400' />}
-												{opt.id === 'soft_sine' && <Activity size={13} className='text-emerald-400' />}
-												{opt.id === 'none' && <VolumeX size={13} className='text-white/40' />}
+												{opt.id === 'tibetan' && (
+													<Sparkles
+														size={13}
+														className={isSelected ? 'text-primary' : 'text-white/45'}
+													/>
+												)}
+												{opt.id === 'bell' && (
+													<Bell
+														size={13}
+														className={isSelected ? 'text-primary' : 'text-white/45'}
+													/>
+												)}
+												{opt.id === 'soft_sine' && (
+													<Activity
+														size={13}
+														className={isSelected ? 'text-primary' : 'text-white/45'}
+													/>
+												)}
+												{opt.id === 'none' && (
+													<VolumeX
+														size={13}
+														className={isSelected ? 'text-primary' : 'text-white/45'}
+													/>
+												)}
 												<span className='text-xs font-medium'>{opt.label}</span>
 											</div>
 											<span className='text-[10px] text-white/40'>
