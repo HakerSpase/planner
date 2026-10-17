@@ -4,6 +4,7 @@ import {
 	Activity,
 	Bell,
 	Check,
+	ChevronDown,
 	Clock,
 	CloudRain,
 	Headphones,
@@ -43,13 +44,43 @@ import {
 	type IBreathingSession
 } from '@/services/breathing.service'
 
-const DURATIONS = [
-	{ label: '1 мин', seconds: 60 },
-	{ label: '2 мин', seconds: 120 },
-	{ label: '3 мин', seconds: 180 },
-	{ label: '5 мин', seconds: 300 },
-	{ label: '10 мин', seconds: 600 },
-	{ label: 'Без лимита', seconds: 0 }
+interface IDurationOption {
+	label: string
+	seconds: number
+	description?: string
+}
+
+const DURATIONS: IDurationOption[] = [
+	{
+		label: '1 мин',
+		seconds: 60,
+		description: 'Экспресс-пауза для снятия резкого стресса'
+	},
+	{
+		label: '2 мин',
+		seconds: 120,
+		description: 'Короткая перезагрузка между делами'
+	},
+	{
+		label: '3 мин',
+		seconds: 180,
+		description: 'Оптимальный баланс — рекомендуется для ежедневной практики'
+	},
+	{
+		label: '5 мин',
+		seconds: 300,
+		description: 'Глубокое погружение, нормализация пульса и давления'
+	},
+	{
+		label: '10 мин',
+		seconds: 600,
+		description: 'Полная медитативная сессия для глубокого спокойствия'
+	},
+	{
+		label: 'Без лимита',
+		seconds: 0,
+		description: 'Свободная практика в собственном ритме без таймера'
+	}
 ]
 
 export default function BreathingPage() {
@@ -60,9 +91,10 @@ export default function BreathingPage() {
 	const [isActive, setIsActive] = useState<boolean>(false)
 	const [isPaused, setIsPaused] = useState<boolean>(false)
 
-	// Zen Mode & Audio Settings Modal
+	// Zen Mode, Audio Settings & Duration Modals
 	const [isZenMode, setIsZenMode] = useState<boolean>(false)
 	const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState<boolean>(false)
+	const [isDurationModalOpen, setIsDurationModalOpen] = useState<boolean>(false)
 	const [sidebarTab, setSidebarTab] = useState<'catalog' | 'history'>('catalog')
 
 	// Phase and timing state
@@ -132,17 +164,27 @@ export default function BreathingPage() {
 		loadHistory()
 	}, [])
 
-	// Escape key listener for Zen Mode
+	// Escape key listener for Modals & Zen Mode
 	useEffect(() => {
-		if (!isZenMode) return
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				setIsZenMode(false)
+				if (isDurationModalOpen) {
+					setIsDurationModalOpen(false)
+					return
+				}
+				if (isAudioSettingsOpen) {
+					setIsAudioSettingsOpen(false)
+					return
+				}
+				if (isZenMode) {
+					setIsZenMode(false)
+					return
+				}
 			}
 		}
 		window.addEventListener('keydown', onKeyDown)
 		return () => window.removeEventListener('keydown', onKeyDown)
-	}, [isZenMode])
+	}, [isDurationModalOpen, isAudioSettingsOpen, isZenMode])
 
 	const loadHistory = async () => {
 		try {
@@ -537,11 +579,16 @@ export default function BreathingPage() {
 												Цикл: <strong className='text-white/80'>{selectedTechnique.totalCycleSeconds}с</strong>
 											</span>
 											<span>•</span>
-											<span>
+											<button
+												type='button'
+												onClick={() => setIsDurationModalOpen(true)}
+												className='hover:text-white underline decoration-dotted transition-colors cursor-pointer'
+												title='Нажмите, чтобы изменить длительность сеанса'
+											>
 												{targetDurationSeconds > 0
 													? `${Math.round(targetDurationSeconds / 60)} мин`
 													: 'Без лимита'}
-											</span>
+											</button>
 										</>
 									)}
 								</div>
@@ -625,7 +672,7 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Slot 4: Duration / Status & Action Buttons - Inline single row */}
-						<div className='relative shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-4 w-full'>
+						<div className='relative shrink-0 flex flex-row items-center justify-between gap-2.5 border-t border-white/[0.06] pt-4 w-full'>
 							{/* Top edge luminous session progress indicator */}
 							{isActive && targetDurationSeconds > 0 && (
 								<div className='absolute top-0 left-0 h-[2px] w-full bg-white/[0.05] overflow-hidden'>
@@ -638,30 +685,23 @@ export default function BreathingPage() {
 								</div>
 							)}
 
-							{/* Left: Duration Selector or Active Status Timer */}
+							{/* Left: Duration Selector (opens modal window) or Active Status Timer */}
 							{!isActive ? (
-								<div className='flex items-center gap-1.5 flex-wrap justify-center sm:justify-start'>
-									<span className='text-[10px] uppercase tracking-wider text-white/40 mr-1 font-mono'>
-										Время:
+								<button
+									type='button'
+									onClick={() => setIsDurationModalOpen(true)}
+									className='flex h-9 items-center gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20 px-3 py-1 text-xs text-white/85 transition-colors shrink-0'
+									title='Выбрать время сеанса в отдельном окне'
+								>
+									<Clock size={13} className='text-primary' />
+									<span className='text-white/45 font-mono'>Время:</span>
+									<span className='font-medium text-white'>
+										{targetDurationSeconds > 0
+											? `${Math.round(targetDurationSeconds / 60)} мин`
+											: 'Без лимита'}
 									</span>
-									{DURATIONS.map(dur => {
-										const isSelected = targetDurationSeconds === dur.seconds
-										return (
-											<button
-												key={dur.seconds}
-												type='button'
-												onClick={() => setTargetDurationSeconds(dur.seconds)}
-												className={`border px-2.5 py-1 text-xs transition-colors ${
-													isSelected
-														? 'border-primary bg-primary/20 text-white font-medium'
-														: 'border-white/10 bg-transparent text-white/50 hover:text-white/80 hover:border-white/25'
-												}`}
-											>
-												{dur.label}
-											</button>
-										)
-									})}
-								</div>
+									<ChevronDown size={12} className='text-white/40 ml-0.5' />
+								</button>
 							) : (
 								<div className='flex flex-wrap items-center gap-2.5 sm:gap-3.5'>
 									{/* Status badge */}
@@ -982,7 +1022,17 @@ export default function BreathingPage() {
 									<>
 										Цикл: <strong className='text-white'>{selectedTechnique.totalCycleSeconds}с</strong>
 										{' • '}
-										Длительность: <strong className='text-white'>{targetDurationSeconds > 0 ? `${Math.round(targetDurationSeconds / 60)} мин` : 'Без лимита'}</strong>
+										<span>Длительность: </span>
+										<button
+											type='button'
+											onClick={() => setIsDurationModalOpen(true)}
+											className='text-white underline decoration-dotted hover:text-primary transition-colors'
+											title='Выбрать время сеанса'
+										>
+											{targetDurationSeconds > 0
+												? `${Math.round(targetDurationSeconds / 60)} мин`
+												: 'Без лимита'}
+										</button>
 									</>
 								)}
 							</p>
@@ -1061,14 +1111,32 @@ export default function BreathingPage() {
 					<div className='relative z-10 flex flex-col items-center gap-3 border-t border-white/[0.06] pt-4'>
 						<div className='flex flex-wrap items-center justify-center gap-3'>
 							{!isActive ? (
-								<button
-									type='button'
-									onClick={startSession}
-									className='flex h-10 items-center gap-2 border border-primary bg-primary px-7 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
-								>
-									<Play size={15} fill='currentColor' />
-									<span>Начать практику</span>
-								</button>
+								<div className='flex items-center gap-3'>
+									<button
+										type='button'
+										onClick={() => setIsDurationModalOpen(true)}
+										className='flex h-10 items-center gap-2 border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 px-4 text-xs font-medium text-white/85 transition-colors'
+										title='Выбрать время сеанса'
+									>
+										<Clock size={14} className='text-primary' />
+										<span className='font-mono text-white/45'>Время:</span>
+										<span className='text-white font-medium'>
+											{targetDurationSeconds > 0
+												? `${Math.round(targetDurationSeconds / 60)} мин`
+												: 'Без лимита'}
+										</span>
+										<ChevronDown size={12} className='text-white/40 ml-0.5' />
+									</button>
+
+									<button
+										type='button'
+										onClick={startSession}
+										className='flex h-10 items-center gap-2 border border-primary bg-primary px-7 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
+									>
+										<Play size={15} fill='currentColor' />
+										<span>Начать практику</span>
+									</button>
+								</div>
 							) : (
 								<div className='flex items-center gap-2.5'>
 									{isPaused ? (
@@ -1283,6 +1351,102 @@ export default function BreathingPage() {
 								className='border border-primary bg-primary px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
 							>
 								Применить и закрыть
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* ========================================================================= */}
+			{/* DURATION SELECTION MODAL ("Отдельное окошко выбора времени сеанса")        */}
+			{/* ========================================================================= */}
+			{isDurationModalOpen && (
+				<div
+					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm'
+					onMouseDown={e => {
+						if (e.target === e.currentTarget) setIsDurationModalOpen(false)
+					}}
+				>
+					<div className='w-full max-w-md border border-white/10 bg-[#121316] p-5 sm:p-6 shadow-2xl'>
+						{/* Modal Header */}
+						<div className='flex items-center justify-between border-b border-white/10 pb-4'>
+							<div>
+								<h3 className='text-sm sm:text-base font-semibold text-white flex items-center gap-2'>
+									<Clock size={16} className='text-primary' />
+									Время сеанса
+								</h3>
+								<p className='mt-0.5 text-xs text-white/50'>
+									Выберите целевую длительность дыхательной практики
+								</p>
+							</div>
+							<button
+								type='button'
+								onClick={() => setIsDurationModalOpen(false)}
+								className='text-white/40 hover:text-white p-1 transition-colors'
+								title='Закрыть'
+							>
+								<X size={18} />
+							</button>
+						</div>
+
+						{/* Durations Grid / List */}
+						<div className='mt-4 space-y-2'>
+							{DURATIONS.map(dur => {
+								const isSelected = targetDurationSeconds === dur.seconds
+								return (
+									<button
+										key={dur.seconds}
+										type='button'
+										onClick={() => {
+											setTargetDurationSeconds(dur.seconds)
+											setIsDurationModalOpen(false)
+										}}
+										className={`w-full flex items-center justify-between p-3 text-left transition-all border ${
+											isSelected
+												? 'border-primary bg-primary/15 text-white'
+												: 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 text-white/70'
+										}`}
+									>
+										<div className='min-w-0'>
+											<div className='flex items-center gap-2'>
+												<span className='font-semibold text-sm text-white'>
+													{dur.label}
+												</span>
+												{dur.seconds === 180 && (
+													<span className='text-[10px] font-mono px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/30'>
+														Рекомендуется
+													</span>
+												)}
+											</div>
+											{dur.description && (
+												<p className='mt-0.5 text-xs text-white/45'>
+													{dur.description}
+												</p>
+											)}
+										</div>
+
+										<div className='shrink-0 ml-3'>
+											{isSelected ? (
+												<div className='h-5 w-5 rounded-full bg-primary flex items-center justify-center text-white'>
+													<Check size={12} strokeWidth={3} />
+												</div>
+											) : (
+												<div className='h-5 w-5 rounded-full border border-white/20' />
+											)}
+										</div>
+									</button>
+								)
+							})}
+						</div>
+
+						{/* Modal Footer */}
+						<div className='mt-5 pt-3 border-t border-white/[0.08] flex justify-end'>
+							<button
+								type='button'
+								onClick={() => setIsDurationModalOpen(false)}
+								className='border border-white/15 bg-white/[0.04] px-4 py-1.5 text-xs text-white hover:bg-white/10 transition-colors'
+							>
+								Закрыть
 							</button>
 						</div>
 					</div>

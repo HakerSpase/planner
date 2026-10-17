@@ -13,7 +13,6 @@ import {
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
-	Calendar as CalendarIcon,
 	Check,
 	ChevronLeft,
 	ChevronRight,
@@ -149,48 +148,22 @@ export default function ThoughtsPage() {
 		hasUserSelectedRef.current = true
 	}
 
-	const goToToday = () => {
-		const today = currentDate()
-		setMonth(today)
-		setSelected(today)
-		hasUserSelectedRef.current = true
-	}
-
 	const selectedKey = iso(selected)
 	const selectedSavedContent = entries[selectedKey] || ''
 	const isDirty = selectedSavedContent !== draft
 	const wordsCount = draft.trim() ? draft.trim().split(/\s+/).length : 0
 	const readingTimeMinutes = Math.max(1, Math.ceil(wordsCount / 180))
 
-	const isTodaySelected = isSameDay(selected, currentDate())
-
 	return (
 		<div className='w-full min-w-0 max-w-[1550px] pb-12'>
 			{/* Page Header */}
-			<div className='flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5'>
-				<div>
-					<h1 className='text-2xl sm:text-3xl font-semibold text-white tracking-tight'>
-						Мысли на каждый день
-					</h1>
-					<p className='mt-1 text-sm text-white/50 max-w-2xl'>
-						Ваш личный дневник для заметок, идей, рефлексии и событий. Все записи привязаны к датам и сохраняются в облаке.
-					</p>
-				</div>
-
-				<div className='flex items-center gap-2.5'>
-					<button
-						type='button'
-						onClick={goToToday}
-						className={`flex items-center gap-2 border px-3.5 py-1.5 text-xs font-medium transition-colors ${
-							isTodaySelected
-								? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-								: 'border-white/15 bg-white/[0.03] text-white/70 hover:bg-white/[0.08] hover:text-white'
-						}`}
-					>
-						<CalendarIcon size={14} />
-						Сегодня
-					</button>
-				</div>
+			<div className='border-b border-white/10 pb-5'>
+				<h1 className='text-2xl sm:text-3xl font-semibold text-white tracking-tight'>
+					Мысли на каждый день
+				</h1>
+				<p className='mt-1 text-sm text-white/50 max-w-2xl'>
+					Ваш личный дневник для заметок, идей, рефлексии и событий. Все записи привязаны к датам и сохраняются в облаке.
+				</p>
 			</div>
 
 			{/* Main Content Grid: Balanced wide PC proportions */}
