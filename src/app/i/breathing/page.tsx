@@ -54,7 +54,7 @@ const DURATIONS: IDurationOption[] = [
 	{
 		label: '1 мин',
 		seconds: 60,
-		description: 'Экспресс-пауза для снятия резкого стресса'
+		description: 'Быстрая пауза для снятия резкого стресса'
 	},
 	{
 		label: '2 мин',
@@ -64,7 +64,7 @@ const DURATIONS: IDurationOption[] = [
 	{
 		label: '3 мин',
 		seconds: 180,
-		description: 'Оптимальный баланс — рекомендуется для ежедневной практики'
+		description: 'Оптимальный баланс для ежедневной практики'
 	},
 	{
 		label: '5 мин',
@@ -1371,8 +1371,7 @@ export default function BreathingPage() {
 						{/* Modal Header */}
 						<div className='flex items-center justify-between border-b border-white/10 pb-4'>
 							<div>
-								<h3 className='text-sm sm:text-base font-semibold text-white flex items-center gap-2'>
-									<Clock size={16} className='text-primary' />
+								<h3 className='text-sm sm:text-base font-semibold text-white'>
 									Время сеанса
 								</h3>
 								<p className='mt-0.5 text-xs text-white/50'>
@@ -1408,16 +1407,9 @@ export default function BreathingPage() {
 										}`}
 									>
 										<div className='min-w-0'>
-											<div className='flex items-center gap-2'>
-												<span className='font-semibold text-sm text-white'>
-													{dur.label}
-												</span>
-												{dur.seconds === 180 && (
-													<span className='text-[10px] font-mono px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/30'>
-														Рекомендуется
-													</span>
-												)}
-											</div>
+											<span className='font-semibold text-sm text-white block'>
+												{dur.label}
+											</span>
 											{dur.description && (
 												<p className='mt-0.5 text-xs text-white/45'>
 													{dur.description}
