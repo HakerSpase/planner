@@ -276,12 +276,6 @@ export function BreathingCircle({
 									{Math.ceil(phaseRemainingSeconds)}
 								</span>
 
-								{/* Time label omitted in Zen mode to remove visual clutter */}
-								{!isZen && (
-									<span className='text-[10px] text-white/40 uppercase tracking-widest font-mono'>
-										секунд
-									</span>
-								)}
 							</>
 						) : (
 							<>

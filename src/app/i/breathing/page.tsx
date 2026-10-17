@@ -4,30 +4,24 @@ import {
 	Activity,
 	Bell,
 	Check,
-	ChevronDown,
-	ChevronUp,
 	Clock,
 	CloudRain,
-	Flame,
 	Headphones,
 	History,
 	Maximize2,
 	Minimize2,
-	Moon,
 	Pause,
 	Play,
 	Radio,
 	RotateCcw,
 	Smartphone,
 	Sparkles,
-	Square,
 	Trash2,
 	Trees,
 	Volume2,
 	VolumeX,
 	Waves,
-	X,
-	Zap
+	X
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -631,8 +625,20 @@ export default function BreathingPage() {
 						</div>
 
 						{/* Slot 4: Duration / Status & Action Buttons - Inline single row */}
-						<div className='shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-4 w-full'>
-							{/* Left: Duration Selector or Active Status */}
+						<div className='relative shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/[0.06] pt-4 w-full'>
+							{/* Top edge luminous session progress indicator */}
+							{isActive && targetDurationSeconds > 0 && (
+								<div className='absolute top-0 left-0 h-[2px] w-full bg-white/[0.05] overflow-hidden'>
+									<div
+										className='h-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-300 ease-linear shadow-[0_0_8px_rgba(139,92,246,0.6)]'
+										style={{
+											width: `${Math.min(100, (totalElapsedSeconds / targetDurationSeconds) * 100)}%`
+										}}
+									/>
+								</div>
+							)}
+
+							{/* Left: Duration Selector or Active Status Timer */}
 							{!isActive ? (
 								<div className='flex items-center gap-1.5 flex-wrap justify-center sm:justify-start'>
 									<span className='text-[10px] uppercase tracking-wider text-white/40 mr-1 font-mono'>
@@ -657,15 +663,56 @@ export default function BreathingPage() {
 									})}
 								</div>
 							) : (
-								<div className='text-xs font-mono text-white/50 flex items-center gap-2'>
-									<span className='h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse' />
-									<span className='text-white/85 font-medium'>Практика активна</span>
-									<span>•</span>
-									<span>
-										{targetDurationSeconds > 0
-											? `Цель: ${Math.round(targetDurationSeconds / 60)} мин`
-											: 'Без лимита'}
-									</span>
+								<div className='flex flex-wrap items-center gap-2.5 sm:gap-3.5'>
+									{/* Status badge */}
+									<div
+										className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium border transition-colors ${
+											isPaused
+												? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+												: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+										}`}
+									>
+										<span
+											className={`h-1.5 w-1.5 rounded-full ${
+												isPaused ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'
+											}`}
+										/>
+										<span>{isPaused ? 'На паузе' : 'Идёт сеанс'}</span>
+									</div>
+
+									{/* Main digital session stopwatch */}
+									<div className='flex items-baseline gap-1.5 font-mono'>
+										<span className='text-base sm:text-lg font-semibold text-white tracking-tight'>
+											{formatTime(totalElapsedSeconds)}
+										</span>
+										{targetDurationSeconds > 0 && (
+											<span className='text-xs text-white/40 font-normal'>
+												/ {formatTime(targetDurationSeconds)}
+											</span>
+										)}
+									</div>
+
+									{/* Remaining time countdown (if target set) */}
+									{targetDurationSeconds > 0 ? (
+										<div className='hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-white/45 border-l border-white/10 pl-3'>
+											<span>Осталось:</span>
+											<span className='text-white/85 font-medium'>
+												{formatTime(Math.max(0, targetDurationSeconds - totalElapsedSeconds))}
+											</span>
+										</div>
+									) : (
+										<div className='hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-white/45 border-l border-white/10 pl-3'>
+											<span>Без лимита</span>
+										</div>
+									)}
+
+									{/* Current cycle counter */}
+									<div className='hidden md:flex items-center gap-1 text-[11px] font-mono text-white/50 border border-white/[0.08] bg-white/[0.02] px-2 py-0.5'>
+										<span>Цикл:</span>
+										<strong className='text-white font-medium'>
+											{completedCycles + 1}
+										</strong>
+									</div>
 								</div>
 							)}
 
@@ -686,7 +733,7 @@ export default function BreathingPage() {
 											<button
 												type='button'
 												onClick={resumeSession}
-												className='flex h-9 items-center gap-2 border border-primary bg-primary px-5 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
+												className='flex h-9 items-center gap-2 border border-primary bg-primary px-5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 shadow-sm'
 											>
 												<Play size={13} fill='currentColor' />
 												<span>Продолжить</span>
@@ -785,28 +832,17 @@ export default function BreathingPage() {
 							<div className='flex-1 overflow-y-auto pr-1 divide-y divide-white/[0.04] pt-1'>
 								{BREATHING_TECHNIQUES.map(tech => {
 									const isSelected = tech.id === selectedTechnique.id
-									const IconComp = tech.icon
 									return (
 										<button
 											key={tech.id}
 											type='button'
 											onClick={() => selectTechnique(tech)}
-											className={`group w-full flex items-start gap-3 py-3 px-2.5 text-left transition-colors ${
+											className={`group w-full flex items-start py-3 px-3 text-left transition-colors ${
 												isSelected
 													? 'bg-white/[0.04] border-l-2 border-primary -ml-[1px]'
 													: 'hover:bg-white/[0.015] border-l-2 border-transparent'
 											}`}
 										>
-											<div className='mt-0.5 shrink-0'>
-												<IconComp
-													size={16}
-													style={{ color: isSelected ? tech.accentColor : undefined }}
-													className={`transition-colors ${
-														isSelected ? '' : 'text-white/40 group-hover:text-white/70'
-													}`}
-												/>
-											</div>
-
 											<div className='min-w-0 flex-1'>
 												<div className='flex items-center justify-between gap-2'>
 													<span

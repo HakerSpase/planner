@@ -13,15 +13,12 @@ import {
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
-	BookOpen,
 	Calendar as CalendarIcon,
 	Check,
 	ChevronLeft,
 	ChevronRight,
 	Clock,
-	FileText,
-	Loader2,
-	Sparkles
+	Loader2
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -167,24 +164,12 @@ export default function ThoughtsPage() {
 
 	const isTodaySelected = isSameDay(selected, currentDate())
 
-	// Filter and sort entries for the current month feed
-	const monthEntries = useMemo(() => {
-		const monthPrefix = format(month, 'yyyy-MM')
-		return Object.entries(entries)
-			.filter(
-				([dateKey, content]) =>
-					dateKey.startsWith(monthPrefix) && Boolean(content?.trim())
-			)
-			.sort((a, b) => b[0].localeCompare(a[0]))
-	}, [entries, month])
-
 	return (
 		<div className='w-full min-w-0 max-w-[1550px] pb-12'>
 			{/* Page Header */}
 			<div className='flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5'>
 				<div>
-					<h1 className='text-2xl sm:text-3xl font-semibold text-white tracking-tight flex items-center gap-3'>
-						<BookOpen className='text-primary shrink-0' size={28} />
+					<h1 className='text-2xl sm:text-3xl font-semibold text-white tracking-tight'>
 						Мысли на каждый день
 					</h1>
 					<p className='mt-1 text-sm text-white/50 max-w-2xl'>
@@ -205,11 +190,6 @@ export default function ThoughtsPage() {
 						<CalendarIcon size={14} />
 						Сегодня
 					</button>
-
-					<div className='hidden sm:flex items-center gap-1.5 border border-white/10 bg-white/[0.02] px-3 py-1.5 text-xs text-white/50'>
-						<FileText size={13} className='text-amber-400' />
-						<span>{monthEntries.length} {monthEntries.length === 1 ? 'запись' : monthEntries.length >= 2 && monthEntries.length <= 4 ? 'записи' : 'записей'} за {format(month, 'LLLL', { locale: ru })}</span>
-					</div>
 				</div>
 			</div>
 
@@ -334,67 +314,6 @@ export default function ThoughtsPage() {
 							)}
 						</div>
 					</section>
-
-					{/* Feed of Month's Entries */}
-					<section className='border border-white/10 bg-[#141516] p-4 sm:p-5 shadow-lg flex flex-col'>
-						<div className='mb-3 flex items-center justify-between border-b border-white/[0.08] pb-3'>
-							<h3 className='text-sm font-semibold text-white/90 flex items-center gap-2'>
-								<FileText size={15} className='text-primary' />
-								Записи месяца ({monthEntries.length})
-							</h3>
-							<span className='text-[11px] text-white/40 capitalize'>
-								{format(month, 'LLLL', { locale: ru })}
-							</span>
-						</div>
-
-						{monthEntries.length === 0 ? (
-							<div className='py-8 text-center px-3'>
-								<Sparkles size={20} className='mx-auto text-white/20 mb-2' />
-								<p className='text-xs text-white/50 font-medium'>
-									В этом месяце пока нет записей
-								</p>
-								<p className='text-[11px] text-white/35 mt-1 leading-relaxed'>
-									Выберите любой день в календаре выше и начните писать свои мысли.
-								</p>
-							</div>
-						) : (
-							<div className='max-h-[360px] overflow-y-auto space-y-2 pr-1'>
-								{monthEntries.map(([dateKey, text]) => {
-									const [y, m, d] = dateKey.split('-').map(Number)
-									const entryDate = new Date(y, m - 1, d)
-									const isEntrySelected = dateKey === selectedKey
-
-									return (
-										<button
-											key={dateKey}
-											type='button'
-											onClick={() => {
-												setSelected(entryDate)
-												hasUserSelectedRef.current = true
-											}}
-											className={`w-full text-left p-2.5 transition-all border ${
-												isEntrySelected
-													? 'bg-primary/10 border-primary/50 text-white'
-													: 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/15 text-white/80'
-											}`}
-										>
-											<div className='flex items-center justify-between gap-2 mb-1'>
-												<span className='text-xs font-semibold text-white capitalize'>
-													{format(entryDate, 'd MMMM, EEE', { locale: ru })}
-												</span>
-												<span className='text-[10px] font-mono text-white/40'>
-													{text.length} зн.
-												</span>
-											</div>
-											<p className='text-xs text-white/50 line-clamp-2 leading-relaxed'>
-												{text}
-											</p>
-										</button>
-									)
-								})}
-							</div>
-						)}
-					</section>
 				</div>
 
 				{/* Right Column: Spacious Journal Studio Editor */}
@@ -402,23 +321,20 @@ export default function ThoughtsPage() {
 					{/* Editor Header */}
 					<div className='mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4'>
 						<div className='min-w-0'>
-							<div className='flex items-center gap-2.5'>
-								<h2 className='text-lg sm:text-xl font-semibold capitalize text-white'>
-									{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
-								</h2>
-								{isTodaySelected && (
-									<span className='border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300'>
-										Сегодня
-									</span>
-								)}
-							</div>
+							<h2 className='text-lg sm:text-xl font-semibold capitalize text-white'>
+								{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
+							</h2>
 							<p className='mt-0.5 text-xs text-white/40 flex items-center gap-3'>
 								<span>{wordsCount} {wordsCount === 1 ? 'слово' : wordsCount >= 2 && wordsCount <= 4 ? 'слова' : 'слов'}</span>
-								<span>•</span>
-								<span className='flex items-center gap-1'>
-									<Clock size={12} />
-									~{readingTimeMinutes} мин чтения
-								</span>
+								{wordsCount > 0 && (
+									<>
+										<span>•</span>
+										<span className='flex items-center gap-1'>
+											<Clock size={12} />
+											~{readingTimeMinutes} мин чтения
+										</span>
+									</>
+								)}
 							</p>
 						</div>
 
