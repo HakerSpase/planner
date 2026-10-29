@@ -4,7 +4,10 @@ import { Check, ChevronDown, LocateFixed, Minus, Plus, Search } from 'lucide-rea
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 
+import { AppBackground } from '@/components/dashboard-layout/AppBackground'
 import { Button } from '@/components/ui/buttons/Button'
+
+import { BACKGROUNDS, useBackground } from '@/lib/background-preference'
 
 import { TypeUserForm } from '@/types/auth.types'
 
@@ -88,6 +91,7 @@ export function Settings() {
 	})
 
 	useInitialData(reset)
+	const [background, setBackground] = useBackground()
 
 	const { isPending, mutate } = useUpdateSettings()
 	const timeZoneMenuRef = useRef<HTMLDivElement>(null)
@@ -326,6 +330,41 @@ export function Settings() {
 							Как на этом устройстве: {deviceTimeZone.replaceAll('_', ' ')}
 						</button>
 					)}
+				</Section>
+
+				<Section
+					title='Фон'
+					description='Подложка под всеми разделами. Применяется сразу и запоминается на этом устройстве.'
+				>
+					<div
+						role='radiogroup'
+						aria-label='Фон'
+						className='grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5'
+					>
+						{BACKGROUNDS.map(option => (
+							<button
+								key={option.id}
+								type='button'
+								role='radio'
+								aria-checked={background === option.id}
+								onClick={() => setBackground(option.id)}
+								className='group text-left'
+							>
+								<span
+									className={`relative block h-20 overflow-hidden border transition-colors ${background === option.id ? 'border-primary' : 'border-border group-hover:border-border-strong'}`}
+								>
+									<AppBackground
+										variant={option.id}
+										className='absolute inset-0'
+									/>
+								</span>
+								<span className='mt-2 block text-sm text-fg'>{option.label}</span>
+								<span className='block text-xs leading-4 text-subtle'>
+									{option.description}
+								</span>
+							</button>
+						))}
+					</div>
 				</Section>
 
 				<Section

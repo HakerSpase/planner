@@ -68,10 +68,13 @@ export function SingleSelect({
 				) : (
 					<Badge>Выберите</Badge>
 				)}
-				<ChevronDown
-					size={14}
-					className='shrink-0 text-subtle'
-				/>
+				{/* у приоритета стрелка лишняя — бейдж и так кликабельный */}
+				{isColorSelect && (
+					<ChevronDown
+						size={14}
+						className='shrink-0 text-subtle'
+					/>
+				)}
 			</button>
 			{isClearable && selected && !isColorSelect && (
 				<button

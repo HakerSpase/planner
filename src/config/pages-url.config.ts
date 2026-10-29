@@ -10,6 +10,7 @@ class DASHBOARD {
 	GUIDE = `${this.root}/guide`
 	THOUGHTS = `${this.root}/thoughts`
 	BREATHING = `${this.root}/breathing`
+	LIBRARY = `${this.root}/library`
 }
 
 export const DASHBOARD_PAGES = new DASHBOARD()

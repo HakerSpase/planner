@@ -162,7 +162,7 @@ export function Pomodoro() {
 	]
 
 	return (
-		<div className='relative w-full border border-border bg-surface text-center'>
+		<div className='relative w-full border border-border bg-surface text-center lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]'>
 			{isLoading ? (
 				<div className='py-16'>
 					<Loader />
@@ -173,7 +173,7 @@ export function Pomodoro() {
 						value={focusTaskId}
 						onChange={setFocusTaskId}
 					/>
-					<div className='px-5 pb-8 pt-8 sm:pt-10'>
+					<div className='flex flex-col items-center justify-center px-5 pb-8 pt-8 sm:pt-10 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:min-h-[30rem] lg:border-r lg:border-border lg:py-16'>
 					<p className='eyebrow'>
 						{timerState.isBreakTime
 							? 'Перерыв'
@@ -181,10 +181,10 @@ export function Pomodoro() {
 								? 'Фокус'
 								: 'Сессия завершена'}
 					</p>
-					<div className='mt-3 font-mono text-6xl font-medium tabular-nums tracking-tight text-fg sm:text-7xl'>
+					<div className='mt-3 font-mono text-6xl font-medium tabular-nums tracking-tight text-fg sm:text-7xl lg:text-8xl'>
 						{formatTime(timerState.secondsLeft)}
 					</div>
-					<div className='mt-7'>
+					<div className='mt-7 w-full max-w-md'>
 						<PomodoroRounds
 							rounds={rounds}
 							nextRoundHandler={actions.nextRoundHandler}
@@ -234,11 +234,11 @@ export function Pomodoro() {
 						Пробел — старт / пауза
 					</p>
 					</div>
-					<dl className='grid grid-cols-3 divide-x divide-border border-t border-border'>
+					<dl className='grid grid-cols-3 divide-x divide-border border-t border-border lg:col-start-2 lg:row-start-2 lg:grid-cols-1 lg:content-start lg:divide-x-0 lg:divide-y lg:border-t-0 lg:text-left'>
 						{focusStats.map(stat => (
 							<div
 								key={stat.label}
-								className='px-3 py-4'
+								className='px-3 py-4 lg:px-5 lg:py-5'
 							>
 								<dt className='eyebrow'>{stat.label}</dt>
 								<dd className='mt-1.5 text-sm tabular-nums text-fg'>{stat.value}</dd>

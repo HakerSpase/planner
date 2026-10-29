@@ -46,3 +46,52 @@ export async function GET() {
 		{ headers: { 'Cache-Control': 'no-store' } }
 	)
 }
+
+// Удаление файлов, которые убрали из заметок. Удалить можно только из своей папки.
+export async function DELETE(request: Request) {
+	const supabase = createClient()
+	const {
+		data: { user },
+		error: authError
+	} = await supabase.auth.getUser()
+
+	if (authError || !user) {
+		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+	}
+
+	const privateKey = process.env.IMAGEKIT_PRIVATE_KEY
+	const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT?.replace(/\/$/, '')
+	if (!privateKey || !urlEndpoint) {
+		return NextResponse.json({ error: 'Не настроено' }, { status: 503 })
+	}
+
+	const body = await request.json().catch(() => ({}))
+	const urls: string[] = Array.isArray(body.urls) ? body.urls.slice(0, 20) : []
+	const folder = `/planner/${user.id}/`
+	const auth = `Basic ${Buffer.from(`${privateKey}:`).toString('base64')}`
+
+	let deleted = 0
+	for (const url of urls) {
+		if (typeof url !== 'string') continue
+		const path = url.split('?')[0].replace(urlEndpoint, '')
+		if (!path.startsWith(folder) || path.includes('..')) continue
+		const name = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1))
+		const dir = path.slice(0, path.lastIndexOf('/') + 1)
+
+		const search = await fetch(
+			`https://api.imagekit.io/v1/files?path=${encodeURIComponent(dir)}&searchQuery=${encodeURIComponent(`name = "${name.replace(/"/g, '')}"`)}&limit=1`,
+			{ headers: { Authorization: auth }, cache: 'no-store' }
+		)
+		const files = search.ok ? await search.json() : []
+		const fileId = Array.isArray(files) ? files[0]?.fileId : undefined
+		if (!fileId) continue
+
+		const removed = await fetch(`https://api.imagekit.io/v1/files/${fileId}`, {
+			method: 'DELETE',
+			headers: { Authorization: auth }
+		})
+		if (removed.ok) deleted++
+	}
+
+	return NextResponse.json({ deleted })
+}

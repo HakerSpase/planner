@@ -150,6 +150,16 @@ export default function BreathingPage() {
 		loadHistory()
 	}, [])
 
+	// Ушли со страницы или закрыли вкладку — гасим весь звук и блокировку экрана
+	useEffect(() => {
+		const stop = () => breathingAudio.shutdown()
+		window.addEventListener('pagehide', stop)
+		return () => {
+			window.removeEventListener('pagehide', stop)
+			stop()
+		}
+	}, [])
+
 	// Escape key listener for Modals & Zen Mode
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
@@ -715,7 +725,7 @@ export default function BreathingPage() {
 
 			<div className='mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]'>
 				{/* Сцена практики */}
-				<section className='flex min-h-[560px] flex-col border border-border bg-surface'>
+				<section className='relative isolate flex min-h-[560px] flex-col overflow-hidden border border-border bg-surface'>
 					<header className='flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5'>
 						<div className='min-w-0'>
 							<h2 className='truncate text-base font-semibold text-fg'>
@@ -899,7 +909,7 @@ export default function BreathingPage() {
 
 			{/* Дзен-режим: только форма, фаза и управление */}
 			{isZenMode && (
-				<div className='fixed inset-0 z-[120] flex animate-fade-in select-none flex-col bg-bg'>
+				<div className='fixed inset-0 z-[120] isolate flex animate-fade-in select-none flex-col overflow-hidden bg-bg'>
 					<header className='flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-8'>
 						<div className='min-w-0'>
 							<p className='truncate text-sm font-medium text-fg'>

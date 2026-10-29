@@ -67,7 +67,7 @@ export function DatePicker({
 
 	return (
 		<div
-			className='relative inline-flex min-w-0 items-center gap-1 max-w-full'
+			className='group/date relative inline-flex min-w-0 max-w-full items-center gap-1'
 			ref={ref}
 		>
 			<button
@@ -85,7 +85,7 @@ export function DatePicker({
 				<button
 					type='button'
 					aria-label='Удалить дату'
-					className='grid h-7 w-7 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+					className='grid h-7 w-7 shrink-0 place-items-center text-subtle opacity-0 transition hover:bg-white/[0.06] hover:text-fg focus-visible:opacity-100 group-hover/date:opacity-100 max-lg:opacity-100'
 					onClick={() => onChange('')}
 				>
 					<X size={14} />

@@ -4,6 +4,7 @@ import cn from 'clsx'
 import { MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type React from 'react'
 
 import { DASHBOARD_PAGES } from '@/config/pages-url.config'
 
@@ -13,8 +14,8 @@ import { MENU } from './sidebar/menu.data'
 const PRIMARY = [
 	DASHBOARD_PAGES.HOME,
 	DASHBOARD_PAGES.TASKS,
-	DASHBOARD_PAGES.TIMER,
-	DASHBOARD_PAGES.THOUGHTS
+	DASHBOARD_PAGES.THOUGHTS,
+	DASHBOARD_PAGES.LIBRARY
 ]
 
 export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
@@ -27,40 +28,64 @@ export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
 	return (
 		<nav
 			aria-label='Основные разделы'
-			className='fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden'
+			className='fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden'
 		>
-			{items.map(item => (
-				<Link
-					key={item.link}
-					href={item.link}
-					aria-current={isActive(item.link) ? 'page' : undefined}
-					className={cn(
-						'relative flex h-14 flex-col items-center justify-center gap-1 text-[10px] transition-colors',
-						isActive(item.link)
-							? 'text-fg before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-primary'
-							: 'text-subtle'
-					)}
-				>
-					<item.icon
-						size={19}
-						strokeWidth={isActive(item.link) ? 2.2 : 1.8}
-					/>
-					{item.name}
-				</Link>
-			))}
+			{items.map(item => {
+				const active = isActive(item.link)
+				return (
+					<Link
+						key={item.link}
+						href={item.link}
+						aria-current={active ? 'page' : undefined}
+						className='flex h-16 flex-col items-center justify-center gap-1 active:opacity-70'
+					>
+						<NavIcon active={active}>
+							<item.icon
+								size={19}
+								strokeWidth={active ? 2.2 : 1.8}
+							/>
+						</NavIcon>
+						<NavLabel active={active}>{item.name}</NavLabel>
+					</Link>
+				)
+			})}
 			<button
 				type='button'
 				onClick={onOpenMore}
-				className={cn(
-					'relative flex h-14 flex-col items-center justify-center gap-1 text-[10px] transition-colors',
-					isMoreActive
-						? 'text-fg before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-primary'
-						: 'text-subtle'
-				)}
+				className='flex h-16 flex-col items-center justify-center gap-1 active:opacity-70'
 			>
-				<MoreHorizontal size={19} />
-				Ещё
+				<NavIcon active={isMoreActive}>
+					<MoreHorizontal size={19} />
+				</NavIcon>
+				<NavLabel active={isMoreActive}>Ещё</NavLabel>
 			</button>
 		</nav>
+	)
+}
+
+// Активный раздел: мягкая плашка за иконкой и акцентный цвет — заметно, но спокойно
+function NavIcon({ active, children }: { active: boolean; children: React.ReactNode }) {
+	return (
+		<span
+			className={cn(
+				'grid h-8 w-14 place-items-center rounded-full transition-all duration-200',
+				active ? 'bg-primary/15 text-primary' : 'text-subtle'
+			)}
+		>
+			{children}
+		</span>
+	)
+}
+
+function NavLabel({ active, children }: { active: boolean; children: React.ReactNode }) {
+	return (
+		<span
+			className={cn(
+				'text-[10px] leading-none transition-colors',
+				active ? 'font-medium text-fg' : 'text-subtle'
+			)}
+		>
+			{children}
+		</span>
 	)
 }

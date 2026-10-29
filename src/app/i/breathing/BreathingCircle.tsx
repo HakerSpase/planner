@@ -21,7 +21,6 @@ const VIEW = 400
 const CENTER = VIEW / 2
 const R_MIN = 112
 const R_MAX = 158
-const RING_R = 186
 const POINTS = 14
 
 // Плавная S-кривая: вдох и выдох ускоряются в середине и замедляются у краёв
@@ -122,11 +121,18 @@ export function BreathingCircle({
 	const body = blobPath(radius, time, amplitude)
 	const aura = blobPath(radius, time * 0.8 + 2, amplitude * 1.6, 1.08 + expansion * 0.05)
 
-	const ringLength = 2 * Math.PI * RING_R
-	const ringProgress = isActive ? Math.max(0, Math.min(1, phaseProgress)) : 0
-
 	return (
 		<div className='relative flex w-full select-none flex-col items-center justify-center'>
+			{/* Динамический свет: мягкое свечение от формы расходится по всей сцене и дышит вместе с ней */}
+			<div
+				aria-hidden
+				className='pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[1100px] w-[1100px] rounded-full'
+				style={{
+					background: `radial-gradient(circle, ${accent}55 0%, ${accent}22 22%, ${accent}0a 42%, transparent 62%)`,
+					opacity: 0.35 + expansion * 0.65,
+					transform: `translate(-50%, -50%) scale(${0.62 + expansion * 0.38})`
+				}}
+			/>
 			<div
 				className={cn(
 					'relative shrink-0',
@@ -196,29 +202,6 @@ export function BreathingCircle({
 							/>
 						</linearGradient>
 					</defs>
-
-					{/* Кольцо хода фазы */}
-					<circle
-						cx={CENTER}
-						cy={CENTER}
-						r={RING_R}
-						fill='none'
-						stroke='rgb(255 255 255 / 0.07)'
-						strokeWidth={1}
-					/>
-					<circle
-						cx={CENTER}
-						cy={CENTER}
-						r={RING_R}
-						fill='none'
-						stroke={accent}
-						strokeOpacity={0.85}
-						strokeWidth={1.5}
-						strokeLinecap='round'
-						strokeDasharray={ringLength}
-						strokeDashoffset={ringLength * (1 - ringProgress)}
-						transform={`rotate(-90 ${CENTER} ${CENTER})`}
-					/>
 
 					{/* Мягкое свечение вокруг формы */}
 					<path

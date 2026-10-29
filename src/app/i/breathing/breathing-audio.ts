@@ -343,6 +343,20 @@ class BreathingAudioManager {
 		}
 	}
 
+	/** Полная остановка: фон, «удержание» вкладки, блокировка экрана и сам аудиоконтекст */
+	shutdown() {
+		this.isSoundscapePlaying = false
+		this.stopSoundscapeNodes()
+		this.stopBackgroundKeepAlive()
+		this.releaseWakeLock()
+		if (this.audioContext) {
+			this.audioContext.close().catch(() => {})
+			this.audioContext = null
+			this.pinkNoiseBuffer = null
+			this.brownNoiseBuffer = null
+		}
+	}
+
 	private restartSoundscape() {
 		if (this.soundscapeType === 'none') {
 			this.stopSoundscape()

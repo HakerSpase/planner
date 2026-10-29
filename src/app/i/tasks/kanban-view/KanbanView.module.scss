@@ -1,5 +1,5 @@
 .board {
-	@apply grid w-full grid-flow-col auto-cols-[min(84vw,22rem)] gap-3 overflow-x-auto pb-2 snap-x snap-mandatory;
+	@apply grid w-full grid-flow-col auto-cols-[min(84vw,20rem)] gap-5 overflow-x-auto pb-2 snap-x snap-mandatory;
 	min-width: 0;
 	min-height: 0;
 	overscroll-behavior-inline: contain;
@@ -19,26 +19,35 @@
 		scroll-snap-type: none !important;
 	}
 	@media (min-width: 1024px) {
-		@apply auto-cols-[19.5rem] snap-none;
+		@apply auto-cols-[18.5rem] snap-none;
 	}
 	@media (min-width: 1536px) {
-		@apply auto-cols-[21rem] gap-4 pb-2;
+		@apply auto-cols-[20rem] gap-6 pb-2;
 	}
 
 	.column {
-		@apply w-full min-w-0 snap-start bg-white/[0.02] p-2;
+		@apply flex w-full min-w-0 snap-start flex-col;
 		min-height: 18rem;
 		@media (min-width: 1536px) {
 			@apply snap-none;
 		}
 
+		/* Заголовок колонки: название, счётчик и цветная линия статуса */
 		.columnHeading {
-			@apply px-1.5 pb-1 pt-1 text-sm font-semibold text-fg;
+			@apply mb-3 flex h-10 items-center gap-2 border-b-2 px-0.5 text-sm font-semibold text-fg;
+			border-color: var(--column-accent, rgb(255 255 255 / 0.12));
 		}
 
 		.card {
-			@apply relative mt-2 min-w-0 bg-surface p-3 transition-colors hover:bg-surface-2;
+			@apply relative mb-2 min-w-0 bg-surface py-3 pl-4 pr-3 transition-colors hover:bg-surface-2;
 			word-break: break-word;
+
+			/* Приоритет — тонкая полоса слева вместо отдельного бейджа-рамки */
+			&::before {
+				content: '';
+				@apply absolute inset-y-0 left-0 w-0.5;
+				background: var(--priority-color, transparent);
+			}
 
 			&.completed {
 				@apply opacity-50;
@@ -49,26 +58,43 @@
 			}
 
 			.cardHeader {
-				@apply mb-2 flex min-w-0 items-center gap-1.5;
-				font-size: 93%;
-			}
-
-			.cardBody,
-			.cardBody > div > button > span,
-			.cardBody > div > div > button > span {
-				font-size: 83%;
+				@apply flex min-w-0 items-start gap-2.5;
 			}
 
 			.cardBody {
-				@apply flex flex-wrap items-center gap-x-3 gap-y-1.5;
+				@apply mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs;
+
 				> div {
-					@apply mb-1 max-w-full;
+					@apply max-w-full;
 					min-width: 0;
+				}
+
+				button {
+					@apply min-h-7 text-xs;
 				}
 			}
 
 			.cardActions {
-				@apply absolute bottom-1.5 right-1.5;
+				@apply ml-auto opacity-0 transition-opacity;
+			}
+
+			&:hover .cardActions,
+			&:focus-within .cardActions {
+				@apply opacity-100;
+			}
+
+			@media (hover: none) {
+				.cardActions {
+					@apply opacity-100;
+				}
+			}
+
+			.dragHandle {
+				@apply absolute -left-0.5 top-2.5 opacity-0 transition-opacity;
+			}
+
+			&:hover .dragHandle {
+				@apply opacity-100;
 			}
 		}
 	}
@@ -82,5 +108,11 @@
 		.grip {
 			@apply opacity-100;
 		}
+	}
+}
+
+@media (hover: none) {
+	.board .column .card .dragHandle {
+		@apply opacity-60;
 	}
 }

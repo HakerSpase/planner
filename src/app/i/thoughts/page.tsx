@@ -27,6 +27,8 @@ import { toast } from 'sonner'
 import { useProfile } from '@/hooks/useProfile'
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
+import { thoughtsService } from '@/services/thoughts.service'
+
 // Редактор тяжёлый (Tiptap + ProseMirror) — грузим его только когда он нужен
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
@@ -77,16 +79,7 @@ export default function ThoughtsPage() {
 	const loadEntries = async (start: string, end: string) => {
 		setLoading(true)
 		try {
-			const res = await fetch(
-				`/api/user/thoughts?start=${start}&end=${end}`,
-				{
-					cache: 'no-store',
-					credentials: 'include'
-				}
-			)
-			if (!res.ok) throw new Error('Не удалось загрузить записи')
-			const rows: Array<{ thought_date: string; content: string }> =
-				await res.json()
+			const rows = await thoughtsService.getRange(start, end)
 			const map: Record<string, string> = {}
 			for (const row of rows || []) {
 				if (row.thought_date) {
@@ -133,17 +126,7 @@ export default function ThoughtsPage() {
 		setEntries(current => ({ ...current, [dateKey]: content }))
 		setSaving(true)
 		try {
-			const res = await fetch('/api/user/thoughts', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				credentials: 'include',
-				body: JSON.stringify({
-					date: dateKey,
-					content
-				})
-			})
-			if (!res.ok) throw new Error()
-			const saved = await res.json()
+			const saved = await thoughtsService.save(dateKey, content)
 			const savedDate = (saved.thought_date || dateKey).slice(0, 10)
 			setEntries(current => ({
 				...current,
@@ -189,12 +172,9 @@ export default function ThoughtsPage() {
 	// Поиск по всем записям: архив грузим один раз, при первом запросе
 	useEffect(() => {
 		if (!query.trim() || archive) return
-		fetch(`/api/user/thoughts?start=2000-01-01&end=${todayKey}`, {
-			cache: 'no-store',
-			credentials: 'include'
-		})
-			.then(res => (res.ok ? res.json() : []))
-			.then(rows => setArchive(rows || []))
+		thoughtsService
+			.getRange('2000-01-01', todayKey)
+			.then(rows => setArchive(rows))
 			.catch(() => setArchive([]))
 	}, [query, archive, todayKey])
 

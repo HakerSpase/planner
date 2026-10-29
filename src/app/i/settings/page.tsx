@@ -16,7 +16,7 @@ export default function SettingsPage() {
 		<div>
 			<Heading
 				title='Настройки'
-				description='Профиль, часовой пояс и ритм Pomodoro'
+				description='Профиль, часовой пояс, фон и ритм Pomodoro'
 			/>
 			<Settings />
 		</div>

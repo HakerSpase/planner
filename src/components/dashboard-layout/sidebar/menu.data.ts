@@ -2,6 +2,7 @@ import {
 	CalendarRange,
 	KanbanSquare,
 	LayoutDashboard,
+	Library,
 	BookOpenText,
 	NotebookPen,
 	Settings,
@@ -38,6 +39,11 @@ export const MENU: IMenuItem[] = [
 		icon: NotebookPen,
 		link: DASHBOARD_PAGES.THOUGHTS,
 		name: 'Мысли'
+	},
+	{
+		icon: Library,
+		link: DASHBOARD_PAGES.LIBRARY,
+		name: 'Архив'
 	},
 	{
 		icon: Wind,

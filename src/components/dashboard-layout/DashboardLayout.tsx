@@ -3,6 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { type PropsWithChildren, useEffect, useState } from 'react'
 
+import { useBackground } from '@/lib/background-preference'
+
+import { AppBackground } from './AppBackground'
 import { MobileNav } from './MobileNav'
 import { Header } from './header/Header'
 import { Sidebar } from './sidebar/Sidebar'
@@ -14,6 +17,7 @@ export default function DashboardLayout({
 	const [isCollapsed, setIsCollapsed] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const router = useRouter()
+	const [background] = useBackground()
 
 	// Alt+1…8 — быстрый переход между разделами (порядок как в меню)
 	useEffect(() => {
@@ -55,6 +59,12 @@ export default function DashboardLayout({
 				/>
 			)}
 
+			{/* Живой фон — под рабочей областью, сайдбар его перекрывает */}
+			<AppBackground
+				variant={background}
+				className='fixed inset-0 z-0'
+			/>
+
 			{/* Сайдбар (десктопный и мобильный) */}
 			<Sidebar
 				isCollapsed={isCollapsed}
@@ -64,7 +74,7 @@ export default function DashboardLayout({
 			/>
 
 			{/* Основная рабочая область */}
-			<main className='bg-dots relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
+			<main className='relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
 				<Header onToggleMobile={() => setIsMobileOpen(true)} />
 				<div className='w-full flex-1 pb-10 pt-2 sm:pt-4'>
 					{children}

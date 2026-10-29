@@ -37,7 +37,7 @@ export function FocusTaskPicker({ value, onChange }: IFocusTaskPicker) {
 	return (
 		<div
 			ref={ref}
-			className='relative border-b border-border text-left'
+			className='relative border-b border-border text-left lg:col-start-2 lg:row-start-1'
 		>
 			<button
 				type='button'

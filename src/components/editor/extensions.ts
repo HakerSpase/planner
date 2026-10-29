@@ -33,6 +33,8 @@ export const PlannerImage = Image.extend({
 			markdown: {
 				serialize(state: any, node: any) {
 					const { src, alt, width } = node.attrs
+					// локальный предпросмотр, пока фото грузится, — не сохраняем
+					if (typeof src === 'string' && src.startsWith('blob:')) return
 					if (width) {
 						state.write(
 							`<img src="${escapeAttr(src)}" alt="${escapeAttr(alt || '')}" width="${escapeAttr(width)}">`
@@ -91,3 +93,204 @@ export function moveSelectedNode(editor: Editor, direction: -1 | 1) {
 	tr.setSelection(NodeSelection.create(tr.doc, insertAt))
 	view.dispatch(tr.scrollIntoView())
 }
+
+/**
+ * Подменить адрес картинки (локальный предпросмотр → ImageKit) или удалить её (src = null).
+ * Удалённую картинку сперва подгружаем в кэш браузера, чтобы не было пустого мигания.
+ */
+export async function replaceImageSrc(editor: Editor, from: string, to: string | null) {
+	if (to && to.includes('?tr=')) {
+		await new Promise<void>(resolve => {
+			const image = new window.Image()
+			image.onload = image.onerror = () => resolve()
+			image.src = to
+		})
+	}
+	if (editor.isDestroyed) return
+	const { state, view } = editor
+	const tr = state.tr
+	state.doc.descendants((node, pos) => {
+		if (!UPLOAD_NODES.includes(node.type.name) || node.attrs.src !== from) return
+		if (to) tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: to })
+		else tr.delete(pos, pos + node.nodeSize)
+	})
+	if (tr.docChanged) view.dispatch(tr)
+}
+
+/* ---------------- Удаление файлов из ImageKit ---------------- */
+
+const UPLOAD_NODES = ['image', 'fileAttachment', 'audioAttachment']
+
+const collectUploads = (doc: import('@tiptap/pm/model').Node) => {
+	const urls = new Set<string>()
+	doc.descendants(node => {
+		if (UPLOAD_NODES.includes(node.type.name) && typeof node.attrs.src === 'string')
+			urls.add(node.attrs.src)
+	})
+	return urls
+}
+
+/**
+ * Запоминаем файлы, которые пользователь убрал из заметки, и удаляем их из ImageKit,
+ * когда редактор закрывается — если к тому моменту их не вернули (Ctrl+Z, вставка).
+ * Программная смена текста (другой день в «Мыслях») не считается удалением.
+ */
+export const UploadTracker = Extension.create<{ onDelete: (urls: string[]) => void }>({
+	name: 'uploadTracker',
+
+	addOptions() {
+		return { onDelete: () => {} }
+	},
+
+	addStorage() {
+		return { removed: new Set<string>() }
+	},
+
+	addProseMirrorPlugins() {
+		const removed: Set<string> = this.storage.removed
+		return [
+			new Plugin({
+				key: new PluginKey('uploadTracker'),
+				appendTransaction: (transactions, oldState, newState) => {
+					const byUser = transactions.some(
+						tr => tr.docChanged && !tr.getMeta('preventUpdate')
+					)
+					if (!byUser) return null
+					const after = collectUploads(newState.doc)
+					collectUploads(oldState.doc).forEach(src => {
+						if (!after.has(src)) removed.add(src)
+					})
+					return null
+				}
+			})
+		]
+	},
+
+	onDestroy() {
+		const remaining = collectUploads(this.editor.state.doc)
+		const urls = Array.from(this.storage.removed as Set<string>).filter(
+			src => !remaining.has(src) && /^https:\/\/ik\.imagekit\.io\//.test(src)
+		)
+		if (urls.length) this.options.onDelete(urls)
+	}
+})
+
+/* ---------------- Перетаскивание долгим нажатием (телефон) ---------------- */
+
+const DRAGGABLE_NODES = ['image', 'fileAttachment', 'audioAttachment']
+
+export const TouchDrag = Extension.create({
+	name: 'touchDrag',
+
+	addProseMirrorPlugins() {
+		return [
+			new Plugin({
+				key: new PluginKey('touchDrag'),
+				view(view) {
+					let timer: ReturnType<typeof setTimeout> | undefined
+					let dragging = false
+					let fromPos = -1
+					let target = -1
+					let startX = 0
+					let startY = 0
+					let indicator: HTMLDivElement | null = null
+
+					const topLevelStart = (index: number) => {
+						let pos = 0
+						for (let i = 0; i < index; i++) pos += view.state.doc.child(i).nodeSize
+						return pos
+					}
+
+					const cleanup = () => {
+						clearTimeout(timer)
+						dragging = false
+						fromPos = -1
+						target = -1
+						indicator?.remove()
+						indicator = null
+						document.body.style.removeProperty('user-select')
+					}
+
+					const onStart = (event: TouchEvent) => {
+						if (!view.editable || event.touches.length !== 1) return
+						const element = (event.target as HTMLElement).closest('img, [data-drag-block]')
+						if (!element) return
+						const touch = event.touches[0]
+						startX = touch.clientX
+						startY = touch.clientY
+						timer = setTimeout(() => {
+							const found = view.posAtCoords({ left: startX, top: startY })
+							if (!found || found.inside < 0) return
+							const node = view.state.doc.nodeAt(found.inside)
+							if (!node || !DRAGGABLE_NODES.includes(node.type.name)) return
+							fromPos = found.inside
+							dragging = true
+							navigator.vibrate?.(12)
+							document.body.style.userSelect = 'none'
+							view.dispatch(
+								view.state.tr.setSelection(NodeSelection.create(view.state.doc, fromPos))
+							)
+							indicator = document.createElement('div')
+							indicator.style.cssText =
+								'position:fixed;height:2px;background:rgb(var(--primary));z-index:200;pointer-events:none;display:none'
+							document.body.appendChild(indicator)
+						}, 380)
+					}
+
+					const onMove = (event: TouchEvent) => {
+						const touch = event.touches[0]
+						if (!dragging) {
+							if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 8)
+								clearTimeout(timer)
+							return
+						}
+						event.preventDefault()
+						const found = view.posAtCoords({ left: touch.clientX, top: touch.clientY })
+						if (!found || !indicator) return
+						const index = view.state.doc.resolve(found.pos).index(0)
+						const blockStart = topLevelStart(index)
+						const dom = view.nodeDOM(blockStart) as HTMLElement | null
+						if (!dom?.getBoundingClientRect) return
+						const rect = dom.getBoundingClientRect()
+						const before = touch.clientY < rect.top + rect.height / 2
+						target = before
+							? blockStart
+							: blockStart + view.state.doc.child(index).nodeSize
+						indicator.style.display = 'block'
+						indicator.style.left = `${rect.left}px`
+						indicator.style.width = `${rect.width}px`
+						indicator.style.top = `${(before ? rect.top : rect.bottom) - 1}px`
+					}
+
+					const onEnd = () => {
+						if (dragging && fromPos >= 0 && target >= 0) {
+							const node = view.state.doc.nodeAt(fromPos)
+							if (node && target !== fromPos && target !== fromPos + node.nodeSize) {
+								const tr = view.state.tr.delete(fromPos, fromPos + node.nodeSize)
+								const insertAt = target > fromPos ? target - node.nodeSize : target
+								tr.insert(insertAt, node)
+								tr.setSelection(NodeSelection.create(tr.doc, insertAt))
+								view.dispatch(tr.scrollIntoView())
+							}
+						}
+						cleanup()
+					}
+
+					view.dom.addEventListener('touchstart', onStart, { passive: true })
+					view.dom.addEventListener('touchmove', onMove, { passive: false })
+					view.dom.addEventListener('touchend', onEnd)
+					view.dom.addEventListener('touchcancel', cleanup)
+					return {
+						destroy() {
+							cleanup()
+							view.dom.removeEventListener('touchstart', onStart)
+							view.dom.removeEventListener('touchmove', onMove)
+							view.dom.removeEventListener('touchend', onEnd)
+							view.dom.removeEventListener('touchcancel', cleanup)
+						}
+					}
+				}
+			})
+		]
+	}
+})

@@ -1,7 +1,7 @@
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import cn from 'clsx'
 import { GripVertical, Loader, Trash } from 'lucide-react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { CSSProperties, Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
@@ -18,6 +18,12 @@ import { useDeleteTask } from '../hooks/useDeleteTask'
 import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
 import styles from './KanbanView.module.scss'
+
+const PRIORITY_COLOR: Record<string, string> = {
+	high: 'rgb(var(--danger))',
+	medium: 'rgb(var(--warning))',
+	low: 'rgb(56 189 248)'
+}
 
 interface IKanbanCard {
 	item: ITaskResponse
@@ -51,12 +57,15 @@ export function KanbanCard({
 
 	return (
 		<div
+			style={
+				{ '--priority-color': PRIORITY_COLOR[watch('priority') || ''] } as CSSProperties
+			}
 			className={cn(
 				styles.card,
 				{
 					[styles.completed]: watch('isCompleted')
 				},
-				'animation-opacity'
+				'animation-opacity group/card'
 			)}
 		>
 			<div className={styles.cardHeader}>
@@ -65,9 +74,12 @@ export function KanbanCard({
 					aria-label='Перетащить задачу'
 					data-task-drag-handle
 					{...dragHandleProps}
-					className='-ml-1.5 grid h-7 w-5 shrink-0 touch-none cursor-grab place-items-center text-subtle active:cursor-grabbing hover:text-fg'
+					className={cn(
+						styles.dragHandle,
+						'grid h-6 w-4 touch-none cursor-grab place-items-center text-subtle active:cursor-grabbing hover:text-fg'
+					)}
 				>
-					<GripVertical className={styles.grip} size={16} />
+					<GripVertical size={13} />
 				</button>
 
 				<Controller
@@ -81,7 +93,7 @@ export function KanbanCard({
 					)}
 				/>
 
-				<div className='flex-1 min-w-0 ml-1.5'>
+				<div className='min-w-0 flex-1'>
 					<TransparentField
 						{...register('name')}
 						autoFocus={item.id.startsWith('draft-')}
@@ -92,15 +104,16 @@ export function KanbanCard({
 							// у черновика ещё нет id на сервере — следующую добавим после сохранения
 							if (!item.id.startsWith('draft-')) onAddNext?.()
 						}}
-						className='text-sm sm:text-[0.95rem] py-0 leading-snug'
+						className='px-0 py-0 text-sm font-medium leading-5 sm:text-sm'
 					/>
 				</div>
 			</div>
 
-			<div className='flex flex-col gap-1 pl-[2.05rem]'>
+			<div className='pl-[1.625rem]'>
 				<TaskDetails
 					control={control}
 					taskName={watch('name')}
+					compact
 				/>
 
 				<div className={styles.cardBody}>
@@ -131,27 +144,30 @@ export function KanbanCard({
 							/>
 						)}
 					/>
-				</div>
-			</div>
 
-			<div className={styles.cardActions}>
-				<button
-					type='button'
-					onClick={() =>
-						item.id.startsWith('draft-')
-							? setItems(prev => prev?.filter(task => task.id !== item.id))
-							: setIsDeleteConfirmOpen(true)
-					}
-					disabled={isCreating}
-					aria-label='Удалить задачу'
-					className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-danger/10 hover:text-danger'
-				>
-					{isCreating || isDeletePending ? (
-						<Loader size={15} className='animate-spin' />
-					) : (
-						<Trash size={15} />
-					)}
-				</button>
+					<div className={styles.cardActions}>
+						<button
+							type='button'
+							onClick={() =>
+								item.id.startsWith('draft-')
+									? setItems(prev => prev?.filter(task => task.id !== item.id))
+									: setIsDeleteConfirmOpen(true)
+							}
+							disabled={isCreating}
+							aria-label='Удалить задачу'
+							className='grid h-7 w-7 shrink-0 place-items-center text-subtle transition-colors hover:bg-danger/10 hover:text-danger'
+						>
+							{isCreating || isDeletePending ? (
+								<Loader
+									size={14}
+									className='animate-spin'
+								/>
+							) : (
+								<Trash size={14} />
+							)}
+						</button>
+					</div>
+				</div>
 			</div>
 			{isDeleteConfirmOpen && (
 				<ConfirmDialog

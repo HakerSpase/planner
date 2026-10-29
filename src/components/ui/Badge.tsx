@@ -8,7 +8,7 @@ interface IBadge {
 }
 
 const badge = tv({
-	base: 'inline-flex w-max max-w-full items-center gap-2 border border-border px-2 py-0.5 text-xs font-medium text-muted transition-colors before:h-1.5 before:w-1.5 before:shrink-0',
+	base: 'inline-flex w-max max-w-full items-center gap-2 py-0.5 text-xs font-medium text-muted transition-colors hover:text-fg before:h-1.5 before:w-1.5 before:shrink-0',
 	variants: {
 		backgroundColor: {
 			gray: 'text-subtle before:hidden',

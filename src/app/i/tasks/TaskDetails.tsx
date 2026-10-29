@@ -21,6 +21,8 @@ const RichEditor = dynamic(
 interface ITaskDetails {
 	control: Control<TypeTaskFormState>
 	taskName?: string
+	// На доске пустую строку «Подзадачи и заметка» показываем только при наведении
+	compact?: boolean
 }
 
 const newSubtaskId = () =>
@@ -28,10 +30,12 @@ const newSubtaskId = () =>
 		? crypto.randomUUID()
 		: `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
-// Короткое превью заметки без Markdown-разметки
+// Короткое превью заметки: только текст — без картинок, ссылок-адресов и разметки
 const notePreview = (markdown: string) =>
 	markdown
-		.replace(/!\[[^\]]*]\([^)]*\)/g, '🖼')
+		.replace(/<img[^>]*>/gi, '')
+		.replace(/<[^>]+>/g, '')
+		.replace(/!\[[^\]]*]\([^)]*\)/g, '')
 		.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
 		.replace(/^[#>\-*\s]+|\[[ x]]\s?/gim, '')
 		.replace(/[*_~`]/g, '')
@@ -43,7 +47,7 @@ const notePreview = (markdown: string) =>
  * подзадачи с прогрессом + заметка в редакторе. Всё пишется в форму задачи
  * и сохраняется тем же debounce, что и остальные поля.
  */
-export function TaskDetails({ control, taskName }: ITaskDetails) {
+export function TaskDetails({ control, taskName, compact }: ITaskDetails) {
 	const [isOpen, setIsOpen] = useState(false)
 	const { field: noteField } = useController({ control, name: 'note' })
 	const { field: subtasksField } = useController({ control, name: 'subtasks' })
@@ -52,13 +56,19 @@ export function TaskDetails({ control, taskName }: ITaskDetails) {
 	const subtasks: ISubtask[] = subtasksField.value || []
 	const doneCount = subtasks.filter(subtask => subtask.isCompleted).length
 	const preview = notePreview(note)
+	const isEmpty = !subtasks.length && !note.trim()
 
 	return (
 		<>
 			<button
 				type='button'
 				onClick={() => setIsOpen(true)}
-				className='group flex min-h-7 w-full min-w-0 max-w-full items-center gap-3 py-0.5 text-left text-xs text-subtle transition-colors hover:text-fg'
+				className={cn(
+					'group flex min-h-7 w-full min-w-0 max-w-full items-center gap-3 py-0.5 text-left text-xs text-subtle transition-colors hover:text-fg',
+					compact &&
+						isEmpty &&
+						'opacity-0 focus-visible:opacity-100 group-hover/card:opacity-100 [@media(hover:none)]:opacity-100'
+				)}
 				aria-label='Открыть подзадачи и заметку'
 			>
 				{subtasks.length > 0 && (
@@ -78,7 +88,12 @@ export function TaskDetails({ control, taskName }: ITaskDetails) {
 						className='shrink-0 group-hover:text-primary'
 					/>
 					<span className='min-w-0 truncate'>
-						{preview || (subtasks.length ? 'Заметка' : 'Подзадачи и заметка')}
+						{preview ||
+							(note.trim()
+								? 'Заметка'
+								: subtasks.length
+									? 'Добавить заметку'
+									: 'Подзадачи и заметка')}
 					</span>
 				</span>
 			</button>
