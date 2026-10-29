@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Unbounded } from 'next/font/google'
 import { Toaster } from 'sonner'
 
 import { SITE_NAME } from '@/constants/seo.constants'
@@ -11,6 +11,14 @@ const sans = Inter({
 	subsets: ['cyrillic', 'latin'],
 	display: 'swap',
 	variable: '--font-sans'
+})
+
+// Только для логотипа «Planner»
+const display = Unbounded({
+	subsets: ['latin'],
+	weight: ['500', '600'],
+	display: 'swap',
+	variable: '--font-display'
 })
 
 const mono = JetBrains_Mono({
@@ -39,7 +47,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang='ru'
-			className={`${sans.variable} ${mono.variable}`}
+			className={`${sans.variable} ${mono.variable} ${display.variable}`}
 		>
 			<body className='font-sans'>
 				<Providers>

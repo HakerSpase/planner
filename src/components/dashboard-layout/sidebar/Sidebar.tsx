@@ -36,7 +36,7 @@ export function Sidebar({
 						onClick={isMobile ? onCloseMobile : undefined}
 						className='flex items-center gap-2.5'
 					>
-						<span className='text-sm font-semibold uppercase tracking-[0.2em] text-fg'>
+						<span className='font-display text-[17px] font-semibold tracking-[-0.03em] text-fg'>
 							Planner
 						</span>
 						<span className='border border-border px-1.5 font-mono text-2xs uppercase text-subtle'>
@@ -103,17 +103,6 @@ export function Sidebar({
 				)}
 			>
 				<LogoutButton collapsed={collapsed} />
-				{!collapsed && (
-					<a
-						href='https://t.me/w_dtc'
-						target='_blank'
-						rel='noreferrer'
-						aria-label='Телеграм разработчика @w_dtc'
-						className='mt-1 flex h-8 items-center px-2.5 font-mono text-2xs uppercase tracking-wider text-subtle transition-colors hover:text-fg'
-					>
-						Telegram ↗
-					</a>
-				)}
 			</footer>
 		</div>
 	)

@@ -261,7 +261,7 @@ function TaskDetailsPanel({
 							))}
 						</ul>
 
-						<div className='mt-1 flex items-center gap-3'>
+						<label className='mt-1 flex cursor-text items-center gap-3'>
 							<Plus
 								size={16}
 								className='shrink-0 text-subtle'
@@ -281,7 +281,7 @@ function TaskDetailsPanel({
 								placeholder='Добавить подзадачу'
 								className='h-9 min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-subtle'
 							/>
-						</div>
+						</label>
 					</section>
 
 					{/* Заметка */}

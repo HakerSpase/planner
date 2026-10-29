@@ -26,7 +26,7 @@
 	}
 
 	.column {
-		@apply w-full min-w-0 snap-start rounded-xl border border-border bg-surface p-2;
+		@apply w-full min-w-0 snap-start bg-white/[0.02] p-2;
 		min-height: 18rem;
 		@media (min-width: 1536px) {
 			@apply snap-none;
@@ -37,7 +37,7 @@
 		}
 
 		.card {
-			@apply relative mt-2 min-w-0 rounded-lg border border-border bg-surface-2 p-3 shadow-card transition-colors hover:border-border-strong;
+			@apply relative mt-2 min-w-0 bg-surface p-3 transition-colors hover:bg-surface-2;
 			word-break: break-word;
 
 			&.completed {

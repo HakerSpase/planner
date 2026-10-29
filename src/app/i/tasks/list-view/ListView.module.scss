@@ -17,7 +17,7 @@ $columns: minmax(0, 1fr) minmax(130px, 10rem) minmax(115px, 8.5rem) 2.75rem;
 		@apply flex flex-col gap-3;
 
 		> div {
-			@apply rounded-xl border border-border bg-surface p-1.5;
+			@apply bg-surface p-1.5;
 		}
 
 		.colHeading {

@@ -1,12 +1,11 @@
 'use client'
 
-import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Typography from '@tiptap/extension-typography'
-import { type Editor, EditorContent, useEditor } from '@tiptap/react'
+import { BubbleMenu, type Editor, EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import cn from 'clsx'
 import {
@@ -22,13 +21,23 @@ import {
 	ListOrdered,
 	Loader2,
 	Quote,
-	Strikethrough
+	Strikethrough,
+	ArrowDown,
+	ArrowUp,
+	Trash2
 } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Markdown } from 'tiptap-markdown'
 
 import { uploadImage } from '@/lib/imagekit-upload'
+
+import {
+	IMAGE_WIDTHS,
+	PlannerImage,
+	TrailingParagraph,
+	moveSelectedNode
+} from './extensions'
 
 interface IRichEditor {
 	value: string
@@ -95,12 +104,14 @@ export function RichEditor({
 				autolink: true,
 				HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' }
 			}),
-			Image.configure({ HTMLAttributes: { loading: 'lazy' } }),
+			PlannerImage.configure({ HTMLAttributes: { loading: 'lazy' } }),
+			TrailingParagraph,
 			TaskList,
 			TaskItem.configure({ nested: true }),
 			Typography,
 			Markdown.configure({
-				html: false,
+				// HTML нужен только для <img width> — ширины картинок
+				html: true,
 				linkify: true,
 				transformPastedText: true,
 				transformCopiedText: true
@@ -279,10 +290,68 @@ export function RichEditor({
 					/>
 				</div>
 			)}
-			<EditorContent
-				editor={editor}
-				className='min-h-0 flex-1'
-			/>
+			{editor && (
+				<BubbleMenu
+					editor={editor}
+					shouldShow={({ editor }) => editor.isActive('image')}
+					tippyOptions={{ placement: 'top', maxWidth: 'none' }}
+				>
+					<div className='flex items-center border border-border bg-elevated shadow-pop'>
+						<ToolButton
+							label='Выше'
+							onClick={() => moveSelectedNode(editor, -1)}
+						>
+							<ArrowUp size={15} />
+						</ToolButton>
+						<ToolButton
+							label='Ниже'
+							onClick={() => moveSelectedNode(editor, 1)}
+						>
+							<ArrowDown size={15} />
+						</ToolButton>
+						<Divider />
+						{IMAGE_WIDTHS.map(width => (
+							<button
+								key={width || 'full'}
+								type='button'
+								onMouseDown={event => event.preventDefault()}
+								onClick={() =>
+									editor.chain().focus().updateAttributes('image', { width }).run()
+								}
+								className={cn(
+									'h-8 px-2 font-mono text-xs transition-colors',
+									(editor.getAttributes('image').width ?? null) === width
+										? 'bg-white/[0.08] text-fg'
+										: 'text-subtle hover:text-fg'
+								)}
+							>
+								{width ? width.replace('%', '') : '100'}
+							</button>
+						))}
+						<Divider />
+						<ToolButton
+							label='Удалить фото'
+							onClick={() => editor.chain().focus().deleteSelection().run()}
+						>
+							<Trash2 size={14} />
+						</ToolButton>
+					</div>
+				</BubbleMenu>
+			)}
+			{/* Тап по любому месту поля ставит курсор в конец текста */}
+			<div
+				className='min-h-0 flex-1 cursor-text'
+				onMouseDown={event => {
+					if (!editor || event.target !== event.currentTarget) return
+					event.preventDefault()
+					editor.commands.focus('end')
+				}}
+			>
+				<EditorContent
+					editor={editor}
+					className='h-full'
+				/>
+			</div>
 		</div>
 	)
 }

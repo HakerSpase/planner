@@ -192,7 +192,7 @@ export function Settings() {
 	return (
 		<form
 			onSubmit={handleSubmit(onSubmit)}
-			className='w-full max-w-4xl pb-24'
+			className='w-full pb-24'
 		>
 			<div className='border border-border bg-surface'>
 				<Section

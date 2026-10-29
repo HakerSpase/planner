@@ -87,14 +87,14 @@ const guideSections = [
 
 export default function GuidePage() {
 	return (
-		<div className='max-w-5xl'>
+		<div>
 			<Heading title='Как пользоваться Planner' />
 			<p className='-mt-3 max-w-3xl text-sm leading-6 text-muted'>
 				Короткая подсказка по основным инструментам. Начните с задач,
 				распределите их по времени и используйте Pomodoro, чтобы удерживать
 				фокус.
 			</p>
-			<div className='mt-6 grid gap-4 md:grid-cols-2'>
+			<div className='mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3'>
 				{guideSections.map(section => {
 					const Icon = section.icon
 					return (
@@ -103,7 +103,7 @@ export default function GuidePage() {
 							className='card-padded sm:p-6'
 						>
 							<div className='flex items-center gap-3'>
-								<span className='grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary'>
+								<span className='grid h-8 w-8 place-items-center text-primary'>
 									<Icon size={19} />
 								</span>
 								<h2 className='text-base font-semibold text-fg'>
@@ -130,7 +130,7 @@ export default function GuidePage() {
 					)
 				})}
 			</div>
-			<div className='mt-4 flex gap-3 rounded-xl border border-primary/20 bg-primary/[0.06] p-4 text-sm leading-6 text-muted'>
+			<div className='mt-4 flex gap-3 border border-border bg-surface p-4 text-sm leading-6 text-muted'>
 				<Lightbulb
 					size={18}
 					className='mt-0.5 shrink-0 text-primary'

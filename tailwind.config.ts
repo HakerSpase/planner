@@ -61,7 +61,8 @@ const config: Config = {
 			},
 			fontFamily: {
 				sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-				mono: ['var(--font-mono)', 'ui-monospace', 'monospace']
+				mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+				display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif']
 			},
 			fontSize: {
 				'2xs': ['0.6875rem', { lineHeight: '1rem' }],

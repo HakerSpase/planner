@@ -10,14 +10,10 @@ export function Profile() {
 	if (isLoading) return <Loader />
 
 	const name = data?.user.name || 'Пользователь'
-	const initial = (data?.user.name || data?.user.email || '?')
-		.trim()
-		.charAt(0)
-		.toUpperCase()
 
 	return (
 		<div className='flex min-w-0 items-center gap-2.5'>
-			<div className='hidden min-w-0 max-w-[220px] text-right sm:block'>
+			<div className='min-w-0 max-w-[240px] text-right'>
 				<p className='truncate text-sm font-medium leading-5 text-fg'>
 					{name}
 				</p>
@@ -28,12 +24,6 @@ export function Profile() {
 					{data?.user.email}
 				</p>
 			</div>
-			<span
-				title={data?.user.email || name}
-				className='grid h-8 w-8 shrink-0 place-items-center border border-primary/40 bg-primary/10 font-mono text-sm font-medium text-primary'
-			>
-				{initial}
-			</span>
 		</div>
 	)
 }

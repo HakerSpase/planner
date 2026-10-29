@@ -243,7 +243,7 @@ export default function ThoughtsPage() {
 	const readingTimeMinutes = Math.max(1, Math.ceil(wordsCount / 180))
 
 	return (
-		<div className='w-full min-w-0 max-w-[1550px] pb-12'>
+		<div className='w-full min-w-0 pb-12'>
 			{/* Page Header */}
 			<div className='mb-6 border-b border-border pb-5 sm:mb-8 sm:pb-6'>
 				<h1 className='text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-4xl'>

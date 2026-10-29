@@ -27,8 +27,10 @@ export function ListRowParent({
 	label,
 	setItems
 }: IListRowParent) {
-	// Выполненные по умолчанию свёрнуты — они редко нужны и только удлиняют список
-	const [isCollapsed, setIsCollapsed] = useState(value === 'completed')
+	// Сворачивается только «Выполненные»; группы с текущими задачами всегда развёрнуты
+	const isCollapsible = value === 'completed'
+	const [isCompletedOpen, setIsCompletedOpen] = useState(false)
+	const isCollapsed = isCollapsible && !isCompletedOpen
 	const columnTasks = filterTasks(items, value) || []
 	const filterDate = getTaskFilters()[value]?.format()
 	const canAdd = value !== 'completed' && value !== 'overdue'
@@ -46,18 +48,21 @@ export function ListRowParent({
 				>
 					<button
 						type='button'
-						onClick={() => setIsCollapsed(current => !current)}
-						aria-expanded={!isCollapsed}
-						className={cn(styles.colHeading, 'w-full text-left')}
+						disabled={!isCollapsible}
+						onClick={() => setIsCompletedOpen(current => !current)}
+						aria-expanded={isCollapsible ? !isCollapsed : undefined}
+						className={cn(styles.colHeading, 'w-full text-left disabled:cursor-default')}
 					>
 						<div className='flex w-full items-center gap-2'>
-							<ChevronRight
-								size={14}
-								className={cn(
-									'shrink-0 text-subtle transition-transform',
-									!isCollapsed && 'rotate-90'
-								)}
-							/>
+							{isCollapsible && (
+								<ChevronRight
+									size={14}
+									className={cn(
+										'shrink-0 text-subtle transition-transform',
+										!isCollapsed && 'rotate-90'
+									)}
+								/>
+							)}
 							<span className={cn(value === 'overdue' && 'text-danger')}>
 								{label}
 							</span>

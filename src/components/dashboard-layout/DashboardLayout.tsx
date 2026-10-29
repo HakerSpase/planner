@@ -64,9 +64,9 @@ export default function DashboardLayout({
 			/>
 
 			{/* Основная рабочая область */}
-			<main className='relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
+			<main className='bg-dots relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
 				<Header onToggleMobile={() => setIsMobileOpen(true)} />
-				<div className='mx-auto w-full max-w-[1400px] flex-1 pb-10 pt-2 sm:pt-4'>
+				<div className='w-full flex-1 pb-10 pt-2 sm:pt-4'>
 					{children}
 				</div>
 			</main>

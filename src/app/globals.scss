@@ -60,7 +60,14 @@ body {
 
 @layer base {
 	:focus-visible {
-		@apply outline-none ring-2 ring-primary/60 ring-offset-0;
+		@apply outline-none ring-1 ring-primary/70 ring-offset-0;
+	}
+
+	/* У полей ввода и редактора своя индикация фокуса (курсор/рамка) — без кольца */
+	input:focus-visible,
+	textarea:focus-visible,
+	[contenteditable]:focus-visible {
+		@apply ring-0;
 	}
 
 	input,
@@ -71,6 +78,14 @@ body {
 }
 
 @layer components {
+	/* Фон рабочей области: неподвижная сетка точек, едва заметная */
+	.bg-dots {
+		background-color: rgb(var(--bg));
+		background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+		background-size: 22px 22px;
+		background-position: -11px -11px;
+	}
+
 	/* Карточка-поверхность: основной контейнер для блоков на страницах */
 	.card {
 		@apply rounded-xl border border-border bg-surface;
@@ -127,7 +142,7 @@ body {
 
 /* Содержимое редактора заметок (Tiptap). Строгая типографика, как у статьи. */
 .rich-editor-content {
-	@apply min-h-[inherit] text-base leading-7 text-fg outline-none;
+	@apply text-base leading-7 text-fg outline-none;
 
 	> * + * {
 		@apply mt-3;
@@ -190,7 +205,7 @@ body {
 	}
 
 	img {
-		@apply block h-auto max-w-full border border-border;
+		@apply block h-auto max-w-full cursor-pointer;
 
 		&.ProseMirror-selectednode {
 			@apply outline outline-2 outline-primary;

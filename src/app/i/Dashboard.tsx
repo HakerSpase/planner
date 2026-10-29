@@ -1,24 +1,15 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
-import { ArrowRight, Check } from 'lucide-react'
-import Link from 'next/link'
 import { useMemo } from 'react'
-
-import { DASHBOARD_PAGES } from '@/config/pages-url.config'
 
 import type { ITaskResponse } from '@/types/task.types'
 
 import { useProfile } from '@/hooks/useProfile'
 
-import { useLoadSettings } from './timer/hooks/useLoadSettings'
 import { useTasks } from './tasks/hooks/useTasks'
-import { useUpdateTask } from './tasks/hooks/useUpdateTask'
-import { useTimeBlocks } from './time-blocking/hooks/useTimeBlocks'
-import { pomodoroService } from '@/services/pomodoro.service'
 
 const greeting = (hour: number) =>
 	hour < 5
@@ -28,12 +19,6 @@ const greeting = (hour: number) =>
 			: hour < 18
 				? 'Добрый день'
 				: 'Добрый вечер'
-
-const formatMinutes = (minutes: number) => {
-	const h = Math.floor(minutes / 60)
-	const m = minutes % 60
-	return h ? `${h} ч${m ? ` ${m} мин` : ''}` : `${m} мин`
-}
 
 /* Цифры по задачам: считаем на клиенте из списка, чтобы можно было сравнить недели */
 function useTaskSummary(tasks: ITaskResponse[] | undefined) {
@@ -71,29 +56,27 @@ function useTaskSummary(tasks: ITaskResponse[] | undefined) {
 export function Dashboard() {
 	const { data: profile } = useProfile()
 	const { items: tasks } = useTasks()
-	const { updateTask } = useUpdateTask()
-	const { items: timeBlocks } = useTimeBlocks()
-	const { workInterval, timeZone } = useLoadSettings()
-	const { data: pomodoro } = useQuery({
-		queryKey: ['get today session', timeZone],
-		queryFn: () => pomodoroService.getTodaySession(timeZone),
-		enabled: Boolean(timeZone),
-		staleTime: 30000
-	})
 
 	const summary = useTaskSummary(tasks)
 	const now = dayjs().locale('ru')
 	const firstName = profile?.user.name?.split(' ')[0]
 
-	// Сначала просроченные, потом сегодняшние
-	const focusTasks = [...summary.overdue, ...summary.dueToday]
-
-	const rounds = pomodoro?.data?.rounds || []
-	const roundsDone = rounds.filter(round => round.isCompleted).length
-	const plannedMinutes = (timeBlocks || []).reduce(
-		(sum, block) => sum + (block.duration || 0),
-		0
-	)
+	// Выполненные задачи по дням за последние 14 дней
+	const days = useMemo(() => {
+		const today = dayjs().startOf('day')
+		return Array.from({ length: 14 }, (_, index) => {
+			const day = today.subtract(13 - index, 'day')
+			const count = (tasks || []).filter(
+				task =>
+					task.isCompleted &&
+					task.completedAt &&
+					dayjs(task.completedAt).isSame(day, 'day')
+			).length
+			return { day, count }
+		})
+	}, [tasks])
+	const maxCount = Math.max(3, ...days.map(item => item.count))
+	const totalDone = days.reduce((sum, item) => sum + item.count, 0)
 
 	const stats = [
 		{
@@ -135,207 +118,75 @@ export function Dashboard() {
 				</h1>
 			</header>
 
-			{/* Ключевые цифры */}
-			<section className='grid grid-cols-2 border border-border xl:grid-cols-4'>
-				{stats.map((stat, index) => (
-					<div
-						key={stat.label}
-						className={cn(
-							'border-border px-4 py-4 sm:px-5 sm:py-5',
-							index % 2 === 0 && 'border-r',
-							index < 2 && 'border-b xl:border-b-0',
-							index === 1 && 'xl:border-r'
-						)}
-					>
-						<p className='eyebrow'>{stat.label}</p>
-						<p className='mt-3 text-4xl font-light tabular-nums tracking-tight text-fg'>
-							{stat.value}
-						</p>
-						<p className={cn('mt-1 text-xs text-subtle', stat.tone)}>{stat.note}</p>
-					</div>
-				))}
-			</section>
-
-			<div className='mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]'>
-				{/* Фокус дня */}
-				<section className='border border-border bg-surface'>
-					<PanelHeader
-						title='Сегодня'
-						meta={
-							focusTasks.length
-								? `${focusTasks.length} ${focusTasks.length === 1 ? 'задача' : 'задач'}`
-								: undefined
-						}
-						href={DASHBOARD_PAGES.TASKS}
-						linkLabel='Все задачи'
-					/>
-					{!tasks ? (
-						<SkeletonRows count={4} />
-					) : focusTasks.length === 0 ? (
-						<div className='px-5 py-12 text-center'>
-							<p className='text-sm text-muted'>На сегодня ничего не запланировано</p>
-							<Link
-								href={DASHBOARD_PAGES.TASKS}
-								className='mt-2 inline-block text-xs text-primary hover:underline'
-							>
-								Добавить задачу
-							</Link>
+			<div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
+				{/* Ключевые цифры */}
+				<section className='grid grid-cols-2 border border-border bg-surface'>
+					{stats.map((stat, index) => (
+						<div
+							key={stat.label}
+							className={cn(
+								'border-border px-4 py-4 sm:px-5 sm:py-5',
+								index % 2 === 0 && 'border-r',
+								index < 2 && 'border-b'
+							)}
+						>
+							<p className='eyebrow'>{stat.label}</p>
+							<p className='mt-3 text-4xl font-light tabular-nums tracking-tight text-fg'>
+								{tasks ? stat.value : '–'}
+							</p>
+							<p className={cn('mt-1 text-xs text-subtle', stat.tone)}>{stat.note}</p>
 						</div>
-					) : (
-						<ul>
-							{focusTasks.slice(0, 8).map(task => {
-								const isOverdue = dayjs(task.createdAt).isBefore(dayjs().startOf('day'))
-								const subtasks = task.subtasks || []
-								return (
-									<li
-										key={task.id}
-										className='flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0'
-									>
-										<button
-											type='button'
-											aria-label='Отметить выполненной'
-											onClick={() =>
-												updateTask({ id: task.id, data: { isCompleted: true } })
-											}
-											className='group grid h-4 w-4 shrink-0 place-items-center border border-white/30 transition-colors hover:border-primary'
-										>
-											<Check
-												size={11}
-												strokeWidth={3}
-												className='text-primary opacity-0 group-hover:opacity-100'
-											/>
-										</button>
-										<span className='min-w-0 flex-1 truncate text-sm text-fg'>
-											{task.name || 'Без названия'}
-										</span>
-										{subtasks.length > 0 && (
-											<span className='shrink-0 font-mono text-2xs text-subtle'>
-												{subtasks.filter(subtask => subtask.isCompleted).length}/
-												{subtasks.length}
-											</span>
-										)}
-										{isOverdue && (
-											<span className='shrink-0 font-mono text-2xs uppercase text-danger'>
-												{dayjs(task.createdAt).locale('ru').format('D MMM')}
-											</span>
-										)}
-									</li>
-								)
-							})}
-						</ul>
-					)}
+					))}
 				</section>
 
-				<div className='flex flex-col gap-4'>
-					{/* Pomodoro */}
-					<section className='border border-border bg-surface'>
-						<PanelHeader
-							title='Фокус'
-							href={DASHBOARD_PAGES.TIMER}
-							linkLabel='Таймер'
-						/>
-						<div className='px-5 py-4'>
-							{rounds.length ? (
-								<>
-									<p className='flex items-baseline gap-2'>
-										<span className='text-3xl font-light tabular-nums text-fg'>
-											{formatMinutes(roundsDone * workInterval)}
+				{/* Небольшой график: выполнено по дням */}
+				<section className='flex flex-col border border-border bg-surface px-4 py-4 sm:px-5 sm:py-5'>
+					<div className='flex items-baseline justify-between gap-3'>
+						<p className='eyebrow'>Выполнено · 14 дней</p>
+						<p className='font-mono text-xs tabular-nums text-muted'>{totalDone}</p>
+					</div>
+					<div className='mt-5 flex min-h-[8rem] flex-1 items-end gap-1.5'>
+						{days.map(({ day, count }, index) => {
+							const isToday = index === days.length - 1
+							return (
+								<div
+									key={day.valueOf()}
+									title={`${day.locale('ru').format('D MMMM')}: ${count}`}
+									className='group flex h-full flex-1 flex-col justify-end'
+								>
+									{count > 0 && (
+										<span className='mb-1 text-center font-mono text-[10px] text-subtle opacity-0 transition-opacity group-hover:opacity-100'>
+											{count}
 										</span>
-									</p>
-									<p className='mt-1 text-xs text-subtle'>
-										{roundsDone} из {rounds.length} раундов
-									</p>
-									<div className='mt-3 flex gap-1'>
-										{rounds.map(round => (
-											<span
-												key={round.id}
-												className={cn(
-													'h-1 flex-1',
-													round.isCompleted ? 'bg-primary' : 'bg-white/10'
-												)}
-											/>
-										))}
-									</div>
-								</>
-							) : (
-								<p className='text-sm text-muted'>
-									Сессия не начата.{' '}
-									<Link
-										href={DASHBOARD_PAGES.TIMER}
-										className='text-primary hover:underline'
-									>
-										Запустить
-									</Link>
-								</p>
-							)}
-						</div>
-					</section>
-
-					{/* Тайм-блоки */}
-					<section className='border border-border bg-surface'>
-						<PanelHeader
-							title='План дня'
-							meta={plannedMinutes ? formatMinutes(plannedMinutes) : undefined}
-							href={DASHBOARD_PAGES.TIME_BLOCKING}
-							linkLabel='Блоки'
-						/>
-						{!timeBlocks ? (
-							<SkeletonRows count={3} />
-						) : timeBlocks.length === 0 ? (
-							<p className='px-5 py-4 text-sm text-muted'>Блоков пока нет</p>
-						) : (
-							<ul>
-								{timeBlocks.slice(0, 6).map(block => (
-									<li
-										key={block.id}
-										className='flex items-center gap-3 border-b border-border px-5 py-2.5 last:border-b-0'
-									>
-										<span
-											className='h-3 w-1 shrink-0'
-											style={{ backgroundColor: block.color || '#64748b' }}
-										/>
-										<span className='min-w-0 flex-1 truncate text-sm text-fg'>
-											{block.name}
-										</span>
-										<span className='shrink-0 font-mono text-xs text-subtle'>
-											{formatMinutes(block.duration)}
-										</span>
-									</li>
-								))}
-							</ul>
-						)}
-					</section>
-				</div>
+									)}
+									<div
+										className={cn(
+											'w-full transition-colors',
+											count === 0
+												? 'h-px bg-white/15'
+												: isToday
+													? 'bg-primary'
+													: 'bg-white/20 group-hover:bg-white/35'
+										)}
+										style={count ? { height: `${Math.max(8, (count / maxCount) * 100)}%` } : undefined}
+									/>
+								</div>
+							)
+						})}
+					</div>
+					<div className='mt-2 flex gap-1.5 font-mono text-[9px] uppercase text-subtle'>
+						{days.map(({ day }, index) => (
+							<span
+								key={day.valueOf()}
+								className={cn('flex-1 text-center', index === days.length - 1 && 'text-fg')}
+							>
+								{day.locale('ru').format('dd')}
+							</span>
+						))}
+					</div>
+				</section>
 			</div>
 		</div>
-	)
-}
-
-function PanelHeader({
-	title,
-	meta,
-	href,
-	linkLabel
-}: {
-	title: string
-	meta?: string
-	href: string
-	linkLabel: string
-}) {
-	return (
-		<header className='flex items-center justify-between gap-3 border-b border-border px-5 py-3'>
-			<h2 className='flex items-baseline gap-2 text-sm font-semibold text-fg'>
-				{title}
-				{meta && <span className='font-mono text-2xs font-normal text-subtle'>{meta}</span>}
-			</h2>
-			<Link
-				href={href}
-				className='flex items-center gap-1 font-mono text-2xs uppercase tracking-wider text-subtle transition-colors hover:text-fg'
-			>
-				{linkLabel}
-				<ArrowRight size={12} />
-			</Link>
-		</header>
 	)
 }
 

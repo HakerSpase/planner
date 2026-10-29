@@ -162,7 +162,7 @@ export function Pomodoro() {
 	]
 
 	return (
-		<div className='relative mx-auto w-full max-w-xl border border-border bg-surface text-center'>
+		<div className='relative w-full border border-border bg-surface text-center'>
 			{isLoading ? (
 				<div className='py-16'>
 					<Loader />
