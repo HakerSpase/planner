@@ -12,7 +12,26 @@ import katex from 'katex'
 
 // $$…$$ или $…$ (не путаем «$5 и $10»: после открывающего $ не пробел)
 // Для одиночного $ правило как в Pandoc: закрывающий $ не после пробела и не перед цифрой
-const MATH_REGEX = /\$\$([\s\S]+?)\$\$|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/g
+// \[…\] и \(…\) тоже рисуем — так формулы видны и до сохранения
+const MATH_REGEX =
+	/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)|\\\(([\s\S]+?)\\\)/g
+
+// Нейросети при копировании «в Markdown» удваивают слеши: \\( \frac … \\, \\)
+// Внутри такой формулы снимаем экранирование Markdown: \\, → \,
+const unescapeMarkdown = (value: string) => value.replace(/\\([!-\/:-@\[-`{-~])/g, '$1')
+
+// Русские обозначения, которых нет в KaTeX
+const KATEX_MACROS = {
+	'\\tg': '\\operatorname{tg}',
+	'\\ctg': '\\operatorname{ctg}',
+	'\\arctg': '\\operatorname{arctg}',
+	'\\arcctg': '\\operatorname{arcctg}',
+	'\\cosec': '\\operatorname{cosec}',
+	'\\sh': '\\operatorname{sh}',
+	'\\ch': '\\operatorname{ch}',
+	'\\th': '\\operatorname{th}',
+	'\\cth': '\\operatorname{cth}'
+}
 
 // Конец формулы с одиночным $: ищем первый $, подходящий под правило Pandoc
 function findInlineDollarEnd(src: string, from: number) {
@@ -33,6 +52,8 @@ function markdownMath(md: any) {
 		const start: number = state.pos
 		const pairs: [string, string, boolean][] = [
 			['$$', '$$', true],
+			['\\\\[', '\\\\]', true],
+			['\\\\(', '\\\\)', false],
 			['\\[', '\\]', true],
 			['\\(', '\\)', false],
 			['$', '$', false]
@@ -45,7 +66,8 @@ function markdownMath(md: any) {
 					? findInlineDollarEnd(src, start + 1)
 					: src.indexOf(close, start + open.length)
 			if (end < 0) continue
-			const body = src.slice(start + open.length, end)
+			const raw = src.slice(start + open.length, end)
+			const body = open.startsWith('\\\\') ? unescapeMarkdown(raw) : raw
 			if (!body.trim() || (open === '$' && body.includes('\n'))) continue
 			if (!silent) {
 				const token = state.push('text', '', 0)
@@ -65,9 +87,9 @@ function markdownMath(md: any) {
 			const lineText = (line: number) =>
 				state.src.slice(state.bMarks[line] + state.tShift[line], state.eMarks[line])
 			const first = lineText(startLine).trim()
-			const open = first.startsWith('$$') ? '$$' : first.startsWith('\\[') ? '\\[' : ''
+			const open = ['$$', '\\\\[', '\\['].find(marker => first.startsWith(marker))
 			if (!open) return false
-			const close = open === '$$' ? '$$' : '\\]'
+			const close = open === '$$' ? '$$' : open === '\\[' ? '\\]' : '\\\\]'
 
 			let body = first.slice(open.length)
 			let line = startLine
@@ -85,6 +107,7 @@ function markdownMath(md: any) {
 			}
 			if (!closed) return false
 			if (silent) return true
+			if (open === '\\\\[') body = unescapeMarkdown(body)
 
 			state.line = line + 1
 			state.push('paragraph_open', 'p', 1)
@@ -139,8 +162,8 @@ function buildDecorations(doc: PMNode, selection: { from: number; to: number }, 
 		for (const match of Array.from(node.text.matchAll(MATH_REGEX))) {
 			const from = pos + (match.index ?? 0)
 			const to = from + match[0].length
-			const display = match[1] !== undefined
-			const content = (match[1] ?? match[2] ?? '').trim()
+			const display = match[1] !== undefined || match[2] !== undefined
+			const content = (match[1] ?? match[2] ?? match[3] ?? match[4] ?? '').trim()
 			const isEditing = editable && selection.from <= to && selection.to >= from
 			if (isEditing) {
 				decorations.push(Decoration.inline(from, to, { class: 'math-source' }))
@@ -157,7 +180,8 @@ function buildDecorations(doc: PMNode, selection: { from: number; to: number }, 
 							katex.render(content, element, {
 								displayMode: display,
 								throwOnError: false,
-								strict: 'ignore'
+								strict: 'ignore',
+								macros: { ...KATEX_MACROS }
 							})
 						} catch {
 							element.textContent = content
