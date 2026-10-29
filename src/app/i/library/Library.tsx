@@ -21,6 +21,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Heading } from '@/components/ui/Heading'
 
 import {
 	type ILibraryPageMeta,
@@ -102,12 +103,56 @@ export function Library() {
 		}
 	}
 
+	const deleteDialog = deleteTarget && (
+		<ConfirmDialog
+			open
+			title={
+				deleteTarget.table === 'library_section'
+					? 'Удалить раздел?'
+					: deleteTarget.table === 'library_topic'
+						? 'Удалить тему?'
+						: 'Удалить лист?'
+			}
+			description={
+				deleteTarget.table === 'library_page'
+					? `«${deleteTarget.title || 'Без названия'}» исчезнет без возможности восстановления.`
+					: `«${deleteTarget.title}» и всё, что внутри, исчезнет без возможности восстановления.`
+			}
+			isPending={isDeleting}
+			onConfirm={confirmDelete}
+			onClose={() => setDeleteTarget(null)}
+		/>
+	)
+
+	// Открытый лист — как отдельная страница, без дерева и рамок
+	if (pageId && topic) {
+		return (
+			<>
+				<PageView
+					key={pageId}
+					pageId={pageId}
+					topic={topic}
+					section={section}
+					onBack={() => navigate({ topic: topic.id })}
+					onOpenRoot={() => navigate({})}
+					onDelete={setDeleteTarget}
+				/>
+				{deleteDialog}
+			</>
+		)
+	}
+
 	return (
-		<div className='grid min-h-[calc(100dvh-11rem)] border border-border bg-surface lg:grid-cols-[18rem_minmax(0,1fr)]'>
+		<div>
+			<Heading
+				title='Архив'
+				description='Разделы, темы и конспекты — с формулами, таблицами и файлами'
+			/>
+		<div className='grid gap-x-12 lg:grid-cols-[15rem_minmax(0,1fr)]'>
 			{/* Дерево: на телефоне показывается, пока не выбрана тема */}
 			<aside
 				className={cn(
-					'min-w-0 border-border lg:border-r',
+					'min-w-0',
 					topicId ? 'hidden lg:block' : 'block'
 				)}
 			>
@@ -123,15 +168,7 @@ export function Library() {
 			</aside>
 
 			<main className={cn('min-w-0', !topicId && 'hidden lg:block')}>
-				{pageId && topic ? (
-					<PageView
-						key={pageId}
-						pageId={pageId}
-						topic={topic}
-						onBack={() => navigate({ topic: topic.id })}
-						onDelete={setDeleteTarget}
-					/>
-				) : topic ? (
+				{topic ? (
 					<TopicView
 						topic={topic}
 						section={section}
@@ -144,27 +181,8 @@ export function Library() {
 					<EmptyState hasSections={sections.length > 0} />
 				)}
 			</main>
-
-			{deleteTarget && (
-				<ConfirmDialog
-					open
-					title={
-						deleteTarget.table === 'library_section'
-							? 'Удалить раздел?'
-							: deleteTarget.table === 'library_topic'
-								? 'Удалить тему?'
-								: 'Удалить лист?'
-					}
-					description={
-						deleteTarget.table === 'library_page'
-							? `«${deleteTarget.title || 'Без названия'}» исчезнет без возможности восстановления.`
-							: `«${deleteTarget.title}» и всё, что внутри, исчезнет без возможности восстановления.`
-					}
-					isPending={isDeleting}
-					onConfirm={confirmDelete}
-					onClose={() => setDeleteTarget(null)}
-				/>
-			)}
+		</div>
+			{deleteDialog}
 		</div>
 	)
 }
@@ -239,7 +257,7 @@ function LibraryTree({
 
 	return (
 		<div className='flex h-full flex-col'>
-			<header className='flex h-14 shrink-0 items-center justify-between border-b border-border px-4'>
+			<header className='flex h-10 shrink-0 items-center justify-between'>
 				<span className='eyebrow'>Разделы</span>
 				<IconButton
 					label='Новый раздел'
@@ -249,7 +267,7 @@ function LibraryTree({
 				</IconButton>
 			</header>
 
-			<div className='min-h-0 flex-1 overflow-y-auto py-2'>
+			<div className='min-h-0 flex-1 py-1'>
 				{isLoading && (
 					<div className='space-y-2 px-4 py-2'>
 						{[60, 75, 45].map(width => (
@@ -390,7 +408,7 @@ function LibraryTree({
 
 				{isAdding ? (
 					<InlineInput
-						placeholder='Например: ЕГЭ · Математика'
+						placeholder='Например: Подготовка к экзамену'
 						onSubmit={createSection}
 					/>
 				) : (
@@ -398,7 +416,7 @@ function LibraryTree({
 						<button
 							type='button'
 							onClick={() => setIsAdding(true)}
-							className='mx-3 mt-2 flex h-10 w-[calc(100%-1.5rem)] items-center gap-2 border border-dashed border-white/10 px-3 text-sm text-subtle transition-colors hover:border-white/25 hover:text-fg'
+							className='mt-2 flex h-9 w-full items-center gap-2 px-2 text-sm text-subtle transition-colors hover:text-fg'
 						>
 							<FolderPlus size={14} />
 							Новый раздел
@@ -428,7 +446,7 @@ function Row({
 	return (
 		<div
 			className={cn(
-				'group relative flex h-9 items-center gap-2 pl-3 pr-1.5 transition-colors',
+				'group relative flex h-9 items-center gap-2 pl-2 pr-1 transition-colors',
 				active
 					? 'bg-white/[0.06] before:absolute before:inset-y-0 before:-left-px before:w-0.5 before:bg-primary'
 					: 'hover:bg-white/[0.03]'
@@ -565,7 +583,7 @@ function TopicView({
 	}
 
 	return (
-		<div className='px-4 py-5 sm:px-8 sm:py-8'>
+		<div>
 			<button
 				type='button'
 				onClick={onBack}
@@ -575,7 +593,7 @@ function TopicView({
 				Разделы
 			</button>
 
-			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6'>
+			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
 				<div className='min-w-0'>
 					{section && <p className='eyebrow'>{section.title}</p>}
 					{isRenaming ? (
@@ -645,7 +663,7 @@ function TopicView({
 					))}
 				</div>
 			) : pages?.length ? (
-				<div className='mt-6 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
+				<div>
 					{pages.map((page, index) => (
 						<PageCard
 							key={page.id}
@@ -681,18 +699,18 @@ function PageCard({
 		<button
 			type='button'
 			onClick={onOpen}
-			className='group flex min-h-[8.5rem] flex-col border border-border bg-bg/40 p-4 text-left transition-colors hover:border-border-strong hover:bg-white/[0.02]'
+			className='group grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 border-b border-border py-5 text-left transition-colors sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
 		>
-			<span className='flex items-baseline gap-3'>
-				<span className='font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
-				<span className='min-w-0 flex-1 truncate text-base font-medium text-fg'>
+			<span className='pt-1 font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
+			<span className='min-w-0'>
+				<span className='block truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
 					{page.title || 'Без названия'}
 				</span>
+				<span className='mt-1 line-clamp-2 block text-sm leading-6 text-subtle'>
+					{page.excerpt || 'Пустой лист'}
+				</span>
 			</span>
-			<span className='mt-2 line-clamp-3 flex-1 text-sm leading-5 text-subtle'>
-				{page.excerpt || 'Пустой лист'}
-			</span>
-			<span className='mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+			<span className='col-start-2 mt-2 font-mono text-2xs uppercase tracking-wider text-subtle sm:col-start-3 sm:mt-1.5'>
 				{dayjs(page.updated_at).locale('ru').format('D MMM, HH:mm')}
 			</span>
 		</button>
@@ -706,12 +724,16 @@ function PageCard({
 function PageView({
 	pageId,
 	topic,
+	section,
 	onBack,
+	onOpenRoot,
 	onDelete
 }: {
 	pageId: string
 	topic: ILibraryTopic
+	section?: ILibrarySection
 	onBack: () => void
+	onOpenRoot: () => void
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
 	const queryClient = useQueryClient()
@@ -792,21 +814,53 @@ function PageView({
 
 	return (
 		<article>
-			<header className='sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6'>
+			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
 				<button
 					type='button'
 					onClick={async () => {
 						await flush()
 						onBack()
 					}}
-					className='flex min-w-0 items-center gap-1.5 text-sm text-subtle transition-colors hover:text-fg'
+					className='flex shrink-0 items-center gap-1.5 text-sm text-subtle transition-colors hover:text-fg sm:hidden'
 				>
 					<ArrowLeft
 						size={15}
 						className='shrink-0'
 					/>
-					<span className='truncate'>{topic.title}</span>
+					<span className='max-w-[40vw] truncate'>{topic.title}</span>
 				</button>
+				<nav
+					aria-label='Путь'
+					className='hidden min-w-0 items-center gap-2 text-sm text-subtle sm:flex'
+				>
+					<button
+						type='button'
+						onClick={async () => {
+							await flush()
+							onOpenRoot()
+						}}
+						className='shrink-0 transition-colors hover:text-fg'
+					>
+						Архив
+					</button>
+					{section && (
+						<>
+							<span className='text-white/15'>/</span>
+							<span className='truncate'>{section.title}</span>
+						</>
+					)}
+					<span className='text-white/15'>/</span>
+					<button
+						type='button'
+						onClick={async () => {
+							await flush()
+							onBack()
+						}}
+						className='truncate transition-colors hover:text-fg'
+					>
+						{topic.title}
+					</button>
+				</nav>
 				<div className='flex shrink-0 items-center gap-2'>
 					<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
 						{status === 'saving'
@@ -843,7 +897,7 @@ function PageView({
 				</div>
 			</header>
 
-			<div className='mx-auto max-w-3xl px-4 pb-24 pt-8 sm:px-8 sm:pt-12'>
+			<div className='mx-auto max-w-3xl pb-24 pt-10 sm:pt-16'>
 				{isEditing ? (
 					<textarea
 						value={title}
@@ -879,7 +933,7 @@ function PageView({
 						schedule({ content: value })
 					}}
 					placeholder='Пишите или вставьте конспект. Формулы: $x^2$ в строке, $$\int f(x)\,dx$$ отдельно.'
-					className={cn('library-page', isEditing && 'bg-surface')}
+					className='library-page bg-bg [&_[role=toolbar]]:top-12'
 					contentClassName={cn('min-h-[50vh]', !isEditing && 'library-reading')}
 				/>
 
@@ -899,14 +953,15 @@ function PageView({
 
 function EmptyState({ hasSections }: { hasSections: boolean }) {
 	return (
-		<div className='flex h-full min-h-[24rem] flex-col items-center justify-center px-6 text-center'>
+		<div className='flex min-h-[22rem] flex-col items-center justify-center px-6 text-center lg:items-start lg:pt-10 lg:text-left'>
 			<p className='eyebrow'>Архив</p>
 			<h2 className='mt-3 text-2xl font-semibold tracking-[-0.02em] text-fg'>
 				{hasSections ? 'Выберите тему слева' : 'Соберите свою библиотеку знаний'}
 			</h2>
 			<p className='mt-3 max-w-md text-sm leading-6 text-subtle'>
-				Разделы — для предметов и проектов («ЕГЭ · Математика», «Английский»),
-				внутри — темы, в темах — листы-конспекты с формулами, таблицами, фото и файлами.
+				Разделы — для больших направлений («Подготовка к экзамену», «Английский»,
+				«Личный проект»), внутри — темы, в темах — конспекты с формулами, таблицами,
+				фото и файлами.
 			</p>
 		</div>
 	)

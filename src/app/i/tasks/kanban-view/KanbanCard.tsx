@@ -1,7 +1,7 @@
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import cn from 'clsx'
 import { GripVertical, Loader, Trash } from 'lucide-react'
-import type { CSSProperties, Dispatch, SetStateAction } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
@@ -19,11 +19,6 @@ import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
 import styles from './KanbanView.module.scss'
 
-const PRIORITY_COLOR: Record<string, string> = {
-	high: 'rgb(var(--danger))',
-	medium: 'rgb(var(--warning))',
-	low: 'rgb(56 189 248)'
-}
 
 interface IKanbanCard {
 	item: ITaskResponse
@@ -57,9 +52,6 @@ export function KanbanCard({
 
 	return (
 		<div
-			style={
-				{ '--priority-color': PRIORITY_COLOR[watch('priority') || ''] } as CSSProperties
-			}
 			className={cn(
 				styles.card,
 				{

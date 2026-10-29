@@ -1,10 +1,13 @@
 import { useSyncExternalStore } from 'react'
 
 export const BACKGROUNDS = [
-	{ id: 'dots', label: 'Точки', description: 'Сетка точек медленно дрейфует' },
-	{ id: 'grid', label: 'Сетка', description: 'Тонкие линии, плавное смещение' },
+	{ id: 'stars', label: 'Звёздное небо', description: 'Мерцание, глубина, падающие звёзды' },
 	{ id: 'aurora', label: 'Аврора', description: 'Мягкие пятна света' },
-	{ id: 'stars', label: 'Созвездие', description: 'Точки со связями, едва движутся' },
+	{ id: 'waves', label: 'Волны', description: 'Тонкие линии медленно колышутся' },
+	{ id: 'fireflies', label: 'Светлячки', description: 'Тёплые огоньки поднимаются' },
+	{ id: 'constellation', label: 'Созвездие', description: 'Точки со связями' },
+	{ id: 'grid', label: 'Сетка', description: 'Тонкие линии, плавное смещение' },
+	{ id: 'dots', label: 'Точки', description: 'Сетка точек медленно дрейфует' },
 	{ id: 'none', label: 'Без фона', description: 'Чистый тёмный фон' }
 ] as const
 
@@ -12,7 +15,7 @@ export type TypeBackground = (typeof BACKGROUNDS)[number]['id']
 
 const KEY = 'app-background'
 const EVENT = 'app-background-change'
-const DEFAULT: TypeBackground = 'dots'
+const DEFAULT: TypeBackground = 'stars'
 
 const read = (): TypeBackground => {
 	try {

@@ -1,33 +1,41 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import cn from 'clsx'
 import {
 	addMonths,
 	eachDayOfInterval,
 	endOfMonth,
 	endOfWeek,
 	format,
+	getDayOfYear,
 	isSameDay,
 	isSameMonth,
 	startOfMonth,
-	startOfWeek
+	startOfWeek,
+	subYears
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import {
-	Check,
 	ChevronLeft,
 	ChevronRight,
 	Clock,
+	History,
 	Loader2,
+	Maximize2,
+	Minimize2,
 	Search
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useProfile } from '@/hooks/useProfile'
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
+import { toExcerpt } from '@/services/library.service'
 import { thoughtsService } from '@/services/thoughts.service'
+
+import { MoodScale, moodColor } from './MoodScale'
 
 // Редактор тяжёлый (Tiptap + ProseMirror) — грузим его только когда он нужен
 const RichEditor = dynamic(
@@ -40,10 +48,27 @@ const RichEditor = dynamic(
 
 const iso = (date: Date) => format(date, 'yyyy-MM-dd')
 
+// Вопрос-подсказка на пустом дне — свой на каждый день года
+const PROMPTS = [
+	'Что сегодня получилось лучше всего?',
+	'За что хочется сказать себе спасибо?',
+	'Что заняло больше всего мыслей?',
+	'Чему ты сегодня научился?',
+	'Что бы ты сделал иначе, если бы начал день заново?',
+	'Какой момент дня хочется запомнить?',
+	'Что сегодня дало энергию, а что забрало?',
+	'Какой маленький шаг ты сделал к большой цели?',
+	'Что тебя удивило?',
+	'О чём ты думаешь перед сном?',
+	'Что можно отпустить и не нести в завтра?',
+	'Кто сегодня помог тебе — или кому помог ты?'
+]
+
+type TypeView = 'day' | 'feed'
+
 export default function ThoughtsPage() {
 	const { data: profile } = useProfile()
-	const deviceTimeZone =
-		Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+	const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 	const timeZone = profile?.user.timeZone || deviceTimeZone
 	const currentDate = () => {
 		const [year, month, day] = dateKeyInTimeZone(new Date(), timeZone)
@@ -51,53 +76,58 @@ export default function ThoughtsPage() {
 			.map(Number)
 		return new Date(year, month - 1, day)
 	}
+
 	const [month, setMonth] = useState(currentDate)
 	const [selected, setSelected] = useState(currentDate)
 	const [entries, setEntries] = useState<Record<string, string>>({})
+	const [moods, setMoods] = useState<Record<string, number | null>>({})
 	const [draft, setDraft] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [saving, setSaving] = useState(false)
+	const [view, setView] = useState<TypeView>('day')
+	const [isFocus, setIsFocus] = useState(false)
 	const hasUserSelectedRef = useRef(false)
 	const [query, setQuery] = useState('')
-	const [archive, setArchive] = useState<
-		Array<{ thought_date: string; content: string }> | null
-	>(null)
+	const [archive, setArchive] = useState<Array<{ thought_date: string; content: string }> | null>(
+		null
+	)
+	const [yearAgo, setYearAgo] = useState<Record<string, string | null>>({})
 
 	const monthStart = startOfMonth(month)
 	const todayKey = dateKeyInTimeZone(new Date(), timeZone)
 	const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
 	const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
-
 	const startKey = iso(gridStart)
 	const endKey = iso(gridEnd)
 
 	const days = useMemo(
 		() => eachDayOfInterval({ start: gridStart, end: gridEnd }),
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[startKey, endKey]
 	)
 
-	const loadEntries = async (start: string, end: string) => {
-		setLoading(true)
-		try {
-			const rows = await thoughtsService.getRange(start, end)
-			const map: Record<string, string> = {}
-			for (const row of rows || []) {
-				if (row.thought_date) {
-					const dateStr = row.thought_date.slice(0, 10)
-					map[dateStr] = row.content || ''
-				}
-			}
-			setEntries(map)
-		} catch (err) {
-			console.error(err)
-			toast.error('Не удалось загрузить мысли за этот месяц')
-		} finally {
-			setLoading(false)
-		}
-	}
-
 	useEffect(() => {
-		loadEntries(startKey, endKey)
+		let active = true
+		setLoading(true)
+		thoughtsService
+			.getRange(startKey, endKey)
+			.then(rows => {
+				if (!active) return
+				const contents: Record<string, string> = {}
+				const moodMap: Record<string, number | null> = {}
+				for (const row of rows) {
+					const key = row.thought_date.slice(0, 10)
+					contents[key] = row.content || ''
+					moodMap[key] = row.mood ?? null
+				}
+				setEntries(contents)
+				setMoods(moodMap)
+			})
+			.catch(() => toast.error('Не удалось загрузить записи за этот месяц'))
+			.finally(() => active && setLoading(false))
+		return () => {
+			active = false
+		}
 	}, [startKey, endKey])
 
 	useEffect(() => {
@@ -106,56 +136,54 @@ export default function ThoughtsPage() {
 			setMonth(today)
 			setSelected(today)
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [timeZone])
 
-	// Черновик берём из сохранённого только при смене дня или после загрузки месяца.
-	// Если синхронизировать на каждое изменение entries, ответ автосохранения
-	// затирал бы текст, набранный, пока шёл запрос.
+	// Черновик берём из сохранённого только при смене дня или после загрузки месяца —
+	// иначе ответ автосохранения затирал бы текст, набранный во время запроса
 	useEffect(() => {
 		if (loading) return
 		setDraft(entries[iso(selected)] ?? '')
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [selected, loading])
 
-	const save = async (
-		dateKey = iso(selected),
-		content = draft,
-		silent = false
-	) => {
-		const previousContent = entries[dateKey]
-		setEntries(current => ({ ...current, [dateKey]: content }))
-		setSaving(true)
-		try {
-			const saved = await thoughtsService.save(dateKey, content)
-			const savedDate = (saved.thought_date || dateKey).slice(0, 10)
-			setEntries(current => ({
-				...current,
-				[savedDate]: saved.content
-			}))
-			if (!silent) toast.success('Запись сохранена')
-		} catch {
-			setEntries(current => {
-				const updated = { ...current }
-				if (previousContent === undefined) delete updated[dateKey]
-				else updated[dateKey] = previousContent
-				return updated
-			})
-			toast.error('Не удалось сохранить запись')
-		} finally {
-			setSaving(false)
-		}
-	}
+	const save = useCallback(
+		async (dateKey: string, content: string, silent = true) => {
+			const previous = entries[dateKey]
+			setEntries(current => ({ ...current, [dateKey]: content }))
+			setSaving(true)
+			try {
+				await thoughtsService.save(dateKey, content)
+				if (!silent) toast.success('Запись сохранена')
+			} catch {
+				setEntries(current => {
+					const updated = { ...current }
+					if (previous === undefined) delete updated[dateKey]
+					else updated[dateKey] = previous
+					return updated
+				})
+				toast.error('Не удалось сохранить запись')
+			} finally {
+				setSaving(false)
+			}
+		},
+		[entries]
+	)
+
+	const selectedKey = iso(selected)
+	const isDirty = (entries[selectedKey] || '') !== draft
 
 	// Перед уходом на другой день досохраняем текущий черновик
 	const flushDraft = () => {
-		const key = iso(selected)
-		if ((entries[key] || '') !== draft) save(key, draft, true)
+		if (isDirty) save(selectedKey, draft)
 	}
 
-	const selectDay = (day: Date) => {
+	const openDay = (day: Date) => {
 		flushDraft()
 		hasUserSelectedRef.current = true
+		if (!isSameMonth(day, month)) setMonth(day)
 		setSelected(day)
+		setView('day')
 	}
 
 	const changeMonth = (direction: -1 | 1) => {
@@ -166,9 +194,36 @@ export default function ThoughtsPage() {
 		hasUserSelectedRef.current = true
 	}
 
-	const selectedKey = iso(selected)
-	const selectedSavedContent = entries[selectedKey] || ''
-	const isDirty = selectedSavedContent !== draft
+	// Автосохранение через 1,5 с после последней правки
+	useEffect(() => {
+		if (!isDirty || saving || loading) return
+		const timer = setTimeout(() => save(selectedKey, draft), 1500)
+		return () => clearTimeout(timer)
+	}, [draft, isDirty, saving, loading, selectedKey, save])
+
+	const changeMood = async (mood: number | null) => {
+		const previous = moods[selectedKey] ?? null
+		setMoods(current => ({ ...current, [selectedKey]: mood }))
+		try {
+			await thoughtsService.saveMood(selectedKey, mood)
+			setEntries(current => ({ ...current, [selectedKey]: current[selectedKey] ?? '' }))
+		} catch {
+			setMoods(current => ({ ...current, [selectedKey]: previous }))
+			toast.error('Не удалось сохранить настроение')
+		}
+	}
+
+	// «В этот день год назад»
+	const yearAgoKey = iso(subYears(selected, 1))
+	useEffect(() => {
+		if (yearAgo[yearAgoKey] !== undefined) return
+		thoughtsService
+			.getRange(yearAgoKey, yearAgoKey)
+			.then(rows => setYearAgo(current => ({ ...current, [yearAgoKey]: rows[0]?.content || null })))
+			.catch(() => setYearAgo(current => ({ ...current, [yearAgoKey]: null })))
+	}, [yearAgoKey, yearAgo])
+	const yearAgoText = yearAgo[yearAgoKey]
+
 	// Поиск по всем записям: архив грузим один раз, при первом запросе
 	useEffect(() => {
 		if (!query.trim() || archive) return
@@ -182,63 +237,103 @@ export default function ThoughtsPage() {
 		const needle = query.trim().toLowerCase()
 		if (!needle || !archive) return []
 		return archive
-			.map(row => ({
-				date: row.thought_date.slice(0, 10),
-				// свежая версия текущего месяца важнее архивной
-				content: entries[row.thought_date.slice(0, 10)] ?? row.content
-			}))
-			.filter(row => row.content.toLowerCase().includes(needle))
+			.map(row => {
+				const date = row.thought_date.slice(0, 10)
+				return { date, text: toExcerpt(entries[date] ?? row.content) }
+			})
+			.filter(row => row.text.toLowerCase().includes(needle))
 			.reverse()
 			.slice(0, 20)
 			.map(row => {
-				const plain = row.content.replace(/[#>*_`~[]()!-]/g, '').replace(/s+/g, ' ')
-				const index = plain.toLowerCase().indexOf(needle)
+				const index = row.text.toLowerCase().indexOf(needle)
 				const from = Math.max(0, index - 40)
-				return {
-					date: row.date,
-					snippet: (from ? '…' : '') + plain.slice(from, from + 120)
-				}
+				return { date: row.date, snippet: (from ? '…' : '') + row.text.slice(from, from + 120) }
 			})
 	}, [query, archive, entries])
 
-	const openDate = (key: string) => {
+	const openKey = (key: string) => {
 		const [year, monthIndex, day] = key.split('-').map(Number)
-		const date = new Date(year, monthIndex - 1, day)
-		flushDraft()
-		hasUserSelectedRef.current = true
-		setMonth(date)
-		setSelected(date)
+		openDay(new Date(year, monthIndex - 1, day))
 		setQuery('')
 	}
 
-	// Автосохранение через 1,5 с после последней правки
+	// Режим «только писать»: на весь экран, выход по Esc
+	const enterFocus = () => {
+		setIsFocus(true)
+		document.documentElement.requestFullscreen?.().catch(() => {})
+	}
+	const exitFocus = useCallback(() => {
+		setIsFocus(false)
+		if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+	}, [])
 	useEffect(() => {
-		if (!isDirty || saving || loading) return
-		const timer = setTimeout(() => save(selectedKey, draft, true), 1500)
-		return () => clearTimeout(timer)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [draft, isDirty, saving, loading, selectedKey])
+		if (!isFocus) return
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') exitFocus()
+		}
+		// Esc в полноэкранном режиме браузер забирает себе — ловим выход из fullscreen
+		const onFullscreen = () => {
+			if (!document.fullscreenElement) setIsFocus(false)
+		}
+		window.addEventListener('keydown', onKey)
+		document.addEventListener('fullscreenchange', onFullscreen)
+		return () => {
+			window.removeEventListener('keydown', onKey)
+			document.removeEventListener('fullscreenchange', onFullscreen)
+		}
+	}, [isFocus, exitFocus])
 
-	const wordsCount = draft.trim() ? draft.trim().split(/\s+/).length : 0
-	const readingTimeMinutes = Math.max(1, Math.ceil(wordsCount / 180))
+	const wordsCount = draft.trim() ? toExcerpt(draft).split(/\s+/).filter(Boolean).length : 0
+	const prompt = PROMPTS[getDayOfYear(selected) % PROMPTS.length]
+	const placeholder = `${prompt} Пишите свободно — # заголовок, - список, $формулы$, фото и голосовые.`
+
+	const feed = Object.keys(entries)
+		.filter(key => entries[key]?.trim() && key.startsWith(format(month, 'yyyy-MM')))
+		.sort()
+		.reverse()
+
+	const status = saving ? 'Сохранение…' : isDirty ? 'Не сохранено' : entries[selectedKey] ? 'Сохранено' : ''
 
 	return (
 		<div className='w-full min-w-0 pb-12'>
-			{/* Page Header */}
-			<div className='mb-6 border-b border-border pb-5 sm:mb-8 sm:pb-6'>
-				<h1 className='text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-4xl'>
-					Мысли на каждый день
-				</h1>
-				<p className='mt-1 text-sm text-subtle max-w-2xl'>
-					Ваш личный дневник для заметок, идей, рефлексии и событий. Все записи привязаны к датам и сохраняются в облаке.
-				</p>
+			<div className='mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5 sm:mb-8 sm:pb-6'>
+				<div>
+					<h1 className='text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-4xl'>Мысли</h1>
+					<p className='mt-1.5 text-sm text-muted'>Дневник по дням: мысли, настроение, итоги</p>
+				</div>
+				<div
+					role='tablist'
+					className='flex divide-x divide-border border border-border'
+				>
+					{(
+						[
+							['day', 'День'],
+							['feed', 'Лента']
+						] as const
+					).map(([value, label]) => (
+						<button
+							key={value}
+							type='button'
+							role='tab'
+							aria-selected={view === value}
+							onClick={() => {
+								flushDraft()
+								setView(value)
+							}}
+							className={cn(
+								'h-9 px-4 text-sm font-medium transition-colors',
+								view === value ? 'bg-white/[0.06] text-fg' : 'text-muted hover:text-fg'
+							)}
+						>
+							{label}
+						</button>
+					))}
+				</div>
 			</div>
 
-			{/* Main Content Grid: Balanced wide PC proportions */}
-			<div className='grid items-start gap-4 lg:grid-cols-[340px_1fr] lg:gap-6 xl:grid-cols-[360px_1fr]'>
-				{/* Left Sidebar: Calendar & Monthly Entries Feed */}
-				<div className='flex flex-col gap-6 min-w-0'>
-					{/* Поиск по всем записям */}
+			<div className='grid items-start gap-6 lg:grid-cols-[330px_minmax(0,1fr)] xl:grid-cols-[350px_minmax(0,1fr)]'>
+				{/* Слева: поиск и календарь */}
+				<div className='flex min-w-0 flex-col gap-4'>
 					<div className='relative'>
 						<Search
 							size={15}
@@ -262,7 +357,7 @@ export default function ThoughtsPage() {
 										<button
 											key={result.date}
 											type='button'
-											onClick={() => openDate(result.date)}
+											onClick={() => openKey(result.date)}
 											className='block w-full border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-white/[0.04]'
 										>
 											<span className='eyebrow'>
@@ -278,23 +373,20 @@ export default function ThoughtsPage() {
 						)}
 					</div>
 
-					{/* Calendar Card */}
-					<section className='card-padded'>
-						<div className='mb-4 flex items-center justify-between'>
+					<section className='border border-border bg-surface p-4'>
+						<div className='mb-3 flex items-center justify-between'>
 							<button
-								className='grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+								className='grid h-8 w-8 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								aria-label='Предыдущий месяц'
 								onClick={() => changeMonth(-1)}
 							>
 								<ChevronLeft size={18} />
 							</button>
-
 							<h2 className='text-sm font-semibold capitalize text-fg'>
 								{format(month, 'LLLL yyyy', { locale: ru })}
 							</h2>
-
 							<button
-								className='grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+								className='grid h-8 w-8 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								aria-label='Следующий месяц'
 								onClick={() => changeMonth(1)}
 							>
@@ -302,187 +394,224 @@ export default function ThoughtsPage() {
 							</button>
 						</div>
 
-						{/* Day of Week Headers */}
-						<div className='mb-1 grid grid-cols-7 text-center'>
+						<div className='grid grid-cols-7 text-center'>
 							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
 								<div
 									key={day}
-									className='py-2 text-xs font-medium text-subtle'
+									className='py-2 font-mono text-2xs uppercase text-subtle'
 								>
 									{day}
 								</div>
 							))}
 							{days.map(day => {
 								const key = iso(day)
-								const now = new Date()
-								const isToday =
-									(day.getDate() === now.getDate() &&
-										day.getMonth() === now.getMonth() &&
-										day.getFullYear() === now.getFullYear()) ||
-									key === todayKey ||
-									isSameDay(day, now)
+								const isToday = key === todayKey
 								const hasEntry = Boolean(entries[key]?.trim())
-								const isSelected = isSameDay(day, selected)
-								const isCurrentMonth = isSameMonth(day, month)
-
+								const mood = moodColor(moods[key])
+								const isSelected = view === 'day' && isSameDay(day, selected)
 								return (
 									<button
 										key={key}
-										onClick={() => selectDay(day)}
+										onClick={() => openDay(day)}
 										aria-pressed={isSelected}
-										aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', есть мысль' : ''}`}
-										className={`group relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-colors hover:bg-white/[0.06] ${
-											!isCurrentMonth ? 'text-subtle' : 'text-fg'
-										} ${
-											isSelected
-												? 'bg-primary/20 text-fg outline outline-1 -outline-offset-1 outline-primary font-semibold shadow-sm'
-												: ''
-										}`}
+										aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', есть запись' : ''}`}
+										className={cn(
+											'relative flex aspect-square flex-col items-center justify-center text-sm transition-colors hover:bg-white/[0.06]',
+											!isSameMonth(day, month) ? 'text-subtle/60' : 'text-fg',
+											isSelected && 'bg-white/[0.08] outline outline-1 -outline-offset-1 outline-primary'
+										)}
 									>
-										<span
-											className={`leading-none ${
-												isToday && !isSelected
-													? 'font-bold text-emerald-400'
-													: ''
-											}`}
-										>
+										<span className={cn('leading-none', isToday && 'font-semibold text-primary')}>
 											{format(day, 'd')}
 										</span>
-
-										{(isToday || hasEntry) && (
+										{hasEntry && !mood && (
+											<span className='absolute bottom-1.5 h-1 w-1 bg-white/40' />
+										)}
+										{mood && (
 											<span
-												aria-hidden='true'
-												className='pointer-events-none absolute bottom-1.5 left-0 right-0 flex items-center justify-center gap-1.5'
-											>
-												{isToday && (
-													<span
-														title='Сегодня'
-														className='block h-1.5 w-1.5 shrink-0 bg-emerald-400 ring-2 ring-surface'
-													/>
-												)}
-												{hasEntry && (
-													<span
-														title='Есть мысль'
-														className='block h-1.5 w-1.5 shrink-0 bg-amber-400 ring-2 ring-surface'
-													/>
-												)}
-											</span>
+												className='absolute bottom-1 h-1 w-4'
+												style={{ backgroundColor: mood }}
+											/>
 										)}
 									</button>
 								)
 							})}
 						</div>
 
-						{/* Legend */}
-						<div className='mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-subtle'>
-							<div className='flex items-center gap-4'>
-								<span className='flex items-center gap-1.5'>
-									<span className='block h-2 w-2 shrink-0 bg-emerald-400' />
-									Сегодня
-								</span>
-								<span className='flex items-center gap-1.5'>
-									<span className='block h-2 w-2 shrink-0 bg-warning' />
-									Есть запись
-								</span>
-							</div>
-							{loading && (
-								<span className='text-subtle text-[11px] animate-pulse'>
-									Загружаем…
-								</span>
-							)}
+						<div className='mt-3 flex items-center justify-between border-t border-border pt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+							<span className='flex items-center gap-1.5'>
+								<span className='h-1 w-3 bg-gradient-to-r from-[#f46363] via-[#e9c46a] to-[#34c780]' />
+								настроение
+							</span>
+							{loading && <span className='animate-pulse'>загрузка…</span>}
 						</div>
 					</section>
 				</div>
 
-				{/* Right Column: Spacious Journal Studio Editor */}
-				<section className='card flex min-h-[580px] flex-col p-5 sm:p-7 xl:min-h-[660px]'>
-					{/* Editor Header */}
-					<div className='mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4'>
-						<div className='min-w-0'>
-							<h2 className='text-lg font-semibold capitalize text-fg sm:text-xl'>
-								{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
-							</h2>
-							<p className='mt-0.5 text-xs text-subtle flex items-center gap-3'>
-								<span>{wordsCount} {wordsCount === 1 ? 'слово' : wordsCount >= 2 && wordsCount <= 4 ? 'слова' : 'слов'}</span>
-								{wordsCount > 0 && (
-									<>
-										<span>•</span>
+				{/* Справа: день или лента */}
+				{view === 'day' ? (
+					<section className='flex min-h-[580px] flex-col border border-border bg-surface p-5 sm:p-7'>
+						<div className='mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5'>
+							<div className='min-w-0'>
+								<h2 className='text-lg font-semibold capitalize text-fg sm:text-xl'>
+									{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
+								</h2>
+								<p className='mt-1 flex items-center gap-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+									<span>{wordsCount} сл.</span>
+									{wordsCount > 0 && (
 										<span className='flex items-center gap-1'>
-											<Clock size={12} />
-											~{readingTimeMinutes} мин чтения
+											<Clock size={11} />~{Math.max(1, Math.ceil(wordsCount / 180))} мин
 										</span>
-									</>
-								)}
-							</p>
+									)}
+									{status && (
+										<span className={cn(isDirty && !saving && 'text-warning')}>
+											{saving && <Loader2 size={11} className='mr-1 inline animate-spin' />}
+											{status}
+										</span>
+									)}
+								</p>
+							</div>
+							<div className='flex items-center gap-4'>
+								<MoodScale
+									value={moods[selectedKey]}
+									onChange={changeMood}
+								/>
+								<button
+									type='button'
+									onClick={enterFocus}
+									title='Только писать (выход — Esc)'
+									aria-label='Режим «только писать»'
+									className='grid h-9 w-9 place-items-center border border-border text-subtle transition-colors hover:text-fg'
+								>
+									<Maximize2 size={15} />
+								</button>
+							</div>
 						</div>
 
-						{/* Saving Status Badge */}
-						<div className='flex items-center gap-3'>
-							{saving ? (
-								<span className='flex items-center gap-1.5 text-xs text-primary animate-pulse font-medium'>
-									<Loader2 size={13} className='animate-spin' />
-									Сохранение…
+						{yearAgoText && (
+							<button
+								type='button'
+								onClick={() => openKey(yearAgoKey)}
+								className='mb-5 flex w-full items-start gap-3 border-l-2 border-primary/60 bg-white/[0.02] px-4 py-3 text-left transition-colors hover:bg-white/[0.04]'
+							>
+								<History
+									size={15}
+									className='mt-0.5 shrink-0 text-primary'
+								/>
+								<span className='min-w-0'>
+									<span className='eyebrow'>
+										Год назад · {format(subYears(selected, 1), 'd MMMM yyyy', { locale: ru })}
+									</span>
+									<span className='mt-1 line-clamp-2 block text-sm text-muted'>
+										{toExcerpt(yearAgoText) || 'Запись без текста'}
+									</span>
 								</span>
-							) : isDirty ? (
-								<span className='flex items-center gap-1.5 text-xs text-warning font-medium'>
-									<span className='block h-1.5 w-1.5 bg-amber-400' />
-									Не сохранено
-								</span>
-							) : selectedSavedContent ? (
-								<span className='flex items-center gap-1 text-xs text-success'>
-									<Check size={13} />
-									Сохранено
-								</span>
-							) : null}
-						</div>
-					</div>
+							</button>
+						)}
 
-					{/* Writing Space */}
-					<RichEditor
-						value={draft}
-						onChange={setDraft}
-						onSubmitShortcut={() => {
-							if (!saving && isDirty) save()
-						}}
-						placeholder='Как прошёл день? Markdown работает: # заголовок, - список, > цитата, [ ] чек-лист. Фото — вставьте или перетащите.'
-						className='flex-1 bg-surface'
-						contentClassName='min-h-[380px] xl:min-h-[460px]'
-					/>
-
-					{/* Editor Footer Toolbar */}
-					<div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4'>
-						<div className='flex items-center gap-3 text-xs text-subtle font-mono'>
-							<span>
-								{draft.length.toLocaleString('ru-RU')} / 70 000 знаков
-							</span>
-							<span className='hidden sm:inline text-subtle'>|</span>
-							<span className='hidden sm:inline text-subtle font-sans text-[11px]'>
-								Нажмите <kbd className='border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted'>Ctrl</kbd> + <kbd className='border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted'>Enter</kbd> для сохранения
-							</span>
-						</div>
-
-						<button
-							onClick={() => save()}
-							disabled={saving || !isDirty}
-							className='flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40'
-						>
-							{saving ? (
-								<>
-									<Loader2 size={15} className='animate-spin' />
-									Сохраняем…
-								</>
-							) : !isDirty && selectedSavedContent ? (
-								<>
-									<Check size={15} />
-									Сохранено
-								</>
-							) : (
-								'Сохранить мысль'
-							)}
-						</button>
-					</div>
-				</section>
+						{!isFocus && (
+							<RichEditor
+								value={draft}
+								onChange={setDraft}
+								onSubmitShortcut={() => isDirty && save(selectedKey, draft, false)}
+								placeholder={placeholder}
+								className='flex-1 bg-surface'
+								contentClassName='min-h-[380px] xl:min-h-[460px]'
+							/>
+						)}
+					</section>
+				) : (
+					<section className='min-w-0'>
+						{feed.length === 0 ? (
+							<div className='border border-border bg-surface px-6 py-16 text-center'>
+								<p className='text-sm text-muted'>
+									В {format(month, 'LLLL', { locale: ru })} записей пока нет
+								</p>
+							</div>
+						) : (
+							<div className='space-y-4'>
+								{feed.map(key => {
+									const date = new Date(`${key}T12:00:00`)
+									const mood = moods[key]
+									return (
+										<article
+											key={key}
+											className='border border-border bg-surface p-5 sm:p-7'
+										>
+											<header className='mb-4 flex items-center justify-between gap-3 border-b border-border pb-3'>
+												<button
+													type='button'
+													onClick={() => openDay(date)}
+													className='text-left text-base font-semibold capitalize text-fg transition-colors hover:text-primary'
+												>
+													{format(date, 'EEEE, d MMMM', { locale: ru })}
+												</button>
+												{mood && (
+													<span
+														className='flex items-center gap-2 text-xs'
+														style={{ color: moodColor(mood) }}
+													>
+														<span
+															className='h-1.5 w-4'
+															style={{ backgroundColor: moodColor(mood) }}
+														/>
+														{mood} из 5
+													</span>
+												)}
+											</header>
+											<RichEditor
+												value={entries[key]}
+												onChange={() => {}}
+												editable={false}
+												contentClassName='library-reading'
+											/>
+										</article>
+									)
+								})}
+							</div>
+						)}
+					</section>
+				)}
 			</div>
+
+			{/* Только писать: весь экран, ничего лишнего */}
+			{isFocus && (
+				<div className='fixed inset-0 z-[120] flex animate-fade-in flex-col overflow-y-auto bg-bg'>
+					<header className='sticky top-0 z-10 flex items-center justify-between gap-4 bg-bg/90 px-5 py-4 backdrop-blur sm:px-10'>
+						<p className='eyebrow capitalize'>{format(selected, 'EEEE, d MMMM', { locale: ru })}</p>
+						<div className='flex items-center gap-4'>
+							<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
+								{status}
+							</span>
+							<button
+								type='button'
+								onClick={exitFocus}
+								className='flex h-9 items-center gap-2 border border-border px-3 text-sm text-muted transition-colors hover:text-fg'
+							>
+								<Minimize2 size={14} />
+								Выйти · Esc
+							</button>
+						</div>
+					</header>
+					<div className='mx-auto w-full max-w-2xl flex-1 px-5 pb-24 pt-6 sm:pt-12'>
+						<div className='mb-8'>
+							<MoodScale
+								value={moods[selectedKey]}
+								onChange={changeMood}
+								size='lg'
+							/>
+						</div>
+						<RichEditor
+							value={draft}
+							onChange={setDraft}
+							autoFocus
+							placeholder={placeholder}
+							className='bg-bg [&_[role=toolbar]]:top-[4.25rem]'
+							contentClassName='library-reading min-h-[60vh]'
+						/>
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

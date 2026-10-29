@@ -39,15 +39,9 @@
 		}
 
 		.card {
-			@apply relative mb-2 min-w-0 bg-surface py-3 pl-4 pr-3 transition-colors hover:bg-surface-2;
+			@apply relative mb-2 min-w-0 bg-surface px-3.5 py-3 transition-colors hover:bg-surface-2;
 			word-break: break-word;
 
-			/* Приоритет — тонкая полоса слева вместо отдельного бейджа-рамки */
-			&::before {
-				content: '';
-				@apply absolute inset-y-0 left-0 w-0.5;
-				background: var(--priority-color, transparent);
-			}
 
 			&.completed {
 				@apply opacity-50;

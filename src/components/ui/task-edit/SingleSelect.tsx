@@ -1,9 +1,9 @@
 import cn from 'clsx'
 import { ChevronDown, X } from 'lucide-react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { Badge } from '@/components/ui/Badge'
-
-import { useOutside } from '@/hooks/useOutside'
 
 export interface IOption {
 	label: string
@@ -25,7 +25,46 @@ export function SingleSelect({
 	isColorSelect,
 	isClearable = false
 }: ISingleSelect) {
-	const { isShow, setIsShow, ref } = useOutside(false)
+	const [isShow, setIsShow] = useState(false)
+	const ref = useRef<HTMLDivElement>(null)
+	const menuRef = useRef<HTMLDivElement>(null)
+	const [menuStyle, setMenuStyle] = useState<CSSProperties>({})
+
+	// Меню рисуем в портале с fixed-позицией: контейнеры с overflow (доска задач) его не обрезают.
+	// Если снизу мало места — открываем вверх.
+	const open = () => {
+		const rect = ref.current?.getBoundingClientRect()
+		if (!rect) return
+		const height = Math.min(240, data.length * 40 + 10)
+		const openUp = window.innerHeight - rect.bottom < height + 12 && rect.top > height + 12
+		setMenuStyle({
+			position: 'fixed',
+			left: Math.min(rect.left, window.innerWidth - 176),
+			width: Math.max(rect.width, 160),
+			...(openUp
+				? { bottom: window.innerHeight - rect.top + 4 }
+				: { top: rect.bottom + 4 })
+		})
+		setIsShow(true)
+	}
+
+	useEffect(() => {
+		if (!isShow) return
+		const onPointerDown = (event: PointerEvent) => {
+			const target = event.target as Node
+			if (!ref.current?.contains(target) && !menuRef.current?.contains(target))
+				setIsShow(false)
+		}
+		const close = () => setIsShow(false)
+		document.addEventListener('pointerdown', onPointerDown)
+		window.addEventListener('scroll', close, true)
+		window.addEventListener('resize', close)
+		return () => {
+			document.removeEventListener('pointerdown', onPointerDown)
+			window.removeEventListener('scroll', close, true)
+			window.removeEventListener('resize', close)
+		}
+	}, [isShow])
 	const selected = data.find(item => item.value === value)
 
 	return (
@@ -40,7 +79,7 @@ export function SingleSelect({
 				type='button'
 				aria-expanded={isShow}
 				aria-haspopup='listbox'
-				onClick={() => setIsShow(!isShow)}
+				onClick={() => (isShow ? setIsShow(false) : open())}
 				className={cn(
 					'flex min-h-9 items-center gap-1.5 text-left max-w-full',
 					isColorSelect
@@ -89,10 +128,14 @@ export function SingleSelect({
 					<X size={13} />
 				</button>
 			)}
-			{isShow && (
+			{isShow &&
+				typeof document !== 'undefined' &&
+				createPortal(
 				<div
+					ref={menuRef}
 					role='listbox'
-					className='absolute left-0 top-[calc(100%+0.25rem)] z-30 max-h-60 w-full min-w-40 animate-pop-in overflow-y-auto rounded-xl border border-border bg-elevated p-1 shadow-pop'
+					style={menuStyle}
+					className='z-[130] max-h-60 animate-pop-in overflow-y-auto border border-border bg-elevated p-1 shadow-pop'
 				>
 					{data.map(item => (
 						<button
@@ -122,7 +165,8 @@ export function SingleSelect({
 							)}
 						</button>
 					))}
-				</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	)

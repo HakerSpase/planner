@@ -63,13 +63,13 @@ export function MobileNav({ onOpenMore }: { onOpenMore: () => void }) {
 	)
 }
 
-// Активный раздел: мягкая плашка за иконкой и акцентный цвет — заметно, но спокойно
+// Активный раздел — только акцентный цвет иконки и подписи
 function NavIcon({ active, children }: { active: boolean; children: React.ReactNode }) {
 	return (
 		<span
 			className={cn(
-				'grid h-8 w-14 place-items-center rounded-full transition-all duration-200',
-				active ? 'bg-primary/15 text-primary' : 'text-subtle'
+				'grid h-8 w-14 place-items-center transition-colors duration-200',
+				active ? 'text-primary' : 'text-subtle'
 			)}
 		>
 			{children}

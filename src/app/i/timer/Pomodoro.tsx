@@ -164,7 +164,7 @@ export function Pomodoro() {
 	return (
 		<div className='relative w-full border border-border bg-surface text-center lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]'>
 			{isLoading ? (
-				<div className='py-16'>
+				<div className='flex justify-center py-16 lg:col-span-2 lg:row-span-2'>
 					<Loader />
 				</div>
 			) : sessionsResponse?.data ? (
@@ -247,7 +247,7 @@ export function Pomodoro() {
 					</dl>
 				</>
 			) : (
-				<div className='px-5 py-14'>
+				<div className='flex flex-col items-center px-5 py-14 lg:col-span-2 lg:row-span-2 lg:py-24'>
 					<p className='text-sm text-muted'>Сегодня сессия ещё не начата</p>
 					<Button
 						onClick={() => mutate()}

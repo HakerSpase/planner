@@ -48,6 +48,9 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024
 
 // Прямая загрузка в ImageKit по одноразовой подписи с нашего сервера
 async function uploadToImageKit(file: File): Promise<IUploadedFile> {
+	if (file.type.startsWith('video/')) {
+		throw new Error('Видео пока загружать нельзя')
+	}
 	if (file.size > MAX_FILE_SIZE) {
 		throw new Error('Файл больше 25 МБ')
 	}

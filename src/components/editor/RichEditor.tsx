@@ -97,6 +97,14 @@ export function RichEditor({
 	// Картинки, аудио и любые файлы: сразу вставляем блок с локальным адресом, после загрузки подменяем
 	const insertFiles = async (editor: Editor, files: File[], pos?: number) => {
 		for (const file of files) {
+			// Видео не принимаем — бесплатного места в ImageKit на них не хватит
+			if (
+				file.type.startsWith('video/') ||
+				(/\.(mp4|mov|avi|mkv)$/i.test(file.name) && !file.type.startsWith('audio/'))
+			) {
+				toast.error('Видео пока загружать нельзя')
+				continue
+			}
 			const preview = URL.createObjectURL(file)
 			const isImage = file.type.startsWith('image/')
 			const type = isImage
@@ -147,7 +155,11 @@ export function RichEditor({
 			const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(type =>
 				MediaRecorder.isTypeSupported(type)
 			)
-			const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+			// 32 кбит/с Opus — речь звучит чисто, а минута весит ~240 КБ
+			const recorder = new MediaRecorder(stream, {
+				...(mimeType && { mimeType }),
+				audioBitsPerSecond: 32_000
+			})
 			chunksRef.current = []
 			cancelRef.current = false
 			recorder.ondataavailable = event => chunksRef.current.push(event.data)
@@ -481,6 +493,9 @@ export function RichEditor({
 					</button>
 				</div>
 			)}
+			{/* BubbleMenu уносит свой элемент в body — держим его в постоянной обёртке,
+			    иначе React падает, вставляя панель/плашку записи «перед» ним */}
+			<div className='contents'>
 			{editor && (
 				<BubbleMenu
 					editor={editor}
@@ -529,6 +544,7 @@ export function RichEditor({
 					</div>
 				</BubbleMenu>
 			)}
+			</div>
 			{/* Тап по любому месту поля ставит курсор в конец текста */}
 			<div
 				className='min-h-0 flex-1 cursor-text'
