@@ -426,6 +426,15 @@ body {
 	from {
 		opacity: 0;
 		transform: translateY(10px);
-		filter: blur(2px);
+	}
+}
+
+/* Телефон: размытые пятна «сияния» не двигаем — это самый тяжёлый для GPU фон */
+@media (pointer: coarse) {
+	.app-bg-aurora,
+	.app-bg-dots,
+	.app-bg-grid {
+		animation: none;
+		will-change: auto;
 	}
 }

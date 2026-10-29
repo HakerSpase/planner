@@ -5,6 +5,8 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import katex from 'katex'
 
+import { KATEX_MACROS } from './katex-macros'
+
 /*
  * Формулы LaTeX. В тексте хранятся как $…$ (в строке) и $$…$$ (отдельной формулой).
  * При вставке ответов нейросетей понимаем и \(…\), \[…\] — приводим к долларам.
@@ -20,18 +22,6 @@ const MATH_REGEX =
 // Внутри такой формулы снимаем экранирование Markdown: \\, → \,
 const unescapeMarkdown = (value: string) => value.replace(/\\([!-\/:-@\[-`{-~])/g, '$1')
 
-// Русские обозначения, которых нет в KaTeX
-const KATEX_MACROS = {
-	'\\tg': '\\operatorname{tg}',
-	'\\ctg': '\\operatorname{ctg}',
-	'\\arctg': '\\operatorname{arctg}',
-	'\\arcctg': '\\operatorname{arcctg}',
-	'\\cosec': '\\operatorname{cosec}',
-	'\\sh': '\\operatorname{sh}',
-	'\\ch': '\\operatorname{ch}',
-	'\\th': '\\operatorname{th}',
-	'\\cth': '\\operatorname{cth}'
-}
 
 // Конец формулы с одиночным $: ищем первый $, подходящий под правило Pandoc
 function findInlineDollarEnd(src: string, from: number) {

@@ -254,13 +254,16 @@ export const TouchDrag = Extension.create({
 						}, 380)
 					}
 
+					// Обычное касание: только отменяем долгое нажатие, прокрутку не трогаем
 					const onMove = (event: TouchEvent) => {
+						if (dragging) return
 						const touch = event.touches[0]
-						if (!dragging) {
-							if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 8)
-								clearTimeout(timer)
-							return
-						}
+						if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 8) clearTimeout(timer)
+					}
+
+					const onDragMove = (event: TouchEvent) => {
+						const touch = event.touches[0]
+						if (!dragging) return
 						event.preventDefault()
 						const found = view.posAtCoords({ left: touch.clientX, top: touch.clientY })
 						if (!found || !indicator) return
@@ -293,12 +296,25 @@ export const TouchDrag = Extension.create({
 						cleanup()
 					}
 
+					// Блокирующий touchmove (чтобы гасить прокрутку при перетаскивании) держим только
+					// в режиме правки: с ним браузер ждёт JS на каждом касании и чтение листается рывками
+					let blocking = false
+					const syncBlocking = () => {
+						if (view.editable === blocking) return
+						blocking = view.editable
+						if (blocking) view.dom.addEventListener('touchmove', onDragMove, { passive: false })
+						else view.dom.removeEventListener('touchmove', onDragMove)
+					}
+					syncBlocking()
+
 					view.dom.addEventListener('touchstart', onStart, { passive: true })
-					view.dom.addEventListener('touchmove', onMove, { passive: false })
+					view.dom.addEventListener('touchmove', onMove, { passive: true })
 					view.dom.addEventListener('touchend', onEnd)
 					view.dom.addEventListener('touchcancel', cleanup)
 					return {
+						update: syncBlocking,
 						destroy() {
+							view.dom.removeEventListener('touchmove', onDragMove)
 							cleanup()
 							view.dom.removeEventListener('touchstart', onStart)
 							view.dom.removeEventListener('touchmove', onMove)

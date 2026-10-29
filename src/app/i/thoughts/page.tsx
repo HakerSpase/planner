@@ -27,8 +27,10 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
+import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { useProfile } from '@/hooks/useProfile'
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
@@ -251,7 +253,7 @@ export default function ThoughtsPage() {
 		return archive
 			.map(row => {
 				const date = row.thought_date.slice(0, 10)
-				return { date, text: toExcerpt(entries[date] ?? row.content) }
+				return { date, text: toExcerpt(entries[date] ?? row.content, 20000) }
 			})
 			.filter(row => row.text.toLowerCase().includes(needle))
 			.reverse()
@@ -376,7 +378,7 @@ export default function ThoughtsPage() {
 												{format(new Date(`${result.date}T12:00:00`), 'd MMMM yyyy', { locale: ru })}
 											</span>
 											<span className='mt-1 line-clamp-2 block text-sm text-muted'>
-												{result.snippet}
+												<MathExcerpt text={result.snippet} />
 											</span>
 										</button>
 									))
@@ -515,7 +517,11 @@ export default function ThoughtsPage() {
 										Год назад · {format(subYears(selected, 1), 'd MMMM yyyy', { locale: ru })}
 									</span>
 									<span className='mt-1 line-clamp-2 block text-sm text-muted'>
-										{toExcerpt(yearAgoText) || 'Запись без текста'}
+										{toExcerpt(yearAgoText) ? (
+											<MathExcerpt text={toExcerpt(yearAgoText)} />
+										) : (
+											'Запись без текста'
+										)}
 									</span>
 								</span>
 							</button>
@@ -588,9 +594,11 @@ export default function ThoughtsPage() {
 			</div>
 
 			{/* Только писать: весь экран, ничего лишнего */}
-			{isFocus && (
-				<div className='fixed inset-0 z-[120] flex animate-fade-in flex-col overflow-y-auto bg-bg'>
-					<header className='sticky top-0 z-10 flex items-center justify-between gap-4 bg-bg/90 px-5 py-4 backdrop-blur sm:px-10'>
+			{/* В body, а не внутри <main>: иначе сайдбар перекрывает окно */}
+			{isFocus &&
+				createPortal(
+				<div className='fixed inset-0 z-[120] flex animate-fade-in flex-col overflow-y-auto overscroll-contain bg-bg'>
+					<header className='sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-bg px-5 py-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10'>
 						<p className='eyebrow capitalize'>{format(selected, 'EEEE, d MMMM', { locale: ru })}</p>
 						<div className='flex items-center gap-4'>
 							<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
@@ -606,7 +614,7 @@ export default function ThoughtsPage() {
 							</button>
 						</div>
 					</header>
-					<div className='mx-auto w-full max-w-2xl flex-1 px-5 pb-24 pt-6 sm:pt-12'>
+					<div className='w-full flex-1 px-5 pb-24 pt-6 sm:px-10 sm:pt-10 lg:px-16'>
 						<div className='mb-8'>
 							<MoodScale
 								value={moods[selectedKey]}
@@ -624,7 +632,8 @@ export default function ThoughtsPage() {
 							contentClassName='library-reading min-h-[60vh]'
 						/>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	)

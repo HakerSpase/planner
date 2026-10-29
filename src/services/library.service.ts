@@ -39,18 +39,35 @@ const unwrap = <T>({ data, error }: { data: T | null; error: { message: string }
 	return data as T
 }
 
-// Короткий текст для превью карточки листа: без разметки, формул и вложений
-export const toExcerpt = (markdown: string) =>
-	markdown
+// Формулы в любых обозначениях: $$…$$, \[…\], \(…\), $…$ и «удвоенные» \\[…\\], \\(…\\)
+const FORMULA =
+	/\$\$([\s\S]+?)\$\$|\\\\\[([\s\S]+?)\\\\\]|\\\\\(([\s\S]+?)\\\\\)|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/g
+
+const unescapeMarkdown = (value: string) => value.replace(/\\([!-\/:-@\[-`{-~])/g, '$1')
+
+// Короткий текст для превью: без разметки и вложений. Формулы остаются как $…$ —
+// превью рисует их KaTeX'ом (MathExcerpt)
+export const toExcerpt = (markdown: string, length = 220) => {
+	const formulas: string[] = []
+	const text = markdown
+		.replace(FORMULA, (_match, ...groups: (string | undefined)[]) => {
+			const index = groups.findIndex(group => group !== undefined)
+			const body = index === 1 || index === 2 ? unescapeMarkdown(groups[index]!) : groups[index]!
+			formulas.push(body.replace(/\s+/g, ' ').trim())
+			return ` \u0000${formulas.length - 1}\u0000 `
+		})
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
-		.replace(/\$\$[\s\S]*?\$\$/g, ' ∑ ')
 		.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
 		.replace(/^[#>\-*\s]+|\[[ x]]\s?|\|/gim, ' ')
 		.replace(/[*_~`]/g, '')
+		.replace(/\\([!-\/:-@\[-`{-~])/g, '$1')
 		.replace(/\s+/g, ' ')
 		.trim()
-		.slice(0, 220)
+		.slice(0, length)
+		.replace(/\u0000\d*$/, '')
+	return text.replace(/\u0000(\d+)\u0000/g, (_match, index) => `$${formulas[Number(index)]}$`)
+}
 
 export const libraryService = {
 	async getTree() {

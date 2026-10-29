@@ -58,7 +58,10 @@ function CanvasScene({ scene }: { scene: TypeScene }) {
 		if (!canvas || !ctx) return
 
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-		const dpr = Math.min(window.devicePixelRatio || 1, 2)
+		// Телефон: фон рисуем в обычном разрешении и реже — экрану 120 Гц нужен свободный поток
+		const isTouch = window.matchMedia('(pointer: coarse)').matches
+		const dpr = isTouch ? 1 : Math.min(window.devicePixelRatio || 1, 2)
+		const frameGap = isTouch ? 50 : 33
 		const size = { width: 0, height: 0 }
 		let draw: ReturnType<TypeScene>
 		let raf = 0
@@ -76,8 +79,8 @@ function CanvasScene({ scene }: { scene: TypeScene }) {
 		setup()
 
 		const frame = (now: number) => {
-			// ~30 кадров в секунду — для медленного фона более чем достаточно
-			if (now - last >= 33) {
+			// ~30 кадров в секунду (на телефоне ~20) — для медленного фона более чем достаточно
+			if (now - last >= frameGap) {
 				const dt = last ? Math.min(0.1, (now - last) / 1000) : 0
 				last = now
 				time += dt
@@ -96,8 +99,32 @@ function CanvasScene({ scene }: { scene: TypeScene }) {
 				raf = requestAnimationFrame(frame)
 			}
 		}
+
+		// Пока листают — фон замирает, весь кадр отдаём прокрутке. Движение звёзд
+		// такое медленное, что паузу не видно
+		let scrollTimer: ReturnType<typeof setTimeout>
+		let isScrolling = false
+		const onScroll = () => {
+			if (!isScrolling) {
+				isScrolling = true
+				cancelAnimationFrame(raf)
+			}
+			clearTimeout(scrollTimer)
+			scrollTimer = setTimeout(() => {
+				isScrolling = false
+				cancelAnimationFrame(raf)
+				if (document.hidden || reduceMotion) return
+				last = 0
+				raf = requestAnimationFrame(frame)
+			}, 220)
+		}
+		document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+		if (isTouch) document.addEventListener('touchmove', onScroll, { passive: true })
 		let resizeTimer: ReturnType<typeof setTimeout>
 		const onResize = () => {
+			// На телефоне при прокрутке прячется адресная строка и меняется высота окна —
+			// не пересоздаём сцену (звёзды бы перескочили), холст просто растянется
+			if (isTouch && canvas.clientWidth === size.width) return
 			clearTimeout(resizeTimer)
 			resizeTimer = setTimeout(setup, 150)
 		}
@@ -106,6 +133,9 @@ function CanvasScene({ scene }: { scene: TypeScene }) {
 		return () => {
 			cancelAnimationFrame(raf)
 			clearTimeout(resizeTimer)
+			clearTimeout(scrollTimer)
+			document.removeEventListener('scroll', onScroll, { capture: true })
+			document.removeEventListener('touchmove', onScroll)
 			window.removeEventListener('resize', onResize)
 			document.removeEventListener('visibilitychange', onVisibility)
 		}

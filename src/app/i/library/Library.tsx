@@ -20,6 +20,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 import { LibrarySearch } from './LibrarySearch'
@@ -757,7 +758,7 @@ function PageCard({
 					{page.title || 'Без названия'}
 				</span>
 				<span className='mt-1 line-clamp-2 block text-sm leading-6 text-subtle'>
-					{page.excerpt || 'Пустой лист'}
+					{page.excerpt ? <MathExcerpt text={page.excerpt} /> : 'Пустой лист'}
 				</span>
 			</span>
 			<span className='col-start-2 mt-2 font-mono text-2xs uppercase tracking-wider text-subtle sm:col-start-3 sm:mt-1.5'>
@@ -866,7 +867,7 @@ function PageView({
 
 	return (
 		<article>
-			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg/85 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
+			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
 				<button
 					type='button'
 					onClick={async () => {
