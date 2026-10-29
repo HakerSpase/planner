@@ -2,84 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Дизайн-токены. Каналы RGB без запятых — чтобы Tailwind мог добавлять прозрачность (bg-surface/60). */
 :root {
-	--foreground-rgb: 0, 0, 0;
-	--background-start-rgb: 214, 219, 220;
-	--background-end-rgb: 255, 255, 255;
-}
+	--bg: 9 9 11;
+	--surface: 17 17 20;
+	--surface-2: 22 22 26;
+	--elevated: 28 28 33;
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--foreground-rgb: 255, 255, 255;
-		--background-start-rgb: 0, 0, 0;
-		--background-end-rgb: 0, 0, 0;
-	}
-}
+	--fg: 236 236 240;
+	--muted: 161 161 170;
+	--subtle: 113 113 122;
 
-body {
-	@apply text-base overflow-hidden;
-	font-family: var(--font-zen), sans-serif;
-	color: rgb(var(--foreground-rgb));
-	background-color: #0e0f0f;
+	--primary: 124 92 255;
+	--primary-hover: 145 120 255;
 
-	@media (max-width: 1200px) {
-		font-size: 16px;
-	}
+	--danger: 244 99 99;
+	--success: 52 199 128;
+	--warning: 245 180 70;
 
-	@media (max-width: 992px) {
-		font-size: 14px;
-	}
-}
-
-* {
-	scrollbar-color: #3a3d45 #101112;
-	scrollbar-width: thin;
 	color-scheme: dark;
 }
 
-/* Planner uses square, quiet surfaces throughout the interface, but allows explicit circular elements like indicator dots. */
-*:not(.rounded-full):not([data-rounded]) {
-	border-radius: 0;
+body {
+	@apply bg-bg text-base text-fg antialiased overflow-hidden;
+	font-feature-settings: 'cv11', 'ss01';
+	-webkit-tap-highlight-color: transparent;
 }
 
-.rounded-full {
-	border-radius: 9999px !important;
+::selection {
+	background: rgb(var(--primary) / 0.35);
+}
+
+* {
+	scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+	scrollbar-width: thin;
 }
 
 *::-webkit-scrollbar {
-	width: 7px;
-	height: 7px;
+	width: 8px;
+	height: 8px;
 }
 
 *::-webkit-scrollbar-track {
-	background: #101112;
+	background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-	background: #424752;
-	border: 1px solid #101112;
+	background: rgb(255 255 255 / 0.1);
+	border: 2px solid transparent;
+	background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-	background: #626a78;
+	background: rgb(255 255 255 / 0.2);
+	background-clip: padding-box;
 }
 
-@media (max-width: 639px) {
-	*::-webkit-scrollbar {
-		width: 4px;
-		height: 4px;
+@layer base {
+	:focus-visible {
+		@apply outline-none ring-2 ring-primary/60 ring-offset-0;
+	}
+
+	input,
+	textarea,
+	select {
+		@apply bg-transparent;
 	}
 }
 
+@layer components {
+	/* Карточка-поверхность: основной контейнер для блоков на страницах */
+	.card {
+		@apply rounded-xl border border-border bg-surface;
+	}
+
+	.card-padded {
+		@apply rounded-xl border border-border bg-surface p-4 sm:p-5;
+	}
+
+	/* Подпись над секцией: маленькая, приглушённая */
+	.eyebrow {
+		@apply font-mono text-xs uppercase tracking-[0.2em] text-subtle;
+	}
+}
 
 .slide {
-	animation: slide_anim 0.5s;
+	animation: slide_anim 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 @keyframes slide_anim {
 	from {
-		transform: translateX(50px);
-		opacity: 0.4;
+		transform: translateX(24px);
+		opacity: 0;
 	}
 
 	to {
@@ -89,7 +103,7 @@ body {
 }
 
 .animation-opacity {
-	animation: opacity_anim 0.5s;
+	animation: opacity_anim 0.3s ease-out;
 }
 
 @keyframes opacity_anim {
@@ -99,5 +113,14 @@ body {
 
 	to {
 		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
 	}
 }

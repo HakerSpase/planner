@@ -1,8 +1,8 @@
 .rdp {
 	--rdp-cell-size: 32px;
 	--rdp-caption-font-size: 16px;
-	--rdp-background-color: rgba(255, 255, 255, 0.2);
-	--rdp-accent-color: #7551ff;
+	--rdp-background-color: rgba(255, 255, 255, 0.06);
+	--rdp-accent-color: rgb(var(--primary));
 
 	@apply m-0 sm:m-1;
 	font-size: 85%;
@@ -15,3 +15,11 @@
 	}
 }
 
+
+.rdp-button {
+	border-radius: 0.5rem !important;
+}
+
+.rdp-day_selected {
+	color: #fff;
+}

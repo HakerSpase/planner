@@ -25,10 +25,10 @@ export function LogoutButton({ collapsed = false }: { collapsed?: boolean }) {
 				type='button'
 				title='Выйти из аккаунта'
 				disabled={isPending}
-				className={`flex w-full items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-3'} py-2 text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40`}
+				className={`flex h-9 w-full items-center rounded-lg text-muted transition-colors hover:bg-white/[0.05] hover:text-fg disabled:opacity-40 ${collapsed ? 'justify-center px-0' : 'gap-3 px-2.5'}`}
 				onClick={() => setIsConfirmOpen(true)}
 			>
-				<LogOut size={16} />
+				<LogOut size={17} strokeWidth={1.8} />
 				{!collapsed && (
 					<span className='text-sm font-medium'>Выйти из аккаунта</span>
 				)}

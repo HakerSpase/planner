@@ -11,7 +11,7 @@ interface IHeaderProps {
 
 export function Header({ onToggleMobile }: IHeaderProps) {
 	return (
-		<header className='flex min-h-9 w-full items-center justify-between gap-2 pb-2 select-none'>
+		<header className='flex h-12 w-full shrink-0 select-none items-center justify-between gap-2'>
 			<div className='flex min-w-0 flex-1 items-center gap-2'>
 				{/* Кнопка гамбургер-меню для телефонов */}
 				{onToggleMobile && (
@@ -19,7 +19,7 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 						onClick={onToggleMobile}
 						title='Открыть меню'
 						aria-label='Открыть меню'
-						className='lg:hidden grid h-11 w-11 shrink-0 place-items-center justify-items-start pl-[3px] text-white/65 transition-colors hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
+						className='-ml-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-fg lg:hidden'
 					>
 						<Menu size={20} />
 					</button>
@@ -27,7 +27,7 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 			</div>
 
 			{/* Профиль пользователя */}
-			<div className='flex min-w-0 shrink items-center gap-2 sm:gap-4'>
+			<div className='flex min-w-0 shrink items-center gap-3'>
 				<GlobalLoader />
 				<Profile />
 			</div>

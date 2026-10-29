@@ -57,7 +57,7 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 					aria-label='Перетащить задачу'
 					data-task-drag-handle
 					{...dragHandleProps}
-					className='touch-none grid h-8 w-6 shrink-0 cursor-grab place-items-center active:cursor-grabbing text-white/35 hover:text-white'
+					className='-ml-1.5 grid h-7 w-5 shrink-0 touch-none cursor-grab place-items-center text-subtle active:cursor-grabbing hover:text-fg'
 				>
 					<GripVertical className={styles.grip} size={16} />
 				</button>
@@ -81,7 +81,7 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 				</div>
 			</div>
 
-			<div className='pl-8 flex flex-col gap-1.5'>
+			<div className='flex flex-col gap-1 pl-[2.05rem]'>
 				<Controller
 					control={control}
 					name='note'
@@ -133,12 +133,13 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 							: setIsDeleteConfirmOpen(true)
 					}
 					disabled={isCreating}
-					className='grid h-10 w-10 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100'
+					aria-label='Удалить задачу'
+					className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-danger/10 hover:text-danger'
 				>
 					{isCreating || isDeletePending ? (
-						<Loader size={17} />
+						<Loader size={15} className='animate-spin' />
 					) : (
-						<Trash size={17} />
+						<Trash size={15} />
 					)}
 				</button>
 			</div>

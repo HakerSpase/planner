@@ -72,7 +72,7 @@ export function DatePicker({
 		>
 			<button
 				type='button'
-				className='min-h-9 flex items-center min-w-0 truncate text-left text-sm'
+				className='flex min-h-9 min-w-0 items-center truncate rounded-md text-left text-sm text-muted transition-colors hover:text-fg'
 				onClick={() => setIsShow(!isShow)}
 			>
 				{value && dayjs(value).isValid()
@@ -85,7 +85,7 @@ export function DatePicker({
 				<button
 					type='button'
 					aria-label='Удалить дату'
-					className='grid h-8 w-8 shrink-0 place-items-center opacity-45 transition-opacity hover:opacity-100'
+					className='grid h-7 w-7 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
 					onClick={() => onChange('')}
 				>
 					<X size={14} />
@@ -95,7 +95,7 @@ export function DatePicker({
 				<div
 					ref={popupRef}
 					className={cn(
-						'absolute p-2.5 slide bg-sidebar z-50 shadow-2xl border border-white/10 max-w-[calc(100vw-1rem)]',
+						'absolute z-50 max-w-[calc(100vw-1rem)] animate-pop-in rounded-xl border border-border bg-elevated p-2.5 shadow-pop',
 						position === 'right' ? 'left-0 sm:left-auto sm:right-0' : 'left-0'
 					)}
 					style={{

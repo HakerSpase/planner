@@ -15,7 +15,10 @@ export const metadata: Metadata = {
 export default function DashboardPage() {
 	return (
 		<div>
-			<Heading title='Статистика' />
+			<Heading
+				title='Главная'
+				description='Ваш прогресс и активность'
+			/>
 			<Statistics />
 			<ActivityCalendar />
 		</div>

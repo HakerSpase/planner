@@ -56,7 +56,7 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 							aria-label='Перетащить задачу'
 							type='button'
 							{...dragHandleProps}
-							className='touch-none cursor-grab active:cursor-grabbing'
+							className='-ml-1 -mr-1 touch-none cursor-grab active:cursor-grabbing'
 						>
 							<GripVertical className={styles.grip} />
 						</button>
@@ -74,7 +74,7 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 
 						<TransparentField {...register('name')} />
 					</span>
-					<div className='pl-8'>
+					<div className='pl-[2.6rem]'>
 						<Controller
 							control={control}
 							name='note'
@@ -128,12 +128,12 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 					}
 					disabled={isCreating}
 					aria-label='Удалить задачу'
-					className='grid h-9 w-9 shrink-0 place-items-center opacity-65 transition-opacity hover:opacity-100 text-white/50 hover:text-white'
+					className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-danger/10 hover:text-danger'
 				>
 					{isCreating || isDeletePending ? (
-						<Loader size={16} />
+						<Loader size={15} className='animate-spin' />
 					) : (
-						<Trash size={16} />
+						<Trash size={15} />
 					)}
 				</button>
 			</div>

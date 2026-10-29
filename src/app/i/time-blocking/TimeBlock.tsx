@@ -46,13 +46,13 @@ export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 					</button>
 					<div className='min-w-0'>
 						<div className='break-words font-medium'>{item.name}</div>
-						<div className='mt-0.5 text-xs text-white/50'>
+						<div className='mt-0.5 text-xs text-subtle'>
 							{item.duration} мин.
 						</div>
 					</div>
 				</div>
 
-				<div className='flex shrink-0 items-center gap-3'>
+				<div className='flex shrink-0 items-center gap-1'>
 					<button
 						type='button'
 						onClick={() => {
@@ -64,14 +64,14 @@ export function TimeBlock({ item }: { item: ITimeBlockResponse }) {
 								order: item.order
 							})
 						}}
-						className='grid h-10 w-10 shrink-0 place-items-center text-white/60 transition-opacity hover:text-white'
+						className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
 					>
 						<Edit size={16} />
 					</button>
 					<button
 						type='button'
 						onClick={() => setIsDeleteConfirmOpen(true)}
-						className='grid h-10 w-10 shrink-0 place-items-center text-white/60 transition-opacity hover:text-white'
+						className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
 					>
 						{isDeletePending ? <Loader size={16} /> : <Trash size={16} />}
 					</button>

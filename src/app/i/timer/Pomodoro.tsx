@@ -102,22 +102,22 @@ export function Pomodoro() {
 	])
 
 	return (
-		<div className='relative mx-auto w-full max-w-md py-3 text-center sm:py-5'>
+		<div className='card relative mx-auto w-full max-w-md px-5 py-8 text-center sm:py-10'>
 			{isLoading ? (
 				<Loader />
 			) : sessionsResponse?.data ? (
 				<>
-					<p className='text-xs font-medium uppercase tracking-[0.12em] text-white/45'>
+					<p className='eyebrow'>
 						{timerState.isBreakTime
 							? 'Перерыв'
 							: timerState.activeRound
 								? 'Фокус'
 								: 'Сессия завершена'}
 					</p>
-					<div className='mt-2 text-5xl font-semibold tabular-nums tracking-tight text-white sm:text-7xl'>
+					<div className='mt-3 font-mono text-6xl font-medium tabular-nums tracking-tight text-fg sm:text-7xl'>
 						{formatTime(timerState.secondsLeft)}
 					</div>
-					<div className='mt-5'>
+					<div className='mt-7'>
 						<PomodoroRounds
 							rounds={rounds}
 							nextRoundHandler={actions.nextRoundHandler}
@@ -127,19 +127,19 @@ export function Pomodoro() {
 							progressPercent={timerState.isBreakTime ? 0 : progressPercent}
 						/>
 					</div>
-					<p className='mt-3 text-xs text-white/40'>
+					<p className='mt-3 text-xs text-subtle'>
 						{timerState.isBreakTime
 							? `Отдыхайте ${breakInterval} мин. Следующий раунд начнётся автоматически.`
 							: timerState.activeRound
 								? `Раунд ${Math.max(1, (rounds?.findIndex(round => round.id === timerState.activeRound?.id) ?? 0) + 1)} из ${rounds?.length || 0}`
 								: 'Все раунды завершены'}
 					</p>
-					<div className='mt-5 flex items-center justify-center gap-6'>
+					<div className='mt-7 flex items-center justify-center gap-3'>
 						<button
 							type='button'
 							aria-label={timerState.isRunning ? 'Пауза' : 'Начать таймер'}
 							title={timerState.isRunning ? 'Пауза' : 'Начать таймер'}
-							className='grid h-12 w-12 place-items-center border border-primary/50 text-primary transition-colors hover:bg-primary/10 disabled:opacity-40'
+							className='grid h-12 w-12 place-items-center bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40'
 							onClick={
 								timerState.isRunning
 									? actions.pauseHandler
@@ -156,11 +156,11 @@ export function Pomodoro() {
 							type='button'
 							aria-label='Начать сессию заново'
 							title='Начать сессию заново'
-							className='p-2 text-white/45 transition-colors hover:text-white disabled:opacity-40'
+							className='grid h-12 w-12 place-items-center border border-border text-subtle transition-colors hover:bg-white/[0.05] hover:text-fg disabled:opacity-40'
 							onClick={() => setIsResetConfirmOpen(true)}
 							disabled={isDeletePending}
 						>
-							<RefreshCcw size={18} />
+							<RefreshCcw size={16} />
 						</button>
 					</div>
 				</>

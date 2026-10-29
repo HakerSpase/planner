@@ -157,36 +157,36 @@ export default function ThoughtsPage() {
 	return (
 		<div className='w-full min-w-0 max-w-[1550px] pb-12'>
 			{/* Page Header */}
-			<div className='border-b border-white/10 pb-5'>
-				<h1 className='text-2xl sm:text-3xl font-semibold text-white tracking-tight'>
+			<div className='mb-6 border-b border-border pb-5 sm:mb-8 sm:pb-6'>
+				<h1 className='text-2xl font-semibold tracking-[-0.02em] text-fg sm:text-4xl'>
 					Мысли на каждый день
 				</h1>
-				<p className='mt-1 text-sm text-white/50 max-w-2xl'>
+				<p className='mt-1 text-sm text-subtle max-w-2xl'>
 					Ваш личный дневник для заметок, идей, рефлексии и событий. Все записи привязаны к датам и сохраняются в облаке.
 				</p>
 			</div>
 
 			{/* Main Content Grid: Balanced wide PC proportions */}
-			<div className='mt-6 grid gap-6 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] items-start'>
+			<div className='grid items-start gap-4 lg:grid-cols-[340px_1fr] lg:gap-6 xl:grid-cols-[360px_1fr]'>
 				{/* Left Sidebar: Calendar & Monthly Entries Feed */}
 				<div className='flex flex-col gap-6 min-w-0'>
 					{/* Calendar Card */}
-					<section className='border border-white/10 bg-[#141516] p-4 sm:p-5 shadow-lg'>
+					<section className='card-padded'>
 						<div className='mb-4 flex items-center justify-between'>
 							<button
-								className='p-2 text-white/60 hover:text-white transition-colors rounded-sm hover:bg-white/[0.06]'
+								className='grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								aria-label='Предыдущий месяц'
 								onClick={() => changeMonth(-1)}
 							>
 								<ChevronLeft size={18} />
 							</button>
 
-							<h2 className='font-semibold text-base capitalize text-white tracking-wide'>
+							<h2 className='text-sm font-semibold capitalize text-fg'>
 								{format(month, 'LLLL yyyy', { locale: ru })}
 							</h2>
 
 							<button
-								className='p-2 text-white/60 hover:text-white transition-colors rounded-sm hover:bg-white/[0.06]'
+								className='grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								aria-label='Следующий месяц'
 								onClick={() => changeMonth(1)}
 							>
@@ -195,11 +195,11 @@ export default function ThoughtsPage() {
 						</div>
 
 						{/* Day of Week Headers */}
-						<div className='grid grid-cols-7 gap-px bg-white/10 text-center mb-1'>
+						<div className='mb-1 grid grid-cols-7 text-center'>
 							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
 								<div
 									key={day}
-									className='bg-[#141516] py-2 text-xs font-medium text-white/40'
+									className='py-2 text-xs font-medium text-subtle'
 								>
 									{day}
 								</div>
@@ -226,11 +226,11 @@ export default function ThoughtsPage() {
 										}}
 										aria-pressed={isSelected}
 										aria-label={`${format(day, 'd MMMM yyyy', { locale: ru })}${isToday ? ', сегодня' : ''}${hasEntry ? ', есть мысль' : ''}`}
-										className={`group relative flex aspect-square flex-col items-center justify-center bg-[#141516] text-sm transition-all hover:bg-white/[0.06] ${
-											!isCurrentMonth ? 'text-white/20' : 'text-white/80'
+										className={`group relative flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-colors hover:bg-white/[0.06] ${
+											!isCurrentMonth ? 'text-subtle' : 'text-fg'
 										} ${
 											isSelected
-												? 'bg-primary/20 text-white outline outline-1 -outline-offset-1 outline-primary font-semibold shadow-sm'
+												? 'bg-primary/20 text-fg outline outline-1 -outline-offset-1 outline-primary font-semibold shadow-sm'
 												: ''
 										}`}
 									>
@@ -252,13 +252,13 @@ export default function ThoughtsPage() {
 												{isToday && (
 													<span
 														title='Сегодня'
-														className='block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400 ring-2 ring-[#141516]'
+														className='block h-1.5 w-1.5 shrink-0 bg-emerald-400 ring-2 ring-surface'
 													/>
 												)}
 												{hasEntry && (
 													<span
 														title='Есть мысль'
-														className='block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 ring-2 ring-[#141516]'
+														className='block h-1.5 w-1.5 shrink-0 bg-amber-400 ring-2 ring-surface'
 													/>
 												)}
 											</span>
@@ -269,19 +269,19 @@ export default function ThoughtsPage() {
 						</div>
 
 						{/* Legend */}
-						<div className='mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3 text-xs text-white/50'>
+						<div className='mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-subtle'>
 							<div className='flex items-center gap-4'>
 								<span className='flex items-center gap-1.5'>
-									<span className='block h-2 w-2 shrink-0 rounded-full bg-emerald-400' />
+									<span className='block h-2 w-2 shrink-0 bg-emerald-400' />
 									Сегодня
 								</span>
 								<span className='flex items-center gap-1.5'>
-									<span className='block h-2 w-2 shrink-0 rounded-full bg-amber-400' />
+									<span className='block h-2 w-2 shrink-0 bg-amber-400' />
 									Есть запись
 								</span>
 							</div>
 							{loading && (
-								<span className='text-white/40 text-[11px] animate-pulse'>
+								<span className='text-subtle text-[11px] animate-pulse'>
 									Загружаем…
 								</span>
 							)}
@@ -290,14 +290,14 @@ export default function ThoughtsPage() {
 				</div>
 
 				{/* Right Column: Spacious Journal Studio Editor */}
-				<section className='flex min-h-[580px] xl:min-h-[660px] flex-col bg-[#141516] p-5 sm:p-7 border border-white/10 shadow-xl'>
+				<section className='card flex min-h-[580px] flex-col p-5 sm:p-7 xl:min-h-[660px]'>
 					{/* Editor Header */}
-					<div className='mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4'>
+					<div className='mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4'>
 						<div className='min-w-0'>
-							<h2 className='text-lg sm:text-xl font-semibold capitalize text-white'>
+							<h2 className='text-lg font-semibold capitalize text-fg sm:text-xl'>
 								{format(selected, 'EEEE, d MMMM yyyy', { locale: ru })}
 							</h2>
-							<p className='mt-0.5 text-xs text-white/40 flex items-center gap-3'>
+							<p className='mt-0.5 text-xs text-subtle flex items-center gap-3'>
 								<span>{wordsCount} {wordsCount === 1 ? 'слово' : wordsCount >= 2 && wordsCount <= 4 ? 'слова' : 'слов'}</span>
 								{wordsCount > 0 && (
 									<>
@@ -320,7 +320,7 @@ export default function ThoughtsPage() {
 								</span>
 							) : isDirty ? (
 								<span className='flex items-center gap-1.5 text-xs text-amber-400/90 font-medium'>
-									<span className='block h-1.5 w-1.5 rounded-full bg-amber-400' />
+									<span className='block h-1.5 w-1.5 bg-amber-400' />
 									Не сохранено
 								</span>
 							) : selectedSavedContent ? (
@@ -347,25 +347,25 @@ export default function ThoughtsPage() {
 						}}
 						maxLength={70000}
 						placeholder='Запишите, как прошёл день, какие мысли возникли, что вдохновило или о чём хочется подумать… (Ctrl + Enter для сохранения)'
-						className='min-h-[380px] xl:min-h-[460px] flex-1 resize-y border-0 bg-transparent p-0 text-base leading-8 text-white/90 outline-none placeholder:text-white/25 focus:ring-0 selection:bg-primary/30 font-normal tracking-wide'
+						className='min-h-[380px] xl:min-h-[460px] flex-1 resize-y border-0 bg-transparent p-0 text-base leading-7 text-fg outline-none placeholder:text-subtle focus:ring-0 focus-visible:ring-0'
 					/>
 
 					{/* Editor Footer Toolbar */}
-					<div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-4'>
-						<div className='flex items-center gap-3 text-xs text-white/40 font-mono'>
+					<div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4'>
+						<div className='flex items-center gap-3 text-xs text-subtle font-mono'>
 							<span>
 								{draft.length.toLocaleString('ru-RU')} / 70 000 знаков
 							</span>
-							<span className='hidden sm:inline text-white/20'>|</span>
-							<span className='hidden sm:inline text-white/35 font-sans text-[11px]'>
-								Нажмите <kbd className='px-1.5 py-0.5 bg-white/10 rounded text-[10px] text-white/60'>Ctrl</kbd> + <kbd className='px-1.5 py-0.5 bg-white/10 rounded text-[10px] text-white/60'>Enter</kbd> для сохранения
+							<span className='hidden sm:inline text-subtle'>|</span>
+							<span className='hidden sm:inline text-subtle font-sans text-[11px]'>
+								Нажмите <kbd className='px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-muted'>Ctrl</kbd> + <kbd className='px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-muted'>Enter</kbd> для сохранения
 							</span>
 						</div>
 
 						<button
 							onClick={save}
 							disabled={saving || !isDirty}
-							className='flex items-center gap-2 border border-primary/50 bg-primary/20 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-primary/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 shadow-sm'
+							className='flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40'
 						>
 							{saving ? (
 								<>

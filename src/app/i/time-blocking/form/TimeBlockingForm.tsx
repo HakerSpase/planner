@@ -77,7 +77,7 @@ export function TimeBlockingForm() {
 	return (
 		<form
 			onSubmit={handleSubmit(onSubmit, onError)}
-			className='w-full min-w-0 max-w-xl border-t border-white/[0.08] pt-5 sm:border-t-0 sm:pt-0'
+			className='card-padded w-full min-w-0'
 		>
 			<Field
 				{...register('name', {
@@ -91,7 +91,7 @@ export function TimeBlockingForm() {
 				extra='mb-4'
 			/>
 			{errors.name?.message && (
-				<p className='-mt-2 mb-3 text-xs text-red-400'>
+				<p className='-mt-2 mb-3 text-xs text-danger'>
 					{errors.name.message}
 				</p>
 			)}
@@ -114,31 +114,31 @@ export function TimeBlockingForm() {
 				})}
 			/>
 			<fieldset className='mb-4'>
-				<legend className='ml-1.5 text-sm font-medium text-white/60'>Длительность:</legend>
+				<legend className='text-sm font-medium text-muted'>Длительность:</legend>
 				<div className='mt-2 grid grid-cols-2 gap-3'>
-					<label className='text-xs text-white/45'>Часы
+					<label className='text-xs text-subtle'>Часы
 						<input aria-label='Часы' type='number' min={0} max={24} value={Math.floor(duration / 60)} onChange={event => {
 							const hours = Math.min(24, Math.max(0, Number(event.target.value) || 0))
 							setValue('duration', Math.min(1440, hours * 60 + duration % 60), { shouldValidate: true, shouldDirty: true })
-						}} className='mt-1 flex w-full border border-border bg-transparent p-3 text-base text-white outline-none focus:border-primary' />
+						}} className='mt-1 flex h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg outline-none transition-colors hover:border-border-strong focus:border-primary/70 focus:ring-2 focus:ring-primary/20' />
 					</label>
-					<label className='text-xs text-white/45'>Минуты
+					<label className='text-xs text-subtle'>Минуты
 						<input aria-label='Минуты' type='number' min={0} max={59} value={duration % 60} onChange={event => {
 							const minutes = Math.min(59, Math.max(0, Number(event.target.value) || 0))
 							setValue('duration', Math.min(1440, Math.floor(duration / 60) * 60 + minutes), { shouldValidate: true, shouldDirty: true })
-						}} className='mt-1 flex w-full border border-border bg-transparent p-3 text-base text-white outline-none focus:border-primary' />
+						}} className='mt-1 flex h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg outline-none transition-colors hover:border-border-strong focus:border-primary/70 focus:ring-2 focus:ring-primary/20' />
 					</label>
 				</div>
-				<p className='mt-1 text-xs text-white/40'>{duration} мин. всего</p>
+				<p className='mt-1 text-xs text-subtle'>{duration} мин. всего</p>
 			</fieldset>
 			{errors.duration?.message && (
-				<p className='-mt-2 mb-4 text-xs text-red-400'>
+				<p className='-mt-2 mb-4 text-xs text-danger'>
 					{errors.duration.message}
 				</p>
 			)}
 
 			<div>
-				<span className='mb-1.5 inline-block text-sm text-white/65'>Цвет:</span>
+				<span className='mb-1.5 inline-block text-sm text-muted'>Цвет:</span>
 				<Controller
 					control={control}
 					name='color'
@@ -159,7 +159,7 @@ export function TimeBlockingForm() {
 			<Button
 				type='submit'
 				disabled={isPending}
-				className='mt-6'
+				className='mt-6 w-full'
 			>
 				{existsId ? 'Обновить' : 'Создать'}
 			</Button>

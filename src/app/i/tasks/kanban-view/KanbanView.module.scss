@@ -26,22 +26,26 @@
 	}
 
 	.column {
-		@apply w-full min-w-0 snap-start;
+		@apply w-full min-w-0 snap-start rounded-xl border border-border bg-surface p-2;
 		min-height: 18rem;
 		@media (min-width: 1536px) {
 			@apply snap-none;
 		}
 
 		.columnHeading {
-			@apply border-b border-border pb-2 text-sm font-medium text-white/80;
+			@apply px-1.5 pb-1 pt-1 text-sm font-semibold text-fg;
 		}
 
 		.card {
-			@apply relative mt-3 min-w-0 border border-border bg-[#0e0f0f] p-3 sm:p-4;
+			@apply relative mt-2 min-w-0 rounded-lg border border-border bg-surface-2 p-3 shadow-card transition-colors hover:border-border-strong;
 			word-break: break-word;
 
 			&.completed {
-				@apply italic line-through opacity-50;
+				@apply opacity-50;
+
+				input {
+					@apply line-through;
+				}
 			}
 
 			.cardHeader {
@@ -64,7 +68,7 @@
 			}
 
 			.cardActions {
-				@apply absolute bottom-1 right-1.5 opacity-50;
+				@apply absolute bottom-1.5 right-1.5;
 			}
 		}
 	}

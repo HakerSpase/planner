@@ -1,58 +1,53 @@
+$columns: minmax(0, 1fr) minmax(130px, 10rem) minmax(115px, 8.5rem) 2.75rem;
+
 .table {
 	@apply w-full min-w-0;
 
 	.header {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(115px, 8.5rem) 3.25rem;
-	}
-
-	.header,
-	.parentsWrapper .row {
-		@apply border-t border-border text-left w-full min-w-0;
+		grid-template-columns: $columns;
+		@apply mb-2 px-2;
 
 		> div {
-			@apply border-r border-border px-2 py-2 sm:px-3 min-w-0;
-
-			&:last-child {
-				@apply border-0 p-0 flex items-center justify-center;
-			}
+			@apply whitespace-nowrap px-2 text-xs font-medium text-subtle;
 		}
 	}
 
-	.header > div {
-		@apply whitespace-nowrap text-xs uppercase tracking-wider text-white/40 font-mono py-2.5;
-	}
-
 	.parentsWrapper {
+		@apply flex flex-col gap-3;
+
+		> div {
+			@apply rounded-xl border border-border bg-surface p-1.5;
+		}
+
 		.colHeading {
-			@apply border-t border-border hover:bg-transparent whitespace-nowrap text-left w-full min-w-0;
-			background-color: #0e0f0f;
+			@apply flex items-center px-2.5 pb-1.5 pt-2;
 
 			> div {
-				@apply font-semibold text-xl py-3 px-2 sm:px-3 border-0 text-left;
+				@apply text-sm font-semibold text-fg;
 			}
 		}
 
 		.addRow {
-			@apply py-2 px-2 sm:px-3 border-t border-border;
+			@apply px-2.5 py-1;
 		}
 
 		.row {
-			@apply font-normal relative w-full min-w-0;
+			@apply relative w-full min-w-0 rounded-lg transition-colors;
 			display: grid;
-			grid-template-columns: minmax(0, 1fr) minmax(130px, 10.5rem) minmax(115px, 8.5rem) 3.25rem;
+			grid-template-columns: $columns;
 
 			> div {
-				@apply flex items-start;
+				@apply flex min-w-0 items-start px-2 py-1.5;
 			}
 
 			> div:first-child {
-				@apply min-w-0 overflow-hidden block;
+				@apply block overflow-hidden;
 				white-space: normal;
 			}
 
 			> div:last-child {
-				@apply border-0 p-0 py-2 flex items-start justify-center;
+				@apply justify-center p-0 py-1.5;
 			}
 
 			> div:not(:first-child) {
@@ -61,22 +56,24 @@
 
 			&.completed {
 				> div:first-child input {
-					@apply italic line-through opacity-50;
+					@apply text-subtle line-through;
 				}
 			}
 
 			&:hover {
-				@apply bg-[#1c1f1f];
+				@apply bg-white/[0.03];
+
+				.grip {
+					@apply opacity-60;
+				}
 			}
 
-			> div > span {
-				.grip {
-					@apply opacity-20 transition-opacity -ml-3 -mr-1;
+			.grip {
+				@apply h-4 w-4 text-subtle opacity-0 transition-opacity;
 
-					&:hover,
-					&:active {
-						@apply opacity-100;
-					}
+				&:hover,
+				&:active {
+					@apply opacity-100;
 				}
 			}
 		}
@@ -90,19 +87,11 @@
 		}
 
 		.parentsWrapper {
-			.colHeading {
-				@apply mt-4 border-t border-border;
-
-				> div {
-					@apply py-2 px-2 text-base text-left;
-				}
-			}
-
 			.row {
-				@apply grid grid-cols-[minmax(0,1fr)_max-content] gap-x-3 gap-y-2 whitespace-normal border-t border-border py-3;
+				@apply grid grid-cols-[minmax(0,1fr)_max-content] gap-x-3 gap-y-1 whitespace-normal py-1.5;
 
 				> div {
-					@apply min-w-0 border-0 p-0;
+					@apply min-w-0 p-0 px-2;
 
 					&:first-child {
 						grid-column: 1 / -1;
@@ -111,11 +100,13 @@
 					&:nth-child(2) {
 						grid-column: 1;
 						grid-row: 2;
+						@apply pl-[3.25rem];
 					}
 
 					&:nth-child(3) {
 						grid-column: 1;
 						grid-row: 3;
+						@apply pl-[3.25rem];
 					}
 
 					&:nth-child(4) {
@@ -128,10 +119,10 @@
 						justify-content: flex-end;
 					}
 				}
-			}
 
-			.addRow {
-				@apply border-t border-border px-2 py-3;
+				.grip {
+					@apply opacity-40;
+				}
 			}
 		}
 	}

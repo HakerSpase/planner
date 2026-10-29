@@ -21,31 +21,31 @@ export function Statistics() {
 	return isLoading ? (
 		<Loader />
 	) : (
-		<div className='mt-5 grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4'>
+		<div className='grid min-w-0 grid-cols-2 gap-px border border-border bg-border xl:grid-cols-4'>
 			{data?.statistics.length ? (
 				data.statistics.map((statistic, index) => {
 					const Icon = STATISTIC_ICONS[index] || ListTodo
 					return (
 						<div
-							className='flex min-h-24 min-w-0 items-start justify-between gap-2 border border-white/[0.08] bg-[#141516] p-3 sm:min-h-28 sm:p-4'
+							className='flex min-w-0 flex-col gap-4 bg-bg p-4 transition-colors hover:bg-surface sm:p-5'
 							key={statistic.label}
 						>
-							<div className='min-w-0'>
-								<p className='break-words text-xs leading-4 text-white/55 sm:text-sm'>
-									{STATISTIC_LABELS[statistic.label] || statistic.label}
-								</p>
-								<p className='mt-2 text-2xl font-semibold tabular-nums tracking-tight text-white/95 sm:text-3xl'>
-									{statistic.value}
-								</p>
-							</div>
-							<span className='shrink-0 text-primary/80'>
+							<span className='grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary'>
 								<Icon size={16} />
 							</span>
+							<div className='min-w-0'>
+								<p className='text-3xl font-semibold tabular-nums tracking-tight text-fg'>
+									{statistic.value}
+								</p>
+								<p className='mt-0.5 break-words text-sm text-muted'>
+									{STATISTIC_LABELS[statistic.label] || statistic.label}
+								</p>
+							</div>
 						</div>
 					)
 				})
 			) : (
-				<div>Статистика не загружена</div>
+				<div className='text-sm text-subtle'>Статистика не загружена</div>
 			)}
 		</div>
 	)

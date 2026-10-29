@@ -37,7 +37,7 @@ export function ConfirmDialog({
 
 	return createPortal(
 		<div
-			className='fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4'
+			className='fixed inset-0 z-[110] flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm'
 			onMouseDown={event => {
 				if (event.target === event.currentTarget && !isPending) onClose()
 			}}
@@ -47,23 +47,22 @@ export function ConfirmDialog({
 				aria-modal='true'
 				aria-labelledby={`${dialogId}-title`}
 				aria-describedby={`${dialogId}-description`}
-				className='w-full max-w-sm border border-white/10 bg-[#151617] p-4 shadow-2xl shadow-black/40 sm:p-5'
+				className='w-full max-w-sm animate-pop-in rounded-2xl border border-border bg-elevated p-5 shadow-pop'
 			>
 				<div className='flex items-start gap-3'>
-					<AlertTriangle
-						className='mt-0.5 shrink-0 text-amber-300'
-						size={19}
-					/>
+					<span className='grid h-9 w-9 shrink-0 place-items-center bg-danger/10 text-danger'>
+						<AlertTriangle size={17} />
+					</span>
 					<div className='min-w-0 flex-1'>
 						<h2
 							id={`${dialogId}-title`}
-							className='text-base font-semibold text-white/90'
+							className='pt-1.5 text-base font-semibold text-fg'
 						>
 							{title}
 						</h2>
 						<p
 							id={`${dialogId}-description`}
-							className='mt-2 text-sm leading-5 text-white/55'
+							className='mt-1.5 text-sm text-muted'
 						>
 							{description}
 						</p>
@@ -73,7 +72,7 @@ export function ConfirmDialog({
 						aria-label='Закрыть окно подтверждения'
 						disabled={isPending}
 						onClick={onClose}
-						className='-mr-1 -mt-1 p-1 text-white/40 hover:text-white disabled:opacity-40'
+						className='-mr-1.5 -mt-1.5 rounded-md p-1.5 text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg disabled:opacity-40'
 					>
 						<X size={17} />
 					</button>
@@ -84,7 +83,7 @@ export function ConfirmDialog({
 						autoFocus
 						disabled={isPending}
 						onClick={onClose}
-						className='border border-white/10 px-3 py-2 text-sm text-white/65 hover:bg-white/[0.04] disabled:opacity-40'
+						className='h-9 rounded-lg border border-border px-3.5 text-sm font-medium text-muted transition-colors hover:bg-white/[0.05] hover:text-fg disabled:opacity-40'
 					>
 						Отмена
 					</button>
@@ -92,7 +91,7 @@ export function ConfirmDialog({
 						type='button'
 						disabled={isPending}
 						onClick={onConfirm}
-						className='border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:opacity-40'
+						className='h-9 rounded-lg bg-danger px-3.5 text-sm font-medium text-white transition-colors hover:bg-danger/85 disabled:opacity-40'
 					>
 						{isPending ? 'Выполняется…' : confirmLabel}
 					</button>

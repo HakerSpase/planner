@@ -21,11 +21,11 @@ const Checkbox = ({
 		<label
 			htmlFor={id}
 			className={cn(
-				'relative inline-flex h-5 w-5 shrink-0 cursor-pointer select-none items-center justify-center transition-colors',
+				'relative inline-flex h-4 w-4 shrink-0 cursor-pointer select-none items-center justify-center transition-colors',
 				'border',
 				checked
-					? 'border-primary bg-primary text-white shadow-sm'
-					: 'border-white/25 bg-transparent hover:border-white/45',
+					? 'border-primary bg-primary text-white'
+					: 'border-white/25 bg-transparent hover:border-primary',
 				disabled && 'cursor-not-allowed opacity-50',
 				extra,
 				className
@@ -42,8 +42,8 @@ const Checkbox = ({
 			/>
 			{checked && (
 				<Check
-					size={13}
-					strokeWidth={3}
+					size={11}
+					strokeWidth={3.5}
 					className='pointer-events-none text-white'
 				/>
 			)}

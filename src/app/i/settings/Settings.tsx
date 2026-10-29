@@ -127,11 +127,11 @@ export function Settings() {
 	return (
 		<div className='w-full max-w-3xl'>
 			<form onSubmit={handleSubmit(onSubmit)}>
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10'>
+				<div className='card-padded grid grid-cols-1 gap-6 sm:p-6 md:grid-cols-2 md:gap-8'>
 					{/* Данные профиля */}
 					<div>
 						<div className='mb-4'>
-							<label className='text-xs uppercase text-white/50 block mb-1'>
+							<label className='mb-1.5 block text-sm font-medium text-muted'>
 								Почта аккаунта Google (только чтение)
 							</label>
 							<input
@@ -140,7 +140,7 @@ export function Settings() {
 								disabled
 								readOnly
 								{...register('email')}
-								className='w-full border border-border bg-[#141515] p-3 text-sm text-white/60 cursor-not-allowed'
+								className='flex h-10 w-full cursor-not-allowed items-center rounded-lg border border-border bg-white/[0.02] px-3 text-sm text-subtle'
 							/>
 						</div>
 
@@ -151,14 +151,14 @@ export function Settings() {
 							{...register('name')}
 							extra='mb-6'
 						/>
-						<div className='border-t border-white/[0.08] pt-5'>
+						<div className='border-t border-border pt-5'>
 							<label
 								htmlFor='timeZone'
-								className='text-sm font-medium text-white/75'
+								className='text-sm font-medium text-muted'
 							>
 								Часовой пояс
 							</label>
-							<p className='mb-2 mt-1 text-xs text-white/45'>
+							<p className='mb-2 mt-1 text-xs text-subtle'>
 								Используется для дат, календаря активности и дневных сессий
 								Pomodoro.
 							</p>
@@ -177,7 +177,7 @@ export function Settings() {
 									aria-expanded={timeZoneMenuOpen}
 									aria-label='Выбрать часовой пояс'
 									onClick={() => setTimeZoneMenuOpen(open => !open)}
-									className='flex min-h-12 w-full items-center justify-between gap-3 border border-border bg-[#141515] px-3 py-2 text-left text-sm text-white outline-none transition-colors hover:border-primary focus-visible:border-primary'
+									className='flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 text-left text-sm text-fg outline-none transition-colors hover:border-border-strong focus-visible:border-primary/70'
 								>
 									<span className='min-w-0 truncate'>
 										{selectedTimeZone
@@ -186,16 +186,16 @@ export function Settings() {
 									</span>
 									<ChevronDown
 										size={16}
-										className={`shrink-0 text-white/50 transition-transform ${timeZoneMenuOpen ? 'rotate-180' : ''}`}
+										className={`shrink-0 text-subtle transition-transform ${timeZoneMenuOpen ? 'rotate-180' : ''}`}
 									/>
 								</button>
 								{timeZoneMenuOpen && (
-									<div className='absolute left-0 right-0 top-full z-40 mt-1 border border-white/15 bg-[#111213] shadow-xl'>
-										<div className='sticky top-0 border-b border-white/10 bg-[#111213] p-2'>
-											<div className='flex items-center gap-2 border border-white/10 px-2'>
+									<div className='absolute left-0 right-0 top-full z-40 mt-1 animate-pop-in overflow-hidden rounded-xl border border-border bg-elevated shadow-pop'>
+										<div className='sticky top-0 border-b border-border bg-elevated p-2'>
+											<div className='flex items-center gap-2 rounded-lg bg-white/[0.04] px-2'>
 												<Search
 													size={15}
-													className='shrink-0 text-white/40'
+													className='shrink-0 text-subtle'
 												/>
 												<input
 													autoFocus
@@ -204,14 +204,14 @@ export function Settings() {
 														setTimeZoneSearch(event.target.value)
 													}
 													placeholder='Найти город или регион'
-													className='h-9 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35'
+													className='h-9 min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-subtle'
 												/>
 											</div>
 										</div>
 										<div
 											role='listbox'
 											aria-label='Часовой пояс'
-											className='max-h-64 overflow-y-auto'
+											className='max-h-64 overflow-y-auto p-1'
 										>
 											{filteredTimeZones.length ? (
 												filteredTimeZones.map(({ zone, label, offset }) => (
@@ -229,10 +229,10 @@ export function Settings() {
 															setTimeZoneMenuOpen(false)
 															setTimeZoneSearch('')
 														}}
-														className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/[0.06] ${selectedTimeZone === zone ? 'bg-primary/10 text-white' : 'text-white/75'}`}
+														className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.06] ${selectedTimeZone === zone ? 'bg-primary/10 text-fg' : 'text-muted'}`}
 													>
 														<span className='min-w-0 truncate'>{label}</span>
-														<span className='flex shrink-0 items-center gap-2 text-xs text-white/45'>
+														<span className='flex shrink-0 items-center gap-2 text-xs text-subtle'>
 															{offset}
 															{selectedTimeZone === zone && (
 																<Check
@@ -244,7 +244,7 @@ export function Settings() {
 													</button>
 												))
 											) : (
-												<p className='px-3 py-4 text-sm text-white/45'>
+												<p className='px-3 py-4 text-sm text-subtle'>
 													Ничего не найдено
 												</p>
 											)}
@@ -273,7 +273,7 @@ export function Settings() {
 							extra='mb-4'
 						/>
 						{errors.workInterval?.message && (
-							<p className='-mt-3 mb-4 text-xs text-red-300'>
+							<p className='-mt-3 mb-4 text-xs text-danger'>
 								{errors.workInterval.message}
 							</p>
 						)}
@@ -295,7 +295,7 @@ export function Settings() {
 							extra='mb-4'
 						/>
 						{errors.breakInterval?.message && (
-							<p className='-mt-3 mb-4 text-xs text-red-300'>
+							<p className='-mt-3 mb-4 text-xs text-danger'>
 								{errors.breakInterval.message}
 							</p>
 						)}
@@ -317,7 +317,7 @@ export function Settings() {
 							extra='mb-6'
 						/>
 						{errors.intervalsCount?.message && (
-							<p className='-mt-5 mb-4 text-xs text-red-300'>
+							<p className='-mt-5 mb-4 text-xs text-danger'>
 								{errors.intervalsCount.message}
 							</p>
 						)}
@@ -326,7 +326,7 @@ export function Settings() {
 				<Button
 					type='submit'
 					disabled={isPending}
-					className='mt-2'
+					className='mt-5'
 				>
 					{isPending ? 'Сохранение...' : 'Сохранить настройки'}
 				</Button>

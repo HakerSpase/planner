@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { type Dispatch, type SetStateAction } from 'react'
 
 import { ITaskResponse } from '@/types/task.types'
@@ -33,9 +34,10 @@ export function ListAddRowInput({ setItems, filterDate }: IListAddRowInput) {
 		<div className={styles.addRow}>
 			<button
 				onClick={addRow}
-				className='italic opacity-40 text-sm'
+				className='flex h-8 items-center gap-2 rounded-md text-sm text-subtle transition-colors hover:text-primary'
 			>
-				Добавить задачу...
+				<Plus size={16} />
+				Добавить задачу
 			</button>
 		</div>
 	)

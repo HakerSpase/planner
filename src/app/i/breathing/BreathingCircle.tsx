@@ -280,7 +280,7 @@ export function BreathingCircle({
 						) : (
 							<>
 								<span
-									className={`font-medium text-white/95 tracking-wide truncate w-full ${
+									className={`font-medium text-fg tracking-wide truncate w-full ${
 										isZen ? 'text-base sm:text-lg' : 'text-sm'
 									}`}
 								>
@@ -295,7 +295,7 @@ export function BreathingCircle({
 									{technique.totalCycleSeconds}с цикл
 								</span>
 								<span
-									className={`text-white/40 tracking-wider uppercase font-mono ${
+									className={`text-subtle tracking-wider uppercase font-mono ${
 										isZen ? 'mt-3 text-xs' : 'mt-2 text-[10px]'
 									}`}
 								>
@@ -310,7 +310,7 @@ export function BreathingCircle({
 			{/* Phase instruction hint (normal mode only; in Zen mode rendered above the circle) */}
 			{!isZen && (
 				<div className='min-h-[28px] w-full max-w-sm sm:max-w-md px-3 sm:px-4 text-center flex items-center justify-center mt-1.5 min-w-0'>
-					<p className='text-xs sm:text-sm font-medium text-white/70 text-center leading-relaxed break-words line-clamp-2 transition-opacity duration-300'>
+					<p className='text-xs sm:text-sm font-medium text-muted text-center leading-relaxed break-words line-clamp-2 transition-opacity duration-300'>
 						{isActive ? currentPhase.hint : technique.tagline}
 					</p>
 				</div>

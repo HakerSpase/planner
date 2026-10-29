@@ -43,16 +43,18 @@ export function SingleSelect({
 				onClick={() => setIsShow(!isShow)}
 				className={cn(
 					'flex min-h-9 items-center gap-1.5 text-left max-w-full',
-					isColorSelect ? 'w-full border border-border px-3' : 'max-w-full'
+					isColorSelect
+						? 'w-full rounded-lg border border-border bg-surface-2 px-3 hover:border-border-strong'
+						: 'max-w-full rounded-md'
 				)}
 			>
 				{isColorSelect ? (
 					<>
 						<span
-							className='h-4 w-4 shrink-0 border border-white/20'
+							className='h-3.5 w-3.5 shrink-0'
 							style={{ backgroundColor: selected?.value || '#64748b' }}
 						/>
-						<span className='min-w-0 flex-1 truncate text-sm text-white/75'>
+						<span className='min-w-0 flex-1 truncate text-sm text-fg'>
 							{selected?.label || 'Выберите цвет'}
 						</span>
 					</>
@@ -68,14 +70,14 @@ export function SingleSelect({
 				)}
 				<ChevronDown
 					size={14}
-					className='shrink-0 text-white/40'
+					className='shrink-0 text-subtle'
 				/>
 			</button>
 			{isClearable && selected && !isColorSelect && (
 				<button
 					type='button'
 					aria-label='Сбросить выбор'
-					className='grid h-6 w-6 place-items-center text-white/35 hover:text-white transition-colors shrink-0'
+					className='grid h-6 w-6 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
 					onClick={e => {
 						e.stopPropagation()
 						onChange('')
@@ -87,7 +89,7 @@ export function SingleSelect({
 			{isShow && (
 				<div
 					role='listbox'
-					className='absolute left-0 top-[calc(100%+0.25rem)] z-30 max-h-60 w-full min-w-40 overflow-y-auto border border-white/10 bg-sidebar p-1 shadow-xl'
+					className='absolute left-0 top-[calc(100%+0.25rem)] z-30 max-h-60 w-full min-w-40 animate-pop-in overflow-y-auto rounded-xl border border-border bg-elevated p-1 shadow-pop'
 				>
 					{data.map(item => (
 						<button
@@ -100,13 +102,13 @@ export function SingleSelect({
 								setIsShow(false)
 							}}
 							className={cn(
-								'flex min-h-9 w-full items-center gap-2 px-2 text-left text-sm transition-colors hover:bg-white/[0.06]',
+								'flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm transition-colors hover:bg-white/[0.06]',
 								item.value === value && 'bg-white/[0.06]'
 							)}
 						>
 							{isColorSelect && (
 								<span
-									className='h-4 w-4 shrink-0 border border-white/20'
+									className='h-3.5 w-3.5 shrink-0'
 									style={{ backgroundColor: item.value }}
 								/>
 							)}

@@ -1,10 +1,8 @@
 'use client'
 
 import cn from 'clsx'
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import Link from 'next/link'
-
-import { COLORS } from '@/constants/color.constants'
 
 import { LogoutButton } from './LogoutButton'
 import { MenuItem } from './MenuItem'
@@ -17,6 +15,12 @@ interface ISidebarProps {
 	onCloseMobile: () => void
 }
 
+function Logo() {
+	return (
+		<span className='h-3 w-3 shrink-0 bg-primary' />
+	)
+}
+
 export function Sidebar({
 	isCollapsed,
 	onToggleCollapse,
@@ -24,104 +28,97 @@ export function Sidebar({
 	onCloseMobile
 }: ISidebarProps) {
 	const sidebarContent = (collapsed: boolean, isMobile: boolean) => (
-		<div className='flex h-full min-h-0 flex-col justify-between'>
-			<div>
-				{/* Шапка сайдбара с логотипом и кнопками управления */}
-				<div
-					className={cn(
-						'flex items-center border-b border-b-border relative min-h-[60px]',
-						collapsed ? 'justify-center px-2 py-2' : 'justify-between p-3'
-					)}
-				>
-					{!collapsed && (
-						<Link
-							href='/'
-							onClick={isMobile ? onCloseMobile : undefined}
-							className='flex shrink-0 items-center gap-3 pl-2'
-						>
-							<CalendarDays
-								color={COLORS.primary}
-								size={collapsed ? 25 : 30}
-								className='flex-shrink-0'
-							/>
-							{!collapsed && (
-								<span className='text-xl font-bold relative'>
-									Planner
-									<span className='absolute -top-1 -right-5 text-[10px] text-[#7551FF] opacity-80 rotate-[18deg] font-mono'>
-										beta
-									</span>
-								</span>
-							)}
-						</Link>
-					)}
+		<div className='flex h-full min-h-0 flex-col'>
+			{/* Шапка сайдбара с логотипом и кнопками управления */}
+			<div
+				className={cn(
+					'flex h-14 shrink-0 items-center border-b border-border',
+					collapsed ? 'justify-center px-2' : 'justify-between px-4'
+				)}
+			>
+				{!collapsed && (
+					<Link
+						href='/'
+						onClick={isMobile ? onCloseMobile : undefined}
+						className='flex items-center gap-2.5'
+					>
+						<Logo />
+						<span className='text-sm font-semibold uppercase tracking-[0.2em] text-fg'>
+							Planner
+						</span>
+						<span className='border border-border px-1.5 font-mono text-2xs uppercase text-subtle'>
+							beta
+						</span>
+					</Link>
+				)}
 
-					{/* Кнопка закрытия для мобильного экрана */}
-					{isMobile && (
-						<button
-							onClick={onCloseMobile}
-							aria-label='Закрыть меню'
-							className='p-1.5 text-white/50 hover:text-white'
-						>
-							<X size={20} />
-						</button>
-					)}
+				{/* Кнопка закрытия для мобильного экрана */}
+				{isMobile && (
+					<button
+						onClick={onCloseMobile}
+						aria-label='Закрыть меню'
+						className='grid h-8 w-8 place-items-center rounded-lg text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+					>
+						<X size={18} />
+					</button>
+				)}
 
-					{/* Кнопка сворачивания для десктопа */}
-					{!isMobile && (
-						<button
-							onClick={onToggleCollapse}
-							title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-							aria-label={
-								collapsed
-									? 'Развернуть боковую панель'
-									: 'Свернуть боковую панель'
-							}
-							className='grid h-9 w-8 shrink-0 place-items-center text-white/45 transition-colors hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary'
-						>
-							{collapsed ? (
-								<ChevronRight size={16} />
-							) : (
-								<ChevronLeft size={18} />
-							)}
-						</button>
-					)}
-				</div>
-
-				{/* Список пунктов меню */}
-				<div className='min-h-0 flex-1 overflow-y-auto p-3'>
-					<nav className='space-y-1'>
-						{MENU.map(item => (
-							<MenuItem
-								item={item}
-								key={item.link}
-								isCollapsed={collapsed}
-								onClick={isMobile ? onCloseMobile : undefined}
-							/>
-						))}
-					</nav>
-				</div>
+				{/* Кнопка сворачивания для десктопа */}
+				{!isMobile && (
+					<button
+						onClick={onToggleCollapse}
+						title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+						aria-label={
+							collapsed
+								? 'Развернуть боковую панель'
+								: 'Свернуть боковую панель'
+						}
+						className='grid h-8 w-8 shrink-0 place-items-center rounded-lg text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+					>
+						{collapsed ? (
+							<PanelLeftOpen size={17} />
+						) : (
+							<PanelLeftClose size={17} />
+						)}
+					</button>
+				)}
 			</div>
+
+			{/* Список пунктов меню */}
+			<nav
+				className={cn(
+					'min-h-0 flex-1 space-y-0.5 overflow-y-auto py-2',
+					collapsed ? 'px-2.5' : 'px-3'
+				)}
+			>
+				{MENU.map(item => (
+					<MenuItem
+						item={item}
+						key={item.link}
+						isCollapsed={collapsed}
+						onClick={isMobile ? onCloseMobile : undefined}
+					/>
+				))}
+			</nav>
 
 			{/* Футер сайдбара */}
 			<footer
 				className={cn(
-					'font-normal border-t border-t-white/[0.06]',
-					collapsed ? 'p-2' : 'p-4'
+					'shrink-0 border-t border-border',
+					collapsed ? 'p-2.5' : 'p-3'
 				)}
 			>
 				<LogoutButton collapsed={collapsed} />
 				{!collapsed && (
-					<div className='pt-3 pl-3 text-xs text-white/40'>
-						<a
-							href='https://t.me/w_dtc'
-							target='_blank'
-							rel='noreferrer'
-							aria-label='Телеграм разработчика @w_dtc'
-							className='inline-flex min-h-8 items-center whitespace-nowrap text-white/45 transition-colors hover:text-primary'
-						>
-							TG разработчика
-						</a>
-					</div>
+					<a
+						href='https://t.me/w_dtc'
+						target='_blank'
+						rel='noreferrer'
+						aria-label='Телеграм разработчика @w_dtc'
+						className='mt-1 flex h-8 items-center px-2.5 font-mono text-2xs uppercase tracking-wider text-subtle transition-colors hover:text-fg'
+					>
+						Telegram ↗
+					</a>
 				)}
 			</footer>
 		</div>
@@ -132,8 +129,8 @@ export function Sidebar({
 			{/* Десктопный сайдбар с плавной анимацией ширины */}
 			<aside
 				className={cn(
-					'hidden lg:flex flex-col border-r border-r-border h-full bg-sidebar transition-all duration-300 relative z-30 select-none flex-shrink-0',
-					isCollapsed ? 'w-20' : 'w-64'
+					'relative z-30 hidden h-full shrink-0 select-none flex-col border-r border-border bg-bg transition-[width] duration-300 lg:flex',
+					isCollapsed ? 'w-[68px]' : 'w-60'
 				)}
 			>
 				{sidebarContent(isCollapsed, false)}
@@ -142,7 +139,7 @@ export function Sidebar({
 			{/* Мобильный сайдбар (выдвижное меню Drawer) */}
 			<aside
 				className={cn(
-					'fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(84vw,20rem)] max-w-[320px] flex-col border-r border-r-border bg-sidebar pb-[env(safe-area-inset-bottom)] transform transition-transform duration-300 lg:hidden shadow-2xl select-none',
+					'fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(84vw,18rem)] select-none flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-pop transition-transform duration-300 lg:hidden',
 					isMobileOpen ? 'translate-x-0' : '-translate-x-full'
 				)}
 			>

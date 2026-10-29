@@ -17,26 +17,28 @@ export function MenuItem({ item, isCollapsed, onClick }: IMenuItemProps) {
 		(item.link !== '/i' && pathname.startsWith(`${item.link}/`))
 
 	return (
-		<div>
-			<Link
-				href={item.link}
-				onClick={onClick}
-				aria-current={isActive ? 'page' : undefined}
-				title={isCollapsed ? item.name : undefined}
+		<Link
+			href={item.link}
+			onClick={onClick}
+			aria-current={isActive ? 'page' : undefined}
+			title={isCollapsed ? item.name : undefined}
+			className={cn(
+				'group relative flex h-9 items-center gap-3 text-sm font-medium transition-colors',
+				isActive
+					? 'bg-white/[0.05] text-fg before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary'
+					: 'text-muted hover:bg-white/[0.04] hover:text-fg',
+				isCollapsed ? 'justify-center px-0' : 'px-2.5'
+			)}
+		>
+			<item.icon
+				size={18}
+				strokeWidth={isActive ? 2.2 : 1.8}
 				className={cn(
-					'flex items-center gap-2.5 border-l-2 py-2 mt-2 text-sm transition-colors hover:bg-white/[0.04] hover:text-white',
-					isActive
-						? 'border-primary bg-white/[0.035] text-white'
-						: 'border-transparent text-white/70',
-					isCollapsed ? 'justify-center px-0' : 'px-layout'
+					'shrink-0 transition-colors',
+					isActive ? 'text-primary' : 'text-subtle group-hover:text-muted'
 				)}
-			>
-				<item.icon
-					size={20}
-					className='flex-shrink-0'
-				/>
-				{!isCollapsed && <span className='truncate'>{item.name}</span>}
-			</Link>
-		</div>
+			/>
+			{!isCollapsed && <span className='truncate'>{item.name}</span>}
+		</Link>
 	)
 }

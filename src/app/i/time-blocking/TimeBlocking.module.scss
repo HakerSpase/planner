@@ -1,8 +1,12 @@
 .list {
 	.block {
-		@apply mb-2 flex min-h-16 min-w-0 items-center justify-between gap-2 border border-white/[0.08] border-l-2 bg-[#151718] px-2 py-2 text-sm sm:min-h-[4.5rem] sm:gap-3 sm:px-4;
-		border-left-color: var(--block-color);
-		color: rgba(255, 255, 255, 0.88);
+		@apply relative mb-2 flex min-h-14 min-w-0 items-center justify-between gap-2 overflow-hidden rounded-lg border border-border bg-surface-2 py-2 pl-4 pr-2 text-sm text-fg transition-colors hover:border-border-strong sm:gap-3;
+
+		&::before {
+			content: '';
+			@apply absolute inset-y-2 left-1.5 w-1;
+			background: var(--block-color);
+		}
 
 		&:active,
 		&:hover {

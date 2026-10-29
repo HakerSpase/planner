@@ -28,7 +28,7 @@ export function TimeBlockingList() {
 	}
 
 	return (
-		<div>
+		<div className='card-padded min-w-0'>
 			<DndContext
 				sensors={sensors}
 				collisionDetection={closestCenter}
@@ -47,28 +47,28 @@ export function TimeBlockingList() {
 								/>
 							))
 						) : (
-							<div className='py-4 text-sm text-white/45'>
+							<div className='rounded-lg border border-dashed border-border-strong py-8 text-center text-sm text-subtle'>
 								Добавьте первый тайм-блок в форме рядом
 							</div>
 						)}
 					</SortableContext>
 				</div>
 			</DndContext>
-			<div className='mt-5 border-t border-white/[0.08] py-3'>
+			<div className='mt-4 border-t border-border pt-4'>
 				<div className='flex flex-wrap items-center justify-between gap-2 text-sm'>
-					<span className='text-white/55'>Запланировано за день</span>
-					<strong className='font-medium text-white'>
+					<span className='text-muted'>Запланировано за день</span>
+					<strong className='font-medium tabular-nums text-fg'>
 						{formatDuration(totalMinutes)}
 					</strong>
 				</div>
 				{overbookedMinutes ? (
-					<p className='mt-2 text-sm text-amber-300'>
+					<p className='mt-2 text-sm text-warning'>
 						План превышает сутки на {formatDuration(overbookedMinutes)}
 					</p>
 				) : (
 					<div className='mt-2 flex flex-wrap items-center justify-between gap-2 text-sm'>
-						<span className='text-white/55'>Осталось на сон и отдых</span>
-						<strong className='font-medium text-white'>
+						<span className='text-muted'>Осталось на сон и отдых</span>
+						<strong className='font-medium tabular-nums text-fg'>
 							{formatDuration(remainingMinutes)}
 						</strong>
 					</div>

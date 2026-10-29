@@ -1,14 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import {
-	Check,
-	FileText,
-	GanttChartSquare,
-	GripVertical,
-	Loader2,
-	Trash
-} from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import Script from 'next/script'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -38,6 +31,31 @@ const PRIORITY_LABEL: Record<TPriority, string> = {
 	medium: 'Средний',
 	low: 'Низкий'
 }
+
+const PRIORITY_DOT: Record<TPriority, string> = {
+	high: 'bg-danger',
+	medium: 'bg-warning',
+	low: 'bg-sky-400'
+}
+
+const FEATURES = [
+	{
+		title: 'Задачи',
+		text: 'Список и доска, сроки и приоритеты. Перетаскивайте задачи между днями.'
+	},
+	{
+		title: 'Pomodoro',
+		text: 'Раунды фокуса и перерывы. Таймер помнит, на чём вы остановились.'
+	},
+	{
+		title: 'Тайм-блокинг',
+		text: 'Распределите день по блокам и видьте, сколько времени осталось.'
+	},
+	{
+		title: 'Мысли',
+		text: 'Дневник, привязанный к датам. Идеи, рефлексия, события дня.'
+	}
+]
 
 const INITIAL_TASKS: IPreviewTask[] = [
 	{
@@ -187,118 +205,11 @@ export function Auth() {
 		}
 	}
 
-	/* Строка задачи */
-	const renderTaskRow = (task: IPreviewTask, compact = false) => (
-		<div
-			key={task.id}
-			draggable
-			onDragStart={() => handleDragStart(task.id)}
-			onDragOver={handleDragOver}
-			onDrop={() => handleDrop(task.id)}
-			onDragEnd={handleDragEnd}
-			className={cn(
-				'grid border-t border-white/[0.08] transition-colors duration-100 cursor-grab active:cursor-grabbing',
-				task.isCompleted && 'opacity-50',
-				dragId === task.id && 'opacity-30 bg-[#1a1c1e]',
-				dragId && dragId !== task.id && 'hover:bg-[#191b1d]'
-			)}
-			style={{
-				gridTemplateColumns: compact
-					? 'minmax(0, 1fr) 5rem 6.8rem'
-					: 'minmax(0, 1fr) 5.8rem 7.5rem 2.6rem'
-			}}
-		>
-			{/* Задача */}
-			<div className={cn(
-				'border-r border-white/[0.08] min-w-0 overflow-hidden flex flex-col justify-center gap-0.5',
-				compact ? 'px-2.5 py-2.5' : 'px-3.5 py-3'
-			)}>
-				<div className='flex items-center gap-2.5 min-w-0'>
-					<GripVertical size={16} className='text-white/15 shrink-0 -ml-0.5' />
-					<div
-						onClick={() => toggleTask(task.id)}
-						className={cn(
-							'w-[17px] h-[17px] shrink-0 border flex items-center justify-center transition-colors cursor-pointer',
-							task.isCompleted
-								? 'border-[#7551FF] bg-[#7551FF] text-white'
-								: 'border-white/25 bg-transparent hover:border-white/50'
-						)}
-					>
-						{task.isCompleted && <Check size={11} strokeWidth={3} />}
-					</div>
-					<span className={cn(
-						'truncate min-w-0 block',
-						compact ? 'text-[13px]' : 'text-sm',
-						task.isCompleted ? 'line-through italic text-white/45' : 'text-white/90'
-					)}>
-						{task.name}
-					</span>
-				</div>
-				{!compact && (
-					<div className='pl-[34px] flex items-center gap-1.5 min-w-0'>
-						<FileText size={13} className='text-white/30 shrink-0' />
-						<span className='text-xs text-white/40 truncate min-w-0 block'>
-							{task.note || 'Добавить заметку'}
-						</span>
-					</div>
-				)}
-			</div>
 
-			{/* Дата */}
-			<div className={cn(
-				'border-r border-white/[0.08] py-3 min-w-0 flex items-center justify-start whitespace-nowrap text-[13px] text-white/60 shrink-0',
-				compact ? 'px-3' : 'px-4'
-			)}>
-				<span>{task.date}</span>
-			</div>
-
-			{/* Приоритет */}
-			<div className={cn(
-				'py-3 flex items-center justify-start shrink-0 overflow-hidden',
-				compact ? 'px-3' : 'px-4',
-				!compact && 'border-r border-white/[0.08]'
-			)}>
-				<span
-					className={cn(
-						'flex items-center justify-center w-[76px] min-w-[76px] max-w-[76px] py-[3px] px-2 text-xs font-semibold text-white whitespace-nowrap shrink-0 rounded-sm select-none',
-						task.priority === 'high' && 'bg-red-400/60',
-						task.priority === 'medium' && 'bg-orange-400/70',
-						task.priority === 'low' && 'bg-blue-400/70'
-					)}
-				>
-					{PRIORITY_LABEL[task.priority]}
-				</span>
-			</div>
-
-			{/* Удалить */}
-			{!compact && (
-				<div className='px-1 py-3 flex items-center justify-center shrink-0'>
-					<Trash size={15} className='text-white/25 hover:text-white/60 transition-colors' />
-				</div>
-			)}
-		</div>
-	)
+	const doneCount = tasks.filter(t => t.isCompleted).length
 
 	return (
 		<>
-			<style>{`
-				@keyframes auroraShift {
-					0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: .4; }
-					33%  { transform: translate(40px, -30px) rotate(120deg) scale(1.15); opacity: .6; }
-					66%  { transform: translate(-20px, 20px) rotate(240deg) scale(.95); opacity: .45; }
-					100% { transform: translate(0, 0) rotate(360deg) scale(1); opacity: .4; }
-				}
-				@keyframes auroraShift2 {
-					0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: .35; }
-					50%  { transform: translate(-35px, 25px) rotate(180deg) scale(1.1); opacity: .55; }
-					100% { transform: translate(0, 0) rotate(360deg) scale(1); opacity: .35; }
-				}
-				@keyframes floatOrb {
-					0%,100% { transform: translateY(0) scale(1); opacity: .3; }
-					50%     { transform: translateY(-20px) scale(1.08); opacity: .5; }
-				}
-			`}</style>
-
 			<Script
 				src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 				strategy='afterInteractive'
@@ -306,165 +217,229 @@ export function Auth() {
 				onError={() => setCaptchaError('Не удалось загрузить проверку безопасности.')}
 			/>
 
-			<div className='min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-[#0E0F0F] text-white selection:bg-[#7551FF]/30'>
-				{/* ===== ЛЕВАЯ: СПИСОК ЗАДАЧ (только desktop) ===== */}
-				<div className='hidden lg:flex flex-col justify-between p-6 lg:p-8 xl:p-14 bg-[#0E0F0F] border-r border-white/[0.08] relative overflow-hidden'>
-					<div className='absolute top-0 right-0 w-[460px] h-[460px] bg-[#7551FF]/8 blur-[130px] pointer-events-none rounded-full' />
-
-					{/* Логотип */}
-					<div className='relative z-10 flex items-center gap-3'>
-						<GanttChartSquare color='#7551FF' size={36} />
-						<div className='text-2xl font-bold tracking-tight relative'>
-							Planner
-							<span className='absolute -top-1 -right-7 text-[11px] text-[#7551FF] opacity-70 rotate-[16deg] font-mono'>
+			{/* body глобально без прокрутки — у лендинга свой скролл-контейнер */}
+			<div className='h-[100dvh] overflow-y-auto bg-bg text-fg'>
+				{/* ===== ШАПКА ===== */}
+				<header className='sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur'>
+					<div className='mx-auto flex h-14 max-w-[1240px] items-center justify-between px-5 sm:px-8'>
+						<div className='flex items-center gap-3'>
+							<span className='h-3 w-3 bg-primary' />
+							<span className='text-sm font-semibold uppercase tracking-[0.2em]'>
+								Planner
+							</span>
+							<span className='border border-border px-1.5 font-mono text-2xs uppercase text-subtle'>
 								beta
 							</span>
 						</div>
-					</div>
-
-					{/* Задачи */}
-					<div className='relative z-10 my-auto py-6 max-w-2xl w-full'>
-						<div className='mb-5'>
-							<h2 className='text-2xl font-semibold tracking-tight mb-1.5'>
-								Пространство фокуса и продуктивности
-							</h2>
-							<p className='text-sm text-white/45 leading-relaxed'>
-								Канбан-доска, список задач и тайм-блокинг в едином строгом интерфейсе.
-							</p>
-						</div>
-
-						<div className='text-xl font-semibold py-2.5'>На этой неделе</div>
-
-						<div className='w-full border-b border-white/[0.08] overflow-hidden'>
-							{tasks.map(t => renderTaskRow(t))}
-						</div>
-
-						<div className='text-xl font-semibold py-2.5 mt-3'>На следующей неделе</div>
-						<div className='text-xs text-white/25 py-2 border-t border-white/[0.08]'>
-							Добавить задачу...
-						</div>
-					</div>
-
-					<div className='relative z-10 text-xs text-white/25'>
-						&copy; 2026 Planner. Все права защищены.
-					</div>
-				</div>
-
-				{/* ===== ПРАВАЯ: ВХОД + ФОН + МОБАЙЛ ===== */}
-				<div className='flex flex-col p-6 sm:p-10 lg:p-14 bg-[#0E0F0F] relative overflow-hidden min-h-screen'>
-					{/* Завораживающий минималистичный фон: мягкие aurora-градиенты */}
-					<div className='absolute inset-0 pointer-events-none overflow-hidden select-none'>
-						{/* Тонкая сетка-паттерн */}
-						<div className='absolute inset-0 opacity-[0.03]' style={{
-							backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
-							backgroundSize: '60px 60px'
-						}} />
-
-						{/* Главная aurora — большой размытый кольцевой градиент */}
-						<div
-							className='absolute top-[10%] left-[10%] w-[500px] h-[500px] rounded-full'
-							style={{
-								background: 'conic-gradient(from 0deg, rgba(117,81,255,0.25), rgba(99,102,241,0.15), rgba(168,85,247,0.2), rgba(117,81,255,0.25))',
-								filter: 'blur(80px)',
-								animation: 'auroraShift 18s linear infinite'
-							}}
-						/>
-						{/* Вторая aurora */}
-						<div
-							className='absolute bottom-[5%] right-[5%] w-[400px] h-[400px] rounded-full'
-							style={{
-								background: 'conic-gradient(from 180deg, rgba(139,92,246,0.2), rgba(79,70,229,0.15), rgba(192,132,252,0.18), rgba(139,92,246,0.2))',
-								filter: 'blur(70px)',
-								animation: 'auroraShift2 14s linear infinite'
-							}}
-						/>
-
-						{/* Парящие маленькие сферы — акценты */}
-						<div
-							className='absolute top-[25%] right-[30%] w-[120px] h-[120px] bg-[#7551FF]/25 blur-[50px] rounded-full'
-							style={{ animation: 'floatOrb 6s ease-in-out infinite' }}
-						/>
-						<div
-							className='absolute bottom-[35%] left-[25%] w-[90px] h-[90px] bg-indigo-500/20 blur-[40px] rounded-full'
-							style={{ animation: 'floatOrb 8s ease-in-out infinite 2s' }}
-						/>
-						<div
-							className='absolute top-[60%] right-[15%] w-[70px] h-[70px] bg-purple-400/15 blur-[35px] rounded-full'
-							style={{ animation: 'floatOrb 7s ease-in-out infinite 4s' }}
-						/>
-					</div>
-
-					{/* Мобильный логотип */}
-					<div className='lg:hidden relative z-10 flex items-center gap-2.5 mb-5'>
-						<GanttChartSquare color='#7551FF' size={30} />
-						<span className='text-xl font-bold tracking-tight'>Planner</span>
-						<span className='text-[10px] text-[#7551FF] font-mono opacity-70 ml-0.5'>beta</span>
-					</div>
-
-					{/* ===== МОБИЛЬНАЯ ВИТРИНА ЗАДАЧ ===== */}
-					<div className='lg:hidden relative z-10 mb-auto border border-white/[0.08] bg-[#111213]/80 backdrop-blur-sm'>
-						<div className='flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08]'>
-							<span className='font-semibold text-white/70 uppercase tracking-wider text-xs'>На этой неделе</span>
-							<span className='text-[#8b6eff] font-mono text-xs'>
-								{tasks.filter(t => t.isCompleted).length}/{tasks.length}
-							</span>
-						</div>
-						{tasks.slice(0, 3).map(t => renderTaskRow(t, true))}
-						<div className='px-4 py-2 text-xs text-white/25 border-t border-white/[0.08]'>
-							ещё {tasks.length - 3} задач...
-						</div>
-					</div>
-
-					{/* ===== БЛОК ВХОДА (по центру) ===== */}
-					<div className='relative z-10 w-full max-w-[380px] mx-auto my-auto flex flex-col items-center text-center py-8 lg:py-0'>
-						<h1 className='text-3xl sm:text-[34px] font-semibold tracking-tight text-white mb-8'>
-							Вход в Planner
-						</h1>
-
-						{/* Turnstile CAPTCHA — по полной ширине контейнера */}
-						<div className='w-full mb-4 flex justify-center items-center min-h-[70px]'>
-							<div ref={turnstileContainerRef} id='turnstile-widget' className='w-full' />
-						</div>
-
-						{captchaError && (
-							<p role='alert' className='w-full mb-3 text-xs text-red-400 text-center leading-relaxed'>
-								{captchaError}
-							</p>
-						)}
-
-						{/* Кнопка Google — та же ширина */}
-						<button
-							type='button'
-							onClick={handleGoogleLogin}
-							disabled={isLoading || !turnstileToken}
-							style={{ backgroundColor: '#FFFFFF', color: '#111827' }}
-							className='w-full h-[52px] flex items-center justify-center gap-3 font-semibold text-sm transition-all duration-200 hover:bg-neutral-100 active:scale-[0.98] shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed px-5'
+						<a
+							href='#login'
+							className='font-mono text-xs uppercase tracking-wider text-muted transition-colors hover:text-fg'
 						>
-							{isLoading ? (
-								<div className='flex items-center gap-2.5'>
-									<Loader2 size={18} className='animate-spin text-neutral-800' />
-									<span style={{ color: '#111827' }}>Авторизация...</span>
-								</div>
-							) : (
-								<>
-									<svg className='w-5 h-5 flex-shrink-0' viewBox='0 0 24 24'>
-										<path fill='#4285F4' d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z' />
-										<path fill='#34A853' d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z' />
-										<path fill='#FBBC05' d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z' />
-										<path fill='#EA4335' d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z' />
-									</svg>
-									<span style={{ color: '#111827' }}>Продолжить через Google</span>
-								</>
-							)}
-						</button>
+							Войти →
+						</a>
 					</div>
+				</header>
 
-					{/* Мобильный футер */}
-					<div className='lg:hidden relative z-10 text-center text-[11px] text-white/25 mt-auto pt-4'>
-						&copy; 2026 Planner
-					</div>
-					<div className='hidden lg:block' />
-				</div>
+				<main className='mx-auto max-w-[1240px] px-5 sm:px-8'>
+					{/* ===== ПЕРВЫЙ ЭКРАН ===== */}
+					<section className='grid border-x border-border lg:grid-cols-12'>
+						<div className='border-b border-border px-5 py-12 sm:px-10 sm:py-16 lg:col-span-7 lg:border-r lg:py-24'>
+							<p className='font-mono text-xs uppercase tracking-[0.2em] text-subtle'>
+								[ 00 ] Планировщик
+							</p>
+							<h1 className='mt-6 text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-6xl xl:text-7xl'>
+								Меньше шума.
+								<br />
+								<span className='text-subtle'>Больше дела.</span>
+							</h1>
+							<p className='mt-8 max-w-md text-base leading-7 text-muted'>
+								Задачи, фокус-таймер, тайм-блокинг и дневник мыслей
+								в&nbsp;одном спокойном интерфейсе. Ничего лишнего.
+							</p>
+						</div>
+
+						{/* Вход */}
+						<div
+							id='login'
+							className='flex scroll-mt-14 flex-col justify-center border-b border-border px-5 py-12 sm:px-10 lg:col-span-5'
+						>
+							<p className='font-mono text-xs uppercase tracking-[0.2em] text-subtle'>
+								Вход
+							</p>
+							<h2 className='mt-3 text-2xl font-semibold tracking-tight'>
+								Продолжить работу
+							</h2>
+							<p className='mt-2 text-sm text-muted'>
+								Один аккаунт Google — и все данные синхронизированы.
+							</p>
+
+							<div className='mt-8 flex min-h-[65px] w-full items-center'>
+								<div
+									ref={turnstileContainerRef}
+									id='turnstile-widget'
+									className='w-full'
+								/>
+							</div>
+
+							{captchaError && (
+								<p
+									role='alert'
+									className='mt-3 text-xs leading-relaxed text-danger'
+								>
+									{captchaError}
+								</p>
+							)}
+
+							<button
+								type='button'
+								onClick={handleGoogleLogin}
+								disabled={isLoading || !turnstileToken}
+								className='mt-4 flex h-12 w-full items-center justify-between bg-fg px-5 text-sm font-semibold text-bg transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-35'
+							>
+								<span className='flex items-center gap-3'>
+									{isLoading ? (
+										<Loader2
+											size={18}
+											className='animate-spin'
+										/>
+									) : (
+										<svg
+											className='h-[18px] w-[18px] shrink-0'
+											viewBox='0 0 24 24'
+										>
+											<path fill='#4285F4' d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z' />
+											<path fill='#34A853' d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z' />
+											<path fill='#FBBC05' d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z' />
+											<path fill='#EA4335' d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z' />
+										</svg>
+									)}
+									{isLoading ? 'Авторизация…' : 'Продолжить через Google'}
+								</span>
+								<span aria-hidden>→</span>
+							</button>
+
+							<p className='mt-4 font-mono text-2xs uppercase tracking-wider text-subtle'>
+								Защищено Cloudflare Turnstile
+							</p>
+						</div>
+					</section>
+
+					{/* ===== ПРЕВЬЮ ЗАДАЧ ===== */}
+					<section className='border-x border-b border-border'>
+						<div className='flex items-center justify-between border-b border-border px-5 py-3 sm:px-10'>
+							<p className='font-mono text-xs uppercase tracking-[0.2em] text-subtle'>
+								[ 01 ] На этой неделе
+							</p>
+							<p className='font-mono text-xs tabular-nums text-muted'>
+								{doneCount}/{tasks.length}
+							</p>
+						</div>
+						<ul>
+							{tasks.map((task, index) => (
+								<li
+									key={task.id}
+									draggable
+									onDragStart={() => handleDragStart(task.id)}
+									onDragOver={handleDragOver}
+									onDrop={() => handleDrop(task.id)}
+									onDragEnd={handleDragEnd}
+									className={cn(
+										'group grid cursor-grab grid-cols-[2.5rem_1.25rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-border px-5 py-3.5 transition-colors last:border-b-0 hover:bg-white/[0.02] active:cursor-grabbing sm:grid-cols-[3rem_1.25rem_minmax(0,1fr)_6rem_6rem] sm:px-10',
+										dragId === task.id && 'opacity-30'
+									)}
+								>
+									<span className='font-mono text-xs tabular-nums text-subtle'>
+										{String(index + 1).padStart(2, '0')}
+									</span>
+									<button
+										type='button'
+										aria-label={
+											task.isCompleted
+												? 'Отметить как невыполненную'
+												: 'Отметить как выполненную'
+										}
+										onClick={() => toggleTask(task.id)}
+										className={cn(
+											'grid h-4 w-4 place-items-center border transition-colors',
+											task.isCompleted
+												? 'border-primary bg-primary text-white'
+												: 'border-white/30 hover:border-primary'
+										)}
+									>
+										{task.isCompleted && (
+											<Check
+												size={11}
+												strokeWidth={3}
+											/>
+										)}
+									</button>
+									<div className='min-w-0'>
+										<p
+											className={cn(
+												'truncate text-sm',
+												task.isCompleted
+													? 'text-subtle line-through'
+													: 'text-fg'
+											)}
+										>
+											{task.name}
+										</p>
+										{task.note && (
+											<p className='mt-0.5 truncate text-xs text-subtle'>
+												{task.note}
+											</p>
+										)}
+									</div>
+									<span className='hidden font-mono text-xs text-muted sm:block'>
+										{task.date}
+									</span>
+									<span className='flex items-center gap-2 justify-self-end text-xs text-muted'>
+										<span
+											className={cn(
+												'h-1.5 w-1.5',
+												PRIORITY_DOT[task.priority]
+											)}
+										/>
+										{PRIORITY_LABEL[task.priority]}
+									</span>
+								</li>
+							))}
+						</ul>
+					</section>
+
+					{/* ===== РАЗДЕЛЫ ===== */}
+					<section className='grid border-x border-b border-border sm:grid-cols-2 lg:grid-cols-4'>
+						{FEATURES.map((feature, index) => (
+							<div
+								key={feature.title}
+								className='border-b border-border px-5 py-8 last:border-b-0 sm:px-8 sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0'
+							>
+								<p className='font-mono text-xs text-subtle'>
+									{String(index + 2).padStart(2, '0')}
+								</p>
+								<h3 className='mt-6 text-base font-semibold'>
+									{feature.title}
+								</h3>
+								<p className='mt-2 text-sm leading-6 text-muted'>
+									{feature.text}
+								</p>
+							</div>
+						))}
+					</section>
+
+					{/* ===== ПОДВАЛ ===== */}
+					<footer className='flex flex-col gap-2 border-x border-border px-5 py-6 font-mono text-2xs uppercase tracking-wider text-subtle sm:flex-row sm:items-center sm:justify-between sm:px-10'>
+						<span>© 2026 Planner</span>
+						<a
+							href='https://t.me/w_dtc'
+							target='_blank'
+							rel='noreferrer'
+							className='transition-colors hover:text-fg'
+						>
+							Telegram разработчика ↗
+						</a>
+					</footer>
+				</main>
 			</div>
 		</>
 	)

@@ -236,14 +236,14 @@ export function ActivityCalendar() {
 
 	const intensity = (count: number) =>
 		count === 0
-			? 'bg-[#242629]'
+			? 'bg-white/[0.05]'
 			: count === 1
-				? 'bg-[#0e4429]'
+				? 'bg-primary/30'
 				: count <= 3
-					? 'bg-[#006d32]'
+					? 'bg-primary/55'
 					: count <= 6
-						? 'bg-[#26a641]'
-						: 'bg-[#d6e685]'
+						? 'bg-primary/80'
+						: 'bg-primary-hover'
 
 	// Calculate custom scrollbar dimensions
 	const canScroll = scrollState.scrollWidth > scrollState.clientWidth + 4
@@ -257,29 +257,29 @@ export function ActivityCalendar() {
 
 	return (
 		<section
-			className='mt-5 min-w-0 border border-white/[0.08] bg-[#141516] p-4 sm:p-5'
+			className='card-padded mt-4 min-w-0'
 			aria-label='Календарь активности'
 		>
 			<div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
 				<div>
-					<h2 className='text-base font-medium text-white'>Активность</h2>
-					<p className='mt-1 text-xs text-white/45'>
+					<h2 className='text-base font-semibold text-fg'>Активность</h2>
+					<p className='mt-1 text-xs text-subtle'>
 						Завершённые задачи и записи в «Мыслях»
 					</p>
 				</div>
 				<div className='flex w-full flex-col gap-2 sm:w-auto sm:items-end'>
 					<div className='flex items-center justify-between gap-3 sm:justify-end'>
-						<span className='text-xs font-medium text-emerald-300'>
+						<span className='text-xs font-medium text-primary'>
 							Сегодня, {format(today, 'd MMMM', { locale: ru })}
 						</span>
 						{loading && (
-							<span className='text-xs text-white/40'>Обновляем…</span>
+							<span className='text-xs text-subtle'>Обновляем…</span>
 						)}
 					</div>
 					<div
 						role='group'
 						aria-label='Период активности'
-						className='grid w-full grid-cols-3 gap-x-3 sm:flex sm:w-auto sm:gap-2'
+						className='grid w-full grid-cols-3 divide-x divide-border border border-border sm:flex sm:w-auto'
 					>
 						{PERIODS.map(option => (
 							<button
@@ -287,7 +287,7 @@ export function ActivityCalendar() {
 								type='button'
 								aria-pressed={period === option.value}
 								onClick={() => setPeriod(option.value)}
-								className={`min-h-9 border-b-2 px-2 text-left text-xs transition-colors sm:px-3 ${period === option.value ? 'border-b-primary text-white' : 'border-b-transparent text-white/55 hover:text-white/85'}`}
+								className={`h-8 px-3 text-center font-mono text-2xs uppercase tracking-wider transition-colors ${period === option.value ? 'bg-white/[0.06] text-fg' : 'text-muted hover:text-fg'}`}
 							>
 								{option.label}
 							</button>
@@ -315,11 +315,11 @@ export function ActivityCalendar() {
 				<div className='w-max pr-6 sm:pr-8 pl-1 py-1'>
 					<div className='mb-2 flex gap-2'>
 						<span
-							className='sticky left-0 z-20 w-[26px] shrink-0 bg-[#141516]'
+							className='sticky left-0 z-20 w-[26px] shrink-0 bg-surface'
 							aria-hidden='true'
 						/>
 						<div
-							className='grid gap-0.5 text-[9px] text-white/45'
+							className='grid gap-0.5 text-[9px] text-subtle'
 							style={{
 								gridTemplateColumns: `repeat(${weeks.length}, ${cellSize}px)`
 							}}
@@ -341,7 +341,7 @@ export function ActivityCalendar() {
 						</div>
 					</div>
 					<div className='flex gap-2'>
-						<div className='sticky left-0 z-20 grid w-[26px] shrink-0 grid-rows-7 gap-0.5 border-r border-white/[0.08] bg-[#141516] pr-1 text-[9px] leading-none text-white/55'>
+						<div className='sticky left-0 z-20 grid w-[26px] shrink-0 grid-rows-7 gap-0.5 border-r border-border bg-surface pr-1 text-[9px] leading-none text-muted'>
 							{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(day => (
 								<span
 									key={day}
@@ -378,7 +378,7 @@ export function ActivityCalendar() {
 													? `${isToday ? 'Сегодня, ' : ''}${format(day, 'd MMMM yyyy', { locale: ru })}: ${count} событий`
 													: undefined
 											}
-											className={`z-0 block transition-colors ${isInRange ? intensity(count) : 'bg-transparent'} ${isToday ? 'relative z-10 bg-emerald-500/50 outline outline-2 outline-emerald-300 outline-offset-1' : ''}`}
+											className={`z-0 block transition-colors ${isInRange ? intensity(count) : 'bg-transparent'} ${isToday ? 'relative z-10 outline outline-[1.5px] outline-offset-1 outline-primary' : ''}`}
 											style={{ width: cellSize, height: cellSize }}
 										/>
 									)
@@ -392,12 +392,12 @@ export function ActivityCalendar() {
 			{/* Auto-fading sleek scroll indicator: appears only while scrolling/dragging, then gently fades out */}
 			{canScroll && (
 				<div
-					className={`mt-2 h-1 w-full rounded-full bg-white/[0.05] overflow-hidden transition-opacity duration-500 ease-out ${
+					className={`mt-2 h-1 w-full bg-white/[0.05] overflow-hidden transition-opacity duration-500 ease-out ${
 						isScrollbarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
 					}`}
 				>
 					<div
-						className='h-full bg-white/35 rounded-full'
+						className='h-full bg-white/35'
 						style={{
 							width: `${thumbWidth}px`,
 							transform: `translateX(${thumbLeft}px)`
@@ -406,7 +406,7 @@ export function ActivityCalendar() {
 				</div>
 			)}
 
-			<div className='mt-2.5 flex items-center justify-end gap-1.5 text-[10px] text-white/40'>
+			<div className='mt-2.5 flex items-center justify-end gap-1.5 text-[10px] text-subtle'>
 				<span>Меньше</span>
 				{[0, 1, 2, 4, 7].map(value => (
 					<span
