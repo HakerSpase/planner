@@ -14,7 +14,10 @@ export const metadata: Metadata = {
 export default function SettingsPage() {
 	return (
 		<div>
-			<Heading title='Настройки' />
+			<Heading
+				title='Настройки'
+				description='Профиль, часовой пояс и ритм Pomodoro'
+			/>
 			<Settings />
 		</div>
 	)

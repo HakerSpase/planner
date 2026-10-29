@@ -1,8 +1,10 @@
 import { Draggable, Droppable } from '@hello-pangea/dnd'
+import cn from 'clsx'
 import type { Dispatch, SetStateAction } from 'react'
 
 import type { ITaskResponse } from '@/types/task.types'
 
+import { addDraftTask } from '../add-draft-task'
 import { getTaskFilters } from '../columns.data'
 import { filterTasks } from '../filter-tasks'
 
@@ -18,6 +20,13 @@ interface IKanbanColumn {
 }
 
 export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
+	const columnTasks = filterTasks(items, value) || []
+	const filterDate = getTaskFilters()[value]?.format()
+	const canAdd = value !== 'completed' && value !== 'overdue'
+
+	// Пустую колонку «Просрочено» не показываем
+	if (value === 'overdue' && !columnTasks.length) return null
+
 	return (
 		<Droppable droppableId={value}>
 			{provided => (
@@ -26,9 +35,14 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 					{...provided.droppableProps}
 				>
 					<div className={styles.column}>
-						<div className={styles.columnHeading}>{label}</div>
+						<div className={cn(styles.columnHeading, 'flex items-center gap-2')}>
+							<span className={cn(value === 'overdue' && 'text-danger')}>{label}</span>
+							<span className='font-mono text-2xs font-normal text-subtle'>
+								{columnTasks.length}
+							</span>
+						</div>
 
-						{filterTasks(items, value)?.map((item, index) => (
+						{columnTasks.map((item, index) => (
 							<Draggable
 								key={item.clientKey || item.id}
 								draggableId={item.id}
@@ -46,6 +60,9 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 											item={item}
 											setItems={setItems}
 											dragHandleProps={provided.dragHandleProps}
+											onAddNext={
+												canAdd ? () => addDraftTask(setItems, filterDate) : undefined
+											}
 										/>
 									</div>
 								)}
@@ -54,11 +71,11 @@ export function KanbanColumn({ value, items, label, setItems }: IKanbanColumn) {
 
 						{provided.placeholder}
 
-						{value !== 'completed' &&
+						{canAdd &&
 							!items?.some(item => item.id.startsWith('draft-')) && (
 								<KanbanAddCardInput
 									setItems={setItems}
-									filterDate={getTaskFilters()[value]?.format()}
+									filterDate={filterDate}
 								/>
 							)}
 					</div>

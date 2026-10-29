@@ -13,7 +13,7 @@ import { DatePicker } from '@/components/ui/task-edit/date-picker/DatePicker'
 
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
-import { TaskNoteEditor } from '../TaskNoteEditor'
+import { TaskDetails } from '../TaskDetails'
 import { useDeleteTask } from '../hooks/useDeleteTask'
 import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
@@ -23,14 +23,22 @@ interface IListRow {
 	item: ITaskResponse
 	setItems: Dispatch<SetStateAction<ITaskResponse[] | undefined>>
 	dragHandleProps?: DraggableProvidedDragHandleProps | null
+	// Enter в названии — создать следующую задачу в той же группе
+	onAddNext?: () => void
 }
 
-export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
+export function ListRow({
+	item,
+	setItems,
+	dragHandleProps,
+	onAddNext
+}: IListRow) {
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const { register, control, watch } = useForm<TypeTaskFormState>({
 		defaultValues: {
 			name: item.name,
 			note: item.note ?? '',
+			subtasks: item.subtasks ?? [],
 			isCompleted: item.isCompleted,
 			createdAt: item.createdAt,
 			priority: item.priority
@@ -72,18 +80,21 @@ export function ListRow({ item, setItems, dragHandleProps }: IListRow) {
 							)}
 						/>
 
-						<TransparentField {...register('name')} />
+						<TransparentField
+						{...register('name')}
+						autoFocus={item.id.startsWith('draft-')}
+						onKeyDown={event => {
+							if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+							event.preventDefault()
+							event.currentTarget.blur()
+							// у черновика ещё нет id на сервере — следующую добавим после сохранения
+							if (!item.id.startsWith('draft-')) onAddNext?.()
+						}} />
 					</span>
 					<div className='pl-[2.6rem]'>
-						<Controller
+						<TaskDetails
 							control={control}
-							name='note'
-							render={({ field }) => (
-								<TaskNoteEditor
-									value={field.value || ''}
-									onChange={value => field.onChange(value)}
-								/>
-							)}
+							taskName={watch('name')}
 						/>
 					</div>
 				</div>

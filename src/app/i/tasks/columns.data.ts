@@ -30,6 +30,10 @@ export const getTaskFilters = (now = dayjs()): Record<string, Dayjs> => {
 
 export const COLUMNS = [
 	{
+		label: 'Просрочено',
+		value: 'overdue'
+	},
+	{
 		label: 'Сегодня',
 		value: 'today'
 	},

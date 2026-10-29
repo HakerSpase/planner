@@ -4,11 +4,8 @@ import {
 	Activity,
 	Bell,
 	Check,
-	ChevronDown,
-	Clock,
 	CloudRain,
 	Headphones,
-	History,
 	Maximize2,
 	Minimize2,
 	Pause,
@@ -24,7 +21,8 @@ import {
 	Waves,
 	X
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import cn from 'clsx'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -38,7 +36,11 @@ import {
 } from './breathing.types'
 import { breathingAudio } from './breathing-audio'
 import { BreathingCircle } from './BreathingCircle'
+import { BreathingStats } from './BreathingStats'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Heading } from '@/components/ui/Heading'
+import { useProfile } from '@/hooks/useProfile'
+import { dateKeyInTimeZone } from '@/lib/time-zone'
 import {
 	breathingService,
 	type IBreathingSession
@@ -47,40 +49,15 @@ import {
 interface IDurationOption {
 	label: string
 	seconds: number
-	description?: string
 }
 
 const DURATIONS: IDurationOption[] = [
-	{
-		label: '1 мин',
-		seconds: 60,
-		description: 'Быстрая пауза для снятия резкого стресса'
-	},
-	{
-		label: '2 мин',
-		seconds: 120,
-		description: 'Короткая перезагрузка между делами'
-	},
-	{
-		label: '3 мин',
-		seconds: 180,
-		description: 'Оптимальный баланс для ежедневной практики'
-	},
-	{
-		label: '5 мин',
-		seconds: 300,
-		description: 'Глубокое погружение, нормализация пульса и давления'
-	},
-	{
-		label: '10 мин',
-		seconds: 600,
-		description: 'Полная медитативная сессия для глубокого спокойствия'
-	},
-	{
-		label: 'Без лимита',
-		seconds: 0,
-		description: 'Свободная практика в собственном ритме без таймера'
-	}
+	{ label: '1', seconds: 60 },
+	{ label: '2', seconds: 120 },
+	{ label: '3', seconds: 180 },
+	{ label: '5', seconds: 300 },
+	{ label: '10', seconds: 600 },
+	{ label: '∞', seconds: 0 }
 ]
 
 export default function BreathingPage() {
@@ -94,8 +71,14 @@ export default function BreathingPage() {
 	// Zen Mode, Audio Settings & Duration Modals
 	const [isZenMode, setIsZenMode] = useState<boolean>(false)
 	const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState<boolean>(false)
-	const [isDurationModalOpen, setIsDurationModalOpen] = useState<boolean>(false)
 	const [sidebarTab, setSidebarTab] = useState<'catalog' | 'history'>('catalog')
+	const [pendingTechnique, setPendingTechnique] = useState<IBreathingTechnique | null>(null)
+
+	const { data: profile } = useProfile()
+	const timeZone =
+		profile?.user.timeZone ||
+		Intl.DateTimeFormat().resolvedOptions().timeZone ||
+		'UTC'
 
 	// Phase and timing state
 	const [currentPhaseIndex, setCurrentPhaseIndex] = useState<number>(0)
@@ -128,6 +111,9 @@ export default function BreathingPage() {
 	const phaseStartTimeRef = useRef<number>(0)
 	const pausedAtRef = useRef<number>(0)
 	const accumulatedElapsedRef = useRef<number>(0)
+	// Актуальные значения для finishSession, который вызывается из интервала со старым замыканием
+	const elapsedRef = useRef<number>(0)
+	const cyclesRef = useRef<number>(0)
 
 	// Load user settings and sessions on mount
 	useEffect(() => {
@@ -168,10 +154,6 @@ export default function BreathingPage() {
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				if (isDurationModalOpen) {
-					setIsDurationModalOpen(false)
-					return
-				}
 				if (isAudioSettingsOpen) {
 					setIsAudioSettingsOpen(false)
 					return
@@ -184,7 +166,7 @@ export default function BreathingPage() {
 		}
 		window.addEventListener('keydown', onKeyDown)
 		return () => window.removeEventListener('keydown', onKeyDown)
-	}, [isDurationModalOpen, isAudioSettingsOpen, isZenMode])
+	}, [isAudioSettingsOpen, isZenMode])
 
 	const loadHistory = async () => {
 		try {
@@ -339,6 +321,7 @@ export default function BreathingPage() {
 				accumulatedElapsedRef.current +
 				Math.floor((now - sessionStartTimeRef.current) / 1000)
 			setTotalElapsedSeconds(currentSessionElapsed)
+			elapsedRef.current = currentSessionElapsed
 
 			// Check target duration
 			if (
@@ -357,7 +340,8 @@ export default function BreathingPage() {
 				const nextPhase = selectedTechnique.phases[nextIndex]
 
 				if (nextIndex === 0) {
-					setCompletedCycles(c => c + 1)
+					cyclesRef.current += 1
+					setCompletedCycles(cyclesRef.current)
 				}
 
 				setCurrentPhaseIndex(nextIndex)
@@ -391,6 +375,8 @@ export default function BreathingPage() {
 		sessionStartTimeRef.current = now
 		phaseStartTimeRef.current = now
 		accumulatedElapsedRef.current = 0
+		elapsedRef.current = 0
+		cyclesRef.current = 0
 		setTotalElapsedSeconds(0)
 		setCompletedCycles(0)
 		setCurrentPhaseIndex(0)
@@ -435,8 +421,8 @@ export default function BreathingPage() {
 	}
 
 	const finishSession = () => {
-		const finalElapsed = totalElapsedSeconds
-		const finalCycles = completedCycles
+		const finalElapsed = elapsedRef.current
+		const finalCycles = cyclesRef.current
 		setIsActive(false)
 		setIsPaused(false)
 		breathingAudio.stopSoundscape()
@@ -447,6 +433,8 @@ export default function BreathingPage() {
 	}
 
 	const resetSession = () => {
+		elapsedRef.current = 0
+		cyclesRef.current = 0
 		setIsActive(false)
 		setIsPaused(false)
 		setTotalElapsedSeconds(0)
@@ -460,11 +448,15 @@ export default function BreathingPage() {
 	}
 
 	const selectTechnique = (tech: IBreathingTechnique) => {
+		if (tech.id === selectedTechnique.id) return
 		if (isActive) {
-			if (!confirm('Прервать текущий сеанс дыхания и выбрать другую практику?'))
-				return
-			resetSession()
+			setPendingTechnique(tech)
+			return
 		}
+		applyTechnique(tech)
+	}
+
+	const applyTechnique = (tech: IBreathingTechnique) => {
 		setSelectedTechnique(tech)
 		setCurrentPhaseIndex(0)
 		setPhaseRemainingSeconds(tech.phases[0].seconds)
@@ -479,14 +471,42 @@ export default function BreathingPage() {
 		return `${m}:${s < 10 ? '0' : ''}${s}`
 	}
 
-	// Calculate stats
-	const todayDateString = new Date().toISOString().split('T')[0]
-	const todaySessions = sessions.filter(
-		s => s.created_at && s.created_at.startsWith(todayDateString)
+	const sessionProgress =
+		isActive && targetDurationSeconds > 0
+			? Math.min(100, (totalElapsedSeconds / targetDurationSeconds) * 100)
+			: 0
+
+	// История по дням: «Сегодня», «Вчера», дальше дата
+	const todayKey = dateKeyInTimeZone(new Date(), timeZone)
+	const yesterdayKey = dateKeyInTimeZone(
+		new Date(Date.now() - 24 * 60 * 60 * 1000),
+		timeZone
 	)
-	const todayTotalMinutes = Math.round(
-		todaySessions.reduce((acc, s) => acc + s.duration_seconds, 0) / 60
-	)
+	const historyGroups = sessions.reduce<
+		{ key: string; label: string; items: IBreathingSession[] }[]
+	>((groups, session) => {
+		const key = dateKeyInTimeZone(new Date(session.created_at), timeZone)
+		let group = groups.find(item => item.key === key)
+		if (!group) {
+			group = {
+				key,
+				label:
+					key === todayKey
+						? 'Сегодня'
+						: key === yesterdayKey
+							? 'Вчера'
+							: new Date(session.created_at).toLocaleDateString('ru-RU', {
+									day: 'numeric',
+									month: 'long',
+									timeZone
+								}),
+				items: []
+			}
+			groups.push(group)
+		}
+		group.items.push(session)
+		return groups
+	}, [])
 
 	const getSoundscapeIcon = (type: SoundscapeType) => {
 		switch (type) {
@@ -503,898 +523,563 @@ export default function BreathingPage() {
 		}
 	}
 
+	const CUE_ICONS: Record<CueStyleType, typeof Bell> = {
+		tibetan: Sparkles,
+		bell: Bell,
+		soft_sine: Activity,
+		none: VolumeX
+	}
+
+	/* Последовательность фаз: «Вдох 4 — Задержка 7 — Выдох 8» */
+	const phaseStrip = (
+		<ol className='flex flex-wrap items-center gap-x-1 gap-y-1 font-mono text-2xs uppercase tracking-wider'>
+			{selectedTechnique.phases.map((phase, index) => {
+				const isCurrent = isActive && index === currentPhaseIndex
+				return (
+					<li
+						key={`${phase.type}-${index}`}
+						className='flex items-center gap-1'
+					>
+						{index > 0 && <span className='text-white/15'>—</span>}
+						<span
+							className={cn(
+								'px-1.5 py-0.5 transition-colors',
+								isCurrent ? 'bg-primary text-white' : 'text-subtle'
+							)}
+						>
+							{phase.name} {phase.seconds}
+						</span>
+					</li>
+				)
+			})}
+		</ol>
+	)
+
+	/* Переключатели звука/вибрации — используются и на странице, и в дзен-режиме */
+	const feedbackControls = (
+		<div className='flex items-center border border-border'>
+			<IconToggle
+				label={
+					soundscape === 'none'
+						? 'Фоновый звук и сигналы'
+						: `Фон: ${SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}`
+				}
+				active={soundscape !== 'none'}
+				onClick={() => setIsAudioSettingsOpen(true)}
+			>
+				<Headphones size={15} />
+			</IconToggle>
+			<IconToggle
+				label={soundEnabled ? 'Выключить звук' : 'Включить звук'}
+				active={soundEnabled}
+				onClick={toggleSound}
+			>
+				{soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+			</IconToggle>
+			<IconToggle
+				label={vibrationEnabled ? 'Выключить вибрацию' : 'Включить вибрацию'}
+				active={vibrationEnabled}
+				onClick={toggleVibration}
+			>
+				<Smartphone size={15} />
+			</IconToggle>
+			<IconToggle
+				label={isZenMode ? 'Выйти из дзен-режима (Esc)' : 'Дзен-режим на весь экран'}
+				onClick={toggleZenMode}
+			>
+				{isZenMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+			</IconToggle>
+		</div>
+	)
+
+	/* Нижняя панель: выбор времени + старт, либо таймер + управление */
+	const sessionControls = (size: 'md' | 'lg') => {
+		const h = size === 'lg' ? 'h-11' : 'h-10'
+		return !isActive ? (
+			<div className='flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+				<div className='flex items-center gap-3'>
+					<span className='eyebrow'>Минут</span>
+					<div
+						role='radiogroup'
+						aria-label='Длительность сеанса'
+						className='flex divide-x divide-border border border-border'
+					>
+						{DURATIONS.map(duration => (
+							<button
+								key={duration.seconds}
+								type='button'
+								role='radio'
+								aria-checked={targetDurationSeconds === duration.seconds}
+								title={duration.seconds ? `${duration.label} мин` : 'Без ограничения'}
+								onClick={() => setTargetDurationSeconds(duration.seconds)}
+								className={cn(
+									'h-9 min-w-9 px-2 font-mono text-xs tabular-nums transition-colors',
+									targetDurationSeconds === duration.seconds
+										? 'bg-white/[0.08] text-fg'
+										: 'text-subtle hover:text-fg'
+								)}
+							>
+								{duration.label}
+							</button>
+						))}
+					</div>
+				</div>
+				<button
+					type='button'
+					onClick={startSession}
+					className={cn(
+						'flex items-center justify-center gap-2 bg-primary px-6 text-sm font-medium text-white transition-colors hover:bg-primary-hover',
+						h
+					)}
+				>
+					<Play
+						size={14}
+						fill='currentColor'
+					/>
+					Начать
+				</button>
+			</div>
+		) : (
+			<div className='flex w-full flex-wrap items-center justify-between gap-3'>
+				<p className='font-mono tabular-nums'>
+					<span className='text-lg text-fg'>{formatTime(totalElapsedSeconds)}</span>
+					<span className='text-xs text-subtle'>
+						{targetDurationSeconds > 0
+							? ` / ${formatTime(targetDurationSeconds)}`
+							: ' · без лимита'}
+					</span>
+				</p>
+				<div className='flex items-center gap-2'>
+					<button
+						type='button'
+						onClick={isPaused ? resumeSession : pauseSession}
+						className={cn(
+							'flex items-center gap-2 px-4 text-sm font-medium transition-colors',
+							h,
+							isPaused
+								? 'bg-primary text-white hover:bg-primary-hover'
+								: 'border border-border text-fg hover:bg-white/[0.05]'
+						)}
+					>
+						{isPaused ? (
+							<Play
+								size={14}
+								fill='currentColor'
+							/>
+						) : (
+							<Pause size={14} />
+						)}
+						{isPaused ? 'Продолжить' : 'Пауза'}
+					</button>
+					<button
+						type='button'
+						onClick={finishSession}
+						className={cn(
+							'flex items-center gap-2 border border-border px-4 text-sm font-medium text-fg transition-colors hover:border-success/50 hover:text-success',
+							h
+						)}
+					>
+						<Check size={14} />
+						Завершить
+					</button>
+					<button
+						type='button'
+						onClick={resetSession}
+						title='Сбросить без сохранения'
+						aria-label='Сбросить без сохранения'
+						className={cn(
+							'grid place-items-center border border-border text-subtle transition-colors hover:text-fg',
+							h,
+							size === 'lg' ? 'w-11' : 'w-10'
+						)}
+					>
+						<RotateCcw size={14} />
+					</button>
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div className='w-full pb-16'>
-			{/* Page Header */}
-			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4'>
-				<div>
-					<h1 className='text-2xl font-semibold text-white'>
-						Дыхательные практики
-					</h1>
-					<p className='mt-1 text-xs text-subtle'>
-						Осознанное дыхание для концентрации, ясности ума и восстановления баланса
-					</p>
-				</div>
-				{todayTotalMinutes > 0 && (
-					<div className='text-xs text-subtle font-mono'>
-						Сегодня: <strong className='text-fg'>{todayTotalMinutes} мин</strong>
-					</div>
-				)}
-			</div>
+			<Heading
+				title='Дыхание'
+				description='Короткие практики, чтобы вернуть фокус и снять напряжение'
+			/>
 
-			{/* MOBILE-ONLY: Horizontal quick-picker without vertical scrollbar */}
-			<div className='mt-3 lg:hidden overflow-hidden'>
-				<div className='flex gap-2 overflow-x-auto overflow-y-hidden touch-pan-x scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1'>
-					{BREATHING_TECHNIQUES.map(tech => {
-						const isSelected = tech.id === selectedTechnique.id
-						return (
-							<button
-								key={tech.id}
-								type='button'
-								onClick={() => selectTechnique(tech)}
-								className={`flex shrink-0 items-center px-3 py-1.5 text-xs transition-colors border ${
-									isSelected
-										? 'border-primary bg-primary/20 text-white font-medium'
-										: 'border-border bg-surface text-muted hover:text-white'
-								}`}
-							>
-								<span>{tech.shortName || tech.name.split('(')[0]}</span>
-							</button>
-						)
-					})}
-				</div>
-			</div>
+			<BreathingStats
+				sessions={sessions}
+				timeZone={timeZone}
+				isLoading={loadingHistory}
+			/>
 
-			{/* Responsive 2-Column Grid on Desktop */}
-			<div className='mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12 items-start'>
-				{/* MAIN / LEFT COLUMN: Visualizer Stage (lg:col-span-8) */}
-				<div className='flex flex-col lg:col-span-8'>
-					{/* Interactive Breathing Stage - Stable fixed desktop height */}
-					<div className='relative flex flex-col justify-between border border-border bg-surface p-5 sm:p-6 shadow-xl lg:h-[570px] min-h-[570px] overflow-hidden'>
-						{/* Slot 1: Top Bar - Responsive layout preventing collisions on mobile */}
-						<div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3 shrink-0 min-h-[44px]'>
-							<div className='flex items-center min-w-0'>
-								<span className='text-sm sm:text-base font-medium text-white tracking-wide truncate'>
-									{selectedTechnique.name}
-								</span>
-							</div>
-
-							{/* Feedback & Mode Controls */}
-							<div className='flex items-center gap-1.5 shrink-0 self-end sm:self-auto'>
-								{/* Zen Mode Button */}
-								<button
-									type='button'
-									onClick={toggleZenMode}
-									title='Полноэкранный дзен-режим (Esc)'
-									className='flex h-8 items-center gap-1.5 border border-border bg-white/[0.03] hover:bg-white/[0.08] hover:border-border-strong px-2.5 text-xs text-muted transition-colors'
-								>
-									<Maximize2 size={13} className='text-primary' />
-									<span className='inline sm:inline'>Дзен</span>
-								</button>
-
-								{/* Audio & Soundscape Settings Button */}
-								<button
-									type='button'
-									onClick={() => setIsAudioSettingsOpen(true)}
-									title='Настройки звука и природы'
-									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
-										soundscape !== 'none'
-											? 'border-primary/50 bg-primary/15 text-primary font-medium'
-											: 'border-border bg-white/[0.03] text-muted hover:text-white hover:border-border-strong'
-									}`}
-								>
-									<Headphones size={13} />
-									<span className='hidden sm:inline'>
-										{soundscape === 'none'
-											? 'Звук'
-											: SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label.split(' ')[0]}
-									</span>
-								</button>
-
-								{/* Vibration Toggle */}
-								<button
-									type='button'
-									onClick={toggleVibration}
-									title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
-									className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
-										vibrationEnabled
-											? 'border-primary/50 bg-primary/15 text-primary font-medium'
-											: 'border-border bg-transparent text-subtle hover:text-white hover:border-border-strong'
-									}`}
-								>
-									<Smartphone size={13} />
-									<span className='hidden sm:inline'>Вибро</span>
-								</button>
-
-								{/* Quick Sound Mute Toggle */}
-								<button
-									type='button'
-									onClick={toggleSound}
-									title={soundEnabled ? 'Звук включен' : 'Звук выключен'}
-									className={`flex h-8 w-8 items-center justify-center border text-xs transition-colors ${
-										soundEnabled
-											? 'border-primary/50 bg-primary/15 text-primary'
-											: 'border-border bg-transparent text-subtle hover:text-white hover:border-border-strong'
-									}`}
-								>
-									{soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
-								</button>
-							</div>
-						</div>
-
-						{/* Slot 2 & 3: Visualizer and Flow Stepper */}
-						<div className='flex-1 flex flex-col items-center justify-center relative py-1 min-h-0'>
-							<BreathingCircle
-								technique={selectedTechnique}
-								currentPhase={currentPhase}
-								currentPhaseIndex={currentPhaseIndex}
-								phaseRemainingSeconds={phaseRemainingSeconds}
-								phaseProgress={phaseProgress}
-								isActive={isActive}
-								isPaused={isPaused}
-								cycleCount={completedCycles}
-							/>
-						</div>
-
-						{/* Slot 4: Duration / Status & Action Buttons - Responsive */}
-						<div className='relative shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-border pt-4 w-full'>
-							{/* Top edge luminous session progress indicator */}
-							{isActive && targetDurationSeconds > 0 && (
-								<div className='absolute top-0 left-0 h-[2px] w-full bg-white/[0.05] overflow-hidden'>
-									<div
-										className='h-full bg-gradient-to-r from-primary to-purple-400 transition-all duration-300 ease-linear shadow-[0_0_8px_rgba(139,92,246,0.6)]'
-										style={{
-											width: `${Math.min(100, (totalElapsedSeconds / targetDurationSeconds) * 100)}%`
-										}}
-									/>
-								</div>
-							)}
-
-							{/* Left: Duration Selector (opens modal window) or Active Stopwatch Timer */}
-							{!isActive ? (
-								<button
-									type='button'
-									onClick={() => setIsDurationModalOpen(true)}
-									className='flex h-9 items-center justify-between sm:justify-start gap-2 border border-border bg-white/[0.03] hover:bg-white/[0.08] hover:border-border-strong px-3.5 py-1 text-xs text-fg transition-colors w-full sm:w-auto shrink-0'
-									title='Выбрать время сеанса в отдельном окне'
-								>
-									<div className='flex items-center gap-2'>
-										<Clock size={13} className='text-primary' />
-										<span className='text-subtle font-mono'>Время:</span>
-										<span className='font-medium text-white'>
-											{targetDurationSeconds > 0
-												? `${Math.round(targetDurationSeconds / 60)} мин`
-												: 'Без лимита'}
-										</span>
-									</div>
-									<ChevronDown size={12} className='text-subtle ml-1' />
-								</button>
-							) : (
-								<div className='flex items-baseline gap-1.5 font-mono whitespace-nowrap shrink-0'>
-									<span className='text-base sm:text-lg font-semibold text-white tracking-tight'>
-										{formatTime(totalElapsedSeconds)}
-									</span>
-									{targetDurationSeconds > 0 && (
-										<span className='text-xs text-subtle font-normal'>
-											/ {formatTime(targetDurationSeconds)}
-										</span>
-									)}
-								</div>
-							)}
-
-							{/* Right: Action Buttons */}
-							<div className='flex items-center gap-2 w-full sm:w-auto'>
-								{!isActive ? (
-									<button
-										type='button'
-										onClick={startSession}
-										className='flex h-9 items-center justify-center gap-2 border border-primary bg-primary px-6 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90 w-full sm:w-auto'
-									>
-										<Play size={13} fill='currentColor' />
-										<span>Начать практику</span>
-									</button>
-								) : (
-									<>
-										{isPaused ? (
-											<button
-												type='button'
-												onClick={resumeSession}
-												className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-primary bg-primary px-3 sm:px-5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 shadow-sm'
-											>
-												<Play size={13} fill='currentColor' />
-												<span>Продолжить</span>
-											</button>
-										) : (
-											<button
-												type='button'
-												onClick={pauseSession}
-												className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-border-strong bg-white/10 px-3 sm:px-5 text-xs font-medium text-white transition-colors hover:bg-white/15'
-											>
-												<Pause size={13} />
-												<span>Пауза</span>
-											</button>
-										)}
-
-										<button
-											type='button'
-											onClick={finishSession}
-											className='flex-1 sm:flex-initial flex h-9 items-center justify-center gap-1.5 sm:gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3 sm:px-4 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20'
-										>
-											<Check size={13} />
-											<span>Завершить</span>
-										</button>
-
-										<button
-											type='button'
-											onClick={resetSession}
-											title='Сбросить'
-											className='grid h-9 w-9 shrink-0 place-items-center border border-border bg-transparent text-subtle hover:border-white/25 hover:text-white transition-colors'
-										>
-											<RotateCcw size={13} />
-										</button>
-									</>
-								)}
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* SIDEBAR / RIGHT COLUMN: Catalog of Techniques & History (lg:col-span-4) */}
-				<div
-					className={`flex flex-col lg:col-span-4 transition-opacity duration-500 ease-in-out ${
-						isActive ? 'opacity-40 pointer-events-none' : 'opacity-100'
-					}`}
-				>
-					<div className='border border-border bg-surface p-4 shadow-xl lg:h-[570px] flex flex-col'>
-						{/* Tab Navigation Header */}
-						<div className='flex items-center justify-between pb-3 border-b border-border shrink-0'>
-							<div className='flex items-center gap-1 bg-white/[0.03] p-0.5 border border-border'>
-								<button
-									type='button'
-									onClick={() => setSidebarTab('catalog')}
-									className={`px-3 py-1 text-xs transition-colors font-medium ${
-										sidebarTab === 'catalog'
-											? 'bg-primary text-white shadow-sm'
-											: 'text-muted hover:text-white'
-									}`}
-								>
-									Каталог
-								</button>
-								<button
-									type='button'
-									onClick={() => setSidebarTab('history')}
-									className={`flex items-center gap-1.5 px-3 py-1 text-xs transition-colors font-medium ${
-										sidebarTab === 'history'
-											? 'bg-primary text-white shadow-sm'
-											: 'text-muted hover:text-white'
-									}`}
-								>
-									<span>История</span>
-									{sessions.length > 0 && (
-										<span
-											className={`px-1.5 py-0.2 text-[10px] font-mono ${
-												sidebarTab === 'history'
-													? 'bg-white/20 text-white'
-													: 'bg-white/10 text-muted'
-											}`}
-										>
-											{sessions.length}
-										</span>
-									)}
-								</button>
-							</div>
-
-							{sidebarTab === 'history' && (
-								<span className='text-[11px] text-subtle font-mono'>
-									{todayTotalMinutes > 0
-										? `сегодня ${todayTotalMinutes} мин`
-										: `${sessions.length} сеансов`}
-								</span>
-							)}
-						</div>
-
-						{/* Tab Content: Catalog View (Clean list without duplicate bottom history button) */}
-						{sidebarTab === 'catalog' && (
-							<div className='flex-1 overflow-y-auto pr-1 divide-y divide-border pt-1'>
-								{BREATHING_TECHNIQUES.map(tech => {
-									const isSelected = tech.id === selectedTechnique.id
-									return (
-										<button
-											key={tech.id}
-											type='button'
-											onClick={() => selectTechnique(tech)}
-											className={`group w-full flex items-start py-3 px-3 text-left transition-colors ${
-												isSelected
-													? 'bg-white/[0.04] border-l-2 border-primary -ml-[1px]'
-													: 'hover:bg-white/[0.015] border-l-2 border-transparent'
-											}`}
-										>
-											<div className='min-w-0 flex-1'>
-												<div className='flex items-center justify-between gap-2'>
-													<span
-														className={`text-xs transition-colors truncate ${
-															isSelected
-																? 'font-semibold text-white'
-																: 'font-medium text-muted group-hover:text-white'
-														}`}
-														style={{ color: isSelected ? tech.accentColor : undefined }}
-													>
-														{tech.name}
-													</span>
-													<span className='text-[11px] font-mono text-subtle shrink-0'>
-														{tech.totalCycleSeconds}с
-													</span>
-												</div>
-												<p className='mt-1 text-[11px] text-subtle leading-relaxed line-clamp-2'>
-													{tech.description}
-												</p>
-											</div>
-										</button>
-									)
-								})}
-							</div>
-						)}
-
-						{/* Tab Content: History View */}
-						{sidebarTab === 'history' && (
-							<div className='flex-1 flex flex-col justify-between overflow-hidden pt-2'>
-								<div className='flex-1 overflow-y-auto pr-1'>
-									{loadingHistory ? (
-										<p className='py-8 text-center text-xs text-subtle'>
-											Загружаем историю…
-										</p>
-									) : sessions.length === 0 ? (
-										<div className='py-12 px-4 text-center'>
-											<History size={24} className='mx-auto text-white/20 mb-2' />
-											<p className='text-xs text-subtle font-medium'>
-												История пока пуста
-											</p>
-											<p className='text-[11px] text-subtle mt-1 leading-relaxed'>
-												Сеансы сохраняются автоматически после завершения практики.
-											</p>
-										</div>
-									) : (
-										<div className='divide-y divide-border'>
-											{sessions.map(s => (
-												<div
-													key={s.id}
-													className='group flex items-center justify-between py-2.5 px-2 text-xs transition-colors hover:bg-white/[0.02]'
-												>
-													<div className='min-w-0 flex-1 pr-2'>
-														<p className='truncate font-medium text-fg'>
-															{s.technique_name}
-														</p>
-														<p className='text-[10px] text-subtle mt-0.5'>
-															{new Date(s.created_at).toLocaleDateString('ru-RU', {
-																day: 'numeric',
-																month: 'short',
-																hour: '2-digit',
-																minute: '2-digit'
-															})}
-														</p>
-													</div>
-
-													<div className='flex items-center gap-2.5 shrink-0'>
-														<div className='text-right font-mono text-[11px] text-muted'>
-															<div>{Math.round(s.duration_seconds / 60) || 1} мин</div>
-															<div className='text-[10px] text-subtle'>
-																{s.cycles_count} ц.
-															</div>
-														</div>
-
-														<button
-															type='button'
-															onClick={() => setSessionToDelete(s)}
-															title='Удалить запись'
-															className='grid h-6 w-6 place-items-center border border-transparent text-white/25 hover:border-red-500/20 hover:text-red-400 transition-colors'
-														>
-															<Trash2 size={12} />
-														</button>
-													</div>
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-
-								{/* Bottom Quick Return to Catalog */}
-								<div className='pt-2.5 mt-2 border-t border-border flex items-center justify-between text-xs text-subtle shrink-0'>
-									<button
-										type='button'
-										onClick={() => setSidebarTab('catalog')}
-										className='text-primary hover:underline text-xs font-medium'
-									>
-										← К каталогу практик
-									</button>
-									<span className='text-[11px] text-subtle font-mono'>
-										Всего: {sessions.length}
-									</span>
-								</div>
-							</div>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{/* ========================================================================= */}
-			{/* FULLSCREEN ZEN MODE OVERLAY                                               */}
-			{/* ========================================================================= */}
-			{isZenMode && (
-				<div className='fixed inset-0 z-[120] flex flex-col justify-between bg-bg px-4 py-6 sm:p-10 select-none overflow-hidden'>
-					{/* Deep Graphite Ambient Backdrop with Subtle Vignette */}
-					<div
-						className='absolute inset-0 pointer-events-none'
-						style={{
-							background:
-								'radial-gradient(ellipse 90% 80% at 50% 50%, #0d0e12 0%, #08090b 100%)'
-						}}
-					/>
-
-					{/* Zen Header */}
-					<div className='relative z-10 flex items-center justify-between border-b border-border pb-4 gap-3'>
-						<div className='min-w-0 flex-1 pr-2'>
-							<h2 className='text-sm sm:text-base font-medium text-white [hyphens:none]'>
-								{selectedTechnique.name.replace(/-/g, '\u2011')}
+			<div className='mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]'>
+				{/* Сцена практики */}
+				<section className='flex min-h-[560px] flex-col border border-border bg-surface'>
+					<header className='flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5'>
+						<div className='min-w-0'>
+							<h2 className='truncate text-base font-semibold text-fg'>
+								{selectedTechnique.name}
 							</h2>
-							<p className='text-xs text-subtle font-mono mt-0.5 whitespace-nowrap'>
-								{isActive ? (
-									<>
-										Время: <strong className='text-white'>{formatTime(totalElapsedSeconds)}</strong>
-										{targetDurationSeconds > 0 && ` / ${formatTime(targetDurationSeconds)}`}
-									</>
-								) : (
-									<>
-										<span>Длительность: </span>
-										<button
-											type='button'
-											onClick={() => setIsDurationModalOpen(true)}
-											className='text-white underline decoration-dotted hover:text-primary transition-colors'
-											title='Выбрать время сеанса'
-										>
-											{targetDurationSeconds > 0
-												? `${Math.round(targetDurationSeconds / 60)} мин`
-												: 'Без лимита'}
-										</button>
-									</>
-								)}
-							</p>
+							<div className='mt-1.5'>{phaseStrip}</div>
 						</div>
+						{feedbackControls}
+					</header>
 
-						{/* Quick Zen Actions */}
-						<div className='flex items-center gap-2 shrink-0'>
-							<button
-								type='button'
-								onClick={() => setIsAudioSettingsOpen(true)}
-								title='Настройки звука и фона природы'
-								className={`flex h-8 items-center gap-1.5 border px-2.5 text-xs transition-colors ${
-									soundscape !== 'none' || soundEnabled
-										? 'border-primary/50 bg-primary/15 text-primary font-medium'
-										: 'border-border bg-white/[0.04] text-subtle hover:text-white'
-								}`}
-							>
-								<Headphones size={13} />
-								<span className='hidden sm:inline'>
-									{soundscape === 'none'
-										? 'Звук'
-										: SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}
-								</span>
-							</button>
-
-							<button
-								type='button'
-								onClick={toggleVibration}
-								title={vibrationEnabled ? 'Вибрация включена' : 'Вибрация выключена'}
-								className={`flex h-8 w-8 items-center justify-center border text-xs transition-colors ${
-									vibrationEnabled
-										? 'border-primary/50 bg-primary/15 text-primary'
-										: 'border-border bg-white/[0.04] text-subtle hover:text-white'
-								}`}
-							>
-								<Smartphone size={13} />
-							</button>
-
-							<button
-								type='button'
-								onClick={toggleZenMode}
-								title='Выйти из дзен-режима (Esc)'
-								className='flex h-8 items-center gap-1.5 border border-border-strong bg-white/10 px-3 text-xs font-medium text-white transition-colors hover:bg-white/15'
-							>
-								<Minimize2 size={13} />
-								<span className='hidden sm:inline'>Выход (Esc)</span>
-							</button>
-						</div>
-					</div>
-
-					{/* Zen Center: Instruction ABOVE the breathing form + Visualizer Circle */}
-					<div className='relative z-10 flex flex-1 flex-col items-center justify-center py-2'>
-						{/* Phase instruction hint ABOVE the central form */}
-						<div className='min-h-[32px] w-full max-w-sm sm:max-w-md px-4 shrink-0 flex items-center justify-center mb-4 sm:mb-6 min-w-0'>
-							<p className='text-xs sm:text-base font-medium text-fg tracking-wide text-center leading-relaxed break-words line-clamp-2 transition-opacity duration-300'>
-								{isActive
-									? (isPaused ? 'Пауза' : currentPhase.hint)
-									: selectedTechnique.tagline}
-							</p>
-						</div>
-
+					<div className='flex flex-1 flex-col items-center justify-center px-4 py-6'>
 						<BreathingCircle
 							technique={selectedTechnique}
 							currentPhase={currentPhase}
-							currentPhaseIndex={currentPhaseIndex}
 							phaseRemainingSeconds={phaseRemainingSeconds}
 							phaseProgress={phaseProgress}
 							isActive={isActive}
 							isPaused={isPaused}
 							cycleCount={completedCycles}
-							isZen={true}
 						/>
-					</div>
-
-					{/* Zen Bottom Controls */}
-					<div className='relative z-10 flex flex-col items-center gap-3 border-t border-border pt-4'>
-						<div className='flex flex-wrap items-center justify-center gap-3'>
-							{!isActive ? (
-								<div className='flex items-center gap-3'>
-									<button
-										type='button'
-										onClick={() => setIsDurationModalOpen(true)}
-										className='flex h-10 items-center gap-2 border border-border-strong bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 px-4 text-xs font-medium text-fg transition-colors'
-										title='Выбрать время сеанса'
-									>
-										<Clock size={14} className='text-primary' />
-										<span className='font-mono text-subtle'>Время:</span>
-										<span className='text-white font-medium'>
-											{targetDurationSeconds > 0
-												? `${Math.round(targetDurationSeconds / 60)} мин`
-												: 'Без лимита'}
-										</span>
-										<ChevronDown size={12} className='text-subtle ml-0.5' />
-									</button>
-
-									<button
-										type='button'
-										onClick={startSession}
-										className='flex h-10 items-center gap-2 border border-primary bg-primary px-7 text-xs sm:text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary/90'
-									>
-										<Play size={15} fill='currentColor' />
-										<span>Начать практику</span>
-									</button>
-								</div>
-							) : (
-								<div className='flex items-center gap-2 sm:gap-2.5 max-w-full'>
-									{isPaused ? (
-										<button
-											type='button'
-											onClick={resumeSession}
-											className='flex h-10 items-center justify-center gap-2 border border-primary bg-primary px-3.5 sm:px-6 text-xs font-semibold text-white transition-colors hover:bg-primary/90 whitespace-nowrap shrink-0'
-										>
-											<Play size={14} fill='currentColor' />
-											<span>Продолжить</span>
-										</button>
-									) : (
-										<button
-											type='button'
-											onClick={pauseSession}
-											className='flex h-10 items-center justify-center gap-2 border border-border-strong bg-white/10 px-3.5 sm:px-6 text-xs font-medium text-white transition-colors hover:bg-white/15 whitespace-nowrap shrink-0'
-										>
-											<Pause size={14} />
-											<span>Пауза</span>
-										</button>
-									)}
-
-									<button
-										type='button'
-										onClick={finishSession}
-										className='flex h-10 items-center justify-center gap-2 border border-emerald-500/40 bg-emerald-500/10 px-3.5 sm:px-5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 whitespace-nowrap shrink-0'
-									>
-										<Check size={14} className='shrink-0' />
-										<span>
-											Завершить<span className='hidden sm:inline'> и сохранить</span>
-										</span>
-									</button>
-
-									<button
-										type='button'
-										onClick={resetSession}
-										title='Сбросить'
-										className='grid h-10 w-10 shrink-0 place-items-center border border-border bg-transparent text-subtle hover:border-white/25 hover:text-white transition-colors'
-									>
-										<RotateCcw size={14} />
-									</button>
-								</div>
-							)}
-						</div>
-
-						<p className='text-[11px] text-subtle'>
-							Нажмите клавишу Esc или кнопку «Выход», чтобы вернуться.
+						<p className='mt-5 min-h-[2.5rem] max-w-md text-center text-sm leading-5 text-muted'>
+							{isActive ? (isPaused ? 'Пауза' : currentPhase.hint) : selectedTechnique.tagline}
 						</p>
 					</div>
+
+					<footer className='relative border-t border-border px-4 py-3 sm:px-5'>
+						{sessionProgress > 0 && (
+							<div
+								className='absolute -top-px left-0 h-px bg-primary transition-[width] duration-300 ease-linear'
+								style={{ width: `${sessionProgress}%` }}
+							/>
+						)}
+						{sessionControls('md')}
+					</footer>
+				</section>
+
+				{/* Каталог и история */}
+				<aside className='flex flex-col border border-border bg-surface lg:h-[560px]'>
+					<div
+						role='tablist'
+						className='grid shrink-0 grid-cols-2 divide-x divide-border border-b border-border'
+					>
+						{(
+							[
+								['catalog', 'Практики', BREATHING_TECHNIQUES.length],
+								['history', 'История', sessions.length]
+							] as const
+						).map(([tab, label, count]) => (
+							<button
+								key={tab}
+								type='button'
+								role='tab'
+								aria-selected={sidebarTab === tab}
+								onClick={() => setSidebarTab(tab)}
+								className={cn(
+									'flex h-11 items-center justify-center gap-2 text-sm font-medium transition-colors',
+									sidebarTab === tab
+										? 'bg-white/[0.04] text-fg'
+										: 'text-subtle hover:text-fg'
+								)}
+							>
+								{label}
+								<span className='font-mono text-2xs text-subtle'>{count}</span>
+							</button>
+						))}
+					</div>
+
+					<div className='min-h-0 flex-1 overflow-y-auto'>
+						{sidebarTab === 'catalog' ? (
+							<ul>
+								{BREATHING_TECHNIQUES.map((tech, index) => {
+									const isSelected = tech.id === selectedTechnique.id
+									return (
+										<li key={tech.id}>
+											<button
+												type='button'
+												onClick={() => selectTechnique(tech)}
+												aria-pressed={isSelected}
+												className={cn(
+													'relative grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border px-4 py-3.5 text-left transition-colors',
+													isSelected
+														? 'bg-white/[0.04] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary'
+														: 'hover:bg-white/[0.02]'
+												)}
+											>
+												<span className='pt-0.5 font-mono text-xs text-subtle'>
+													{String(index + 1).padStart(2, '0')}
+												</span>
+												<span className='min-w-0'>
+													<span
+														className={cn(
+															'block truncate text-sm font-medium',
+															isSelected ? 'text-fg' : 'text-muted'
+														)}
+													>
+														{tech.shortName || tech.name}
+													</span>
+													<span className='mt-0.5 block text-xs leading-5 text-subtle'>
+														{tech.tagline}
+													</span>
+												</span>
+												<span className='pt-0.5 font-mono text-2xs text-subtle'>
+													{tech.totalCycleSeconds} с
+												</span>
+											</button>
+										</li>
+									)
+								})}
+							</ul>
+						) : loadingHistory ? (
+							<div className='space-y-px p-4'>
+								{[0, 1, 2, 3].map(item => (
+									<div
+										key={item}
+										className='h-12 animate-pulse bg-white/[0.03]'
+									/>
+								))}
+							</div>
+						) : sessions.length === 0 ? (
+							<div className='px-6 py-14 text-center'>
+								<p className='text-sm text-muted'>Пока ни одного сеанса</p>
+								<p className='mt-1 text-xs leading-5 text-subtle'>
+									Сеанс сохранится сам, когда закончится время или вы нажмёте
+									«Завершить».
+								</p>
+							</div>
+						) : (
+							historyGroups.map(group => {
+								const minutes = Math.round(
+									group.items.reduce((sum, item) => sum + item.duration_seconds, 0) /
+										60
+								)
+								return (
+									<section key={group.key}>
+										<h3 className='sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-2'>
+											<span className='eyebrow'>{group.label}</span>
+											<span className='font-mono text-2xs text-subtle'>
+												{minutes} мин
+											</span>
+										</h3>
+										<ul>
+											{group.items.map(session => (
+												<li
+													key={session.id}
+													className='group flex items-center gap-3 border-b border-border px-4 py-2.5'
+												>
+													<span className='w-11 shrink-0 font-mono text-xs text-subtle'>
+														{new Date(session.created_at).toLocaleTimeString('ru-RU', {
+															hour: '2-digit',
+															minute: '2-digit',
+															timeZone
+														})}
+													</span>
+													<span className='min-w-0 flex-1 truncate text-sm text-fg'>
+														{BREATHING_TECHNIQUES.find(
+															tech => tech.id === session.technique_id
+														)?.shortName || session.technique_name}
+													</span>
+													<span className='shrink-0 font-mono text-xs tabular-nums text-muted'>
+														{Math.max(1, Math.round(session.duration_seconds / 60))} мин
+														<span className='text-subtle'> · {session.cycles_count} ц</span>
+													</span>
+													<button
+														type='button'
+														onClick={() => setSessionToDelete(session)}
+														aria-label='Удалить запись'
+														className='grid h-7 w-7 shrink-0 place-items-center text-subtle opacity-0 transition hover:text-danger focus-visible:opacity-100 group-hover:opacity-100'
+													>
+														<Trash2 size={13} />
+													</button>
+												</li>
+											))}
+										</ul>
+									</section>
+								)
+							})
+						)}
+					</div>
+				</aside>
+			</div>
+
+			{/* Дзен-режим: только форма, фаза и управление */}
+			{isZenMode && (
+				<div className='fixed inset-0 z-[120] flex animate-fade-in select-none flex-col bg-bg'>
+					<header className='flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-8'>
+						<div className='min-w-0'>
+							<p className='truncate text-sm font-medium text-fg'>
+								{selectedTechnique.name}
+							</p>
+							<div className='mt-1.5 hidden sm:block'>{phaseStrip}</div>
+						</div>
+						{feedbackControls}
+					</header>
+
+					<div className='flex flex-1 flex-col items-center justify-center px-4'>
+						<BreathingCircle
+							technique={selectedTechnique}
+							currentPhase={currentPhase}
+							phaseRemainingSeconds={phaseRemainingSeconds}
+							phaseProgress={phaseProgress}
+							isActive={isActive}
+							isPaused={isPaused}
+							cycleCount={completedCycles}
+							isZen
+						/>
+						<p className='mt-6 min-h-[3rem] max-w-md text-center text-base leading-6 text-muted'>
+							{isActive ? (isPaused ? 'Пауза' : currentPhase.hint) : selectedTechnique.tagline}
+						</p>
+					</div>
+
+					<footer className='relative border-t border-border px-4 py-4 sm:px-8'>
+						{sessionProgress > 0 && (
+							<div
+								className='absolute -top-px left-0 h-px bg-primary transition-[width] duration-300 ease-linear'
+								style={{ width: `${sessionProgress}%` }}
+							/>
+						)}
+						<div className='mx-auto max-w-3xl'>{sessionControls('lg')}</div>
+					</footer>
 				</div>
 			)}
 
-			{/* ========================================================================= */}
-			{/* AUDIO & SOUNDSCAPES SETTINGS MODAL                                        */}
-			{/* ========================================================================= */}
+			{/* Звук: фон природы и сигнал смены фазы */}
 			{isAudioSettingsOpen && (
 				<div
-					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm'
+					className='fixed inset-0 z-[130] flex animate-fade-in items-center justify-center bg-black/60 p-4'
 					onMouseDown={e => {
 						if (e.target === e.currentTarget) setIsAudioSettingsOpen(false)
 					}}
 				>
-					<div className='w-full max-w-lg border border-border bg-surface p-5 sm:p-6 shadow-2xl'>
-						{/* Modal Header */}
-						<div className='flex items-center justify-between border-b border-border pb-4'>
-							<div>
-								<h3 className='text-sm sm:text-base font-semibold text-white'>
-									Звуковое окружение
-								</h3>
-								<p className='text-xs text-subtle mt-0.5'>
-									Настройте фоны природы и звуковые сигналы фаз
-								</p>
-							</div>
+					<div
+						role='dialog'
+						aria-modal='true'
+						aria-labelledby='breathing-audio-title'
+						className='w-full max-w-lg animate-pop-in border border-border bg-elevated shadow-pop'
+					>
+						<header className='flex items-center justify-between border-b border-border px-5 py-4'>
+							<h3
+								id='breathing-audio-title'
+								className='text-base font-semibold text-fg'
+							>
+								Звук
+							</h3>
 							<button
 								type='button'
 								onClick={() => setIsAudioSettingsOpen(false)}
-								className='text-subtle hover:text-white transition-colors'
+								aria-label='Закрыть'
+								className='grid h-8 w-8 place-items-center text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
 							>
-								<X size={18} />
+								<X size={17} />
 							</button>
-						</div>
+						</header>
 
-						{/* Section 1: Soundscapes */}
-						<div className='mt-5'>
-							<div className='flex items-center justify-between'>
-								<label className='text-xs font-semibold uppercase tracking-wider text-muted'>
-									Фоновые звуки природы
-								</label>
-								<span className='text-xs text-primary font-medium'>
-									{SOUNDSCAPE_OPTIONS.find(s => s.id === soundscape)?.label}
-								</span>
-							</div>
-
-							<div className='mt-2.5 grid grid-cols-2 sm:grid-cols-3 gap-2'>
-								{SOUNDSCAPE_OPTIONS.map(opt => {
-									const isSelected = soundscape === opt.id
-									const IconComp = getSoundscapeIcon(opt.id)
+						<section className='border-b border-border px-5 py-4'>
+							<p className='eyebrow'>Фон</p>
+							<div className='mt-3 grid grid-cols-2 border-l border-t border-border sm:grid-cols-3'>
+								{SOUNDSCAPE_OPTIONS.map(option => {
+									const Icon = getSoundscapeIcon(option.id)
+									const isSelected = soundscape === option.id
 									return (
 										<button
-											key={opt.id}
+											key={option.id}
 											type='button'
-											onClick={() => handleSoundscapeChange(opt.id)}
-											className={`flex flex-col items-start gap-1 border p-2.5 text-left transition-colors ${
-												isSelected
-													? 'border-primary bg-primary/15 text-white'
-													: 'border-border bg-white/[0.02] text-muted hover:border-border-strong hover:text-white hover:bg-white/[0.04]'
-											}`}
+											onClick={() => handleSoundscapeChange(option.id)}
+											aria-pressed={isSelected}
+											className={cn(
+												'flex flex-col items-start gap-1 border-b border-r border-border p-3 text-left transition-colors',
+												isSelected ? 'bg-white/[0.06] text-fg' : 'text-muted hover:text-fg'
+											)}
 										>
-											<div className='flex items-center gap-1.5'>
-												<IconComp
-													size={14}
-													className={isSelected ? 'text-primary' : 'text-subtle'}
-												/>
-												<span className='text-xs font-medium'>{opt.label}</span>
-											</div>
-											<span className='text-[10px] text-subtle line-clamp-1'>
-												{opt.description}
-											</span>
+											<Icon
+												size={15}
+												className={isSelected ? 'text-primary' : 'text-subtle'}
+											/>
+											<span className='text-sm'>{option.label}</span>
 										</button>
 									)
 								})}
 							</div>
-
-							{/* Soundscape Volume */}
 							{soundscape !== 'none' && (
-								<div className='mt-3.5 flex items-center gap-3 px-1 py-1'>
-									<Volume2 size={14} className='text-subtle shrink-0' />
-									<span className='text-xs text-muted shrink-0'>Громкость фона:</span>
-									<input
-										type='range'
-										min={0}
-										max={100}
-										value={soundscapeVolume}
-										onChange={e => handleSoundscapeVolumeChange(Number(e.target.value))}
-										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/15 accent-primary'
-									/>
-									<span className='w-8 text-right font-mono text-xs text-subtle'>
-										{soundscapeVolume}%
-									</span>
-								</div>
+								<VolumeSlider
+									label='Громкость фона'
+									value={soundscapeVolume}
+									onChange={handleSoundscapeVolumeChange}
+								/>
 							)}
-						</div>
+						</section>
 
-						{/* Section 2: Cue Styles */}
-						<div className='mt-5 border-t border-border pt-4'>
+						<section className='px-5 py-4'>
 							<div className='flex items-center justify-between'>
-								<label className='text-xs font-semibold uppercase tracking-wider text-muted'>
-									Сигнал смены фазы
-								</label>
+								<p className='eyebrow'>Сигнал смены фазы</p>
 								<button
 									type='button'
 									onClick={() => breathingAudio.playTone('inhale')}
-									className='flex items-center gap-1 text-[11px] text-primary hover:underline'
+									className='flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-fg'
 								>
-									<Play size={11} fill='currentColor' />
-									<span>Проверить звук</span>
+									<Play
+										size={11}
+										fill='currentColor'
+									/>
+									Прослушать
 								</button>
 							</div>
-
-							<div className='mt-2.5 grid grid-cols-2 gap-2'>
-								{CUE_STYLE_OPTIONS.map(opt => {
-									const isSelected = cueStyle === opt.id
+							<div className='mt-3 grid grid-cols-2 border-l border-t border-border'>
+								{CUE_STYLE_OPTIONS.map(option => {
+									const Icon = CUE_ICONS[option.id]
+									const isSelected = cueStyle === option.id
 									return (
 										<button
-											key={opt.id}
+											key={option.id}
 											type='button'
-											onClick={() => handleCueStyleChange(opt.id)}
-											className={`flex flex-col items-start gap-0.5 border p-2.5 text-left transition-colors ${
-												isSelected
-													? 'border-primary bg-primary/15 text-white'
-													: 'border-border bg-white/[0.02] text-muted hover:border-border-strong hover:text-white hover:bg-white/[0.04]'
-											}`}
+											onClick={() => handleCueStyleChange(option.id)}
+											aria-pressed={isSelected}
+											className={cn(
+												'flex items-start gap-2.5 border-b border-r border-border p-3 text-left transition-colors',
+												isSelected ? 'bg-white/[0.06]' : 'hover:bg-white/[0.02]'
+											)}
 										>
-											<div className='flex items-center gap-1.5'>
-												{opt.id === 'tibetan' && (
-													<Sparkles
-														size={13}
-														className={isSelected ? 'text-primary' : 'text-subtle'}
-													/>
-												)}
-												{opt.id === 'bell' && (
-													<Bell
-														size={13}
-														className={isSelected ? 'text-primary' : 'text-subtle'}
-													/>
-												)}
-												{opt.id === 'soft_sine' && (
-													<Activity
-														size={13}
-														className={isSelected ? 'text-primary' : 'text-subtle'}
-													/>
-												)}
-												{opt.id === 'none' && (
-													<VolumeX
-														size={13}
-														className={isSelected ? 'text-primary' : 'text-subtle'}
-													/>
-												)}
-												<span className='text-xs font-medium'>{opt.label}</span>
-											</div>
-											<span className='text-[10px] text-subtle'>
-												{opt.description}
+											<Icon
+												size={15}
+												className={cn('mt-0.5 shrink-0', isSelected ? 'text-primary' : 'text-subtle')}
+											/>
+											<span className='min-w-0'>
+												<span className={cn('block text-sm', isSelected ? 'text-fg' : 'text-muted')}>
+													{option.label}
+												</span>
+												<span className='block text-xs text-subtle'>{option.description}</span>
 											</span>
 										</button>
 									)
 								})}
 							</div>
-
-							{/* Cue Volume */}
 							{cueStyle !== 'none' && (
-								<div className='mt-3.5 flex items-center gap-3 px-1 py-1'>
-									<Bell size={14} className='text-subtle shrink-0' />
-									<span className='text-xs text-muted shrink-0'>Громкость сигнала:</span>
-									<input
-										type='range'
-										min={0}
-										max={100}
-										value={cueVolume}
-										onChange={e => handleCueVolumeChange(Number(e.target.value))}
-										className='h-1.5 flex-1 cursor-pointer appearance-none bg-white/15 accent-primary'
-									/>
-									<span className='w-8 text-right font-mono text-xs text-subtle'>
-										{cueVolume}%
-									</span>
-								</div>
+								<VolumeSlider
+									label='Громкость сигнала'
+									value={cueVolume}
+									onChange={handleCueVolumeChange}
+								/>
 							)}
-						</div>
-
-						{/* Modal Footer */}
-						<div className='mt-5 flex justify-end border-t border-border pt-4'>
-							<button
-								type='button'
-								onClick={() => setIsAudioSettingsOpen(false)}
-								className='border border-primary bg-primary px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary/90'
-							>
-								Применить и закрыть
-							</button>
-						</div>
+						</section>
 					</div>
 				</div>
 			)}
 
-			{/* ========================================================================= */}
-			{/* DURATION SELECTION MODAL ("Отдельное окошко выбора времени сеанса")        */}
-			{/* ========================================================================= */}
-			{isDurationModalOpen && (
-				<div
-					className='fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm'
-					onMouseDown={e => {
-						if (e.target === e.currentTarget) setIsDurationModalOpen(false)
+			{pendingTechnique && (
+				<ConfirmDialog
+					open
+					title='Сменить практику?'
+					description={`Текущий сеанс прервётся без сохранения, и начнётся «${pendingTechnique.shortName || pendingTechnique.name}».`}
+					confirmLabel='Сменить'
+					onConfirm={() => {
+						resetSession()
+						applyTechnique(pendingTechnique)
+						setPendingTechnique(null)
 					}}
-				>
-					<div className='w-full max-w-md border border-border bg-surface p-5 sm:p-6 shadow-2xl'>
-						{/* Modal Header */}
-						<div className='flex items-center justify-between border-b border-border pb-4'>
-							<div>
-								<h3 className='text-sm sm:text-base font-semibold text-white'>
-									Время сеанса
-								</h3>
-								<p className='mt-0.5 text-xs text-subtle'>
-									Выберите целевую длительность дыхательной практики
-								</p>
-							</div>
-							<button
-								type='button'
-								onClick={() => setIsDurationModalOpen(false)}
-								className='text-subtle hover:text-white p-1 transition-colors'
-								title='Закрыть'
-							>
-								<X size={18} />
-							</button>
-						</div>
-
-						{/* Durations Grid / List */}
-						<div className='mt-4 space-y-2'>
-							{DURATIONS.map(dur => {
-								const isSelected = targetDurationSeconds === dur.seconds
-								return (
-									<button
-										key={dur.seconds}
-										type='button'
-										onClick={() => {
-											setTargetDurationSeconds(dur.seconds)
-											setIsDurationModalOpen(false)
-										}}
-										className={`w-full flex items-center justify-between p-3 text-left transition-all border ${
-											isSelected
-												? 'border-primary bg-primary/15 text-white'
-												: 'border-border bg-white/[0.02] hover:bg-white/[0.05] hover:border-border-strong text-muted'
-										}`}
-									>
-										<div className='min-w-0'>
-											<span className='font-semibold text-sm text-white block'>
-												{dur.label}
-											</span>
-											{dur.description && (
-												<p className='mt-0.5 text-xs text-subtle'>
-													{dur.description}
-												</p>
-											)}
-										</div>
-
-										<div className='shrink-0 ml-3'>
-											{isSelected ? (
-												<div className='h-5 w-5 rounded-full bg-primary flex items-center justify-center text-white'>
-													<Check size={12} strokeWidth={3} />
-												</div>
-											) : (
-												<div className='h-5 w-5 rounded-full border border-border-strong' />
-											)}
-										</div>
-									</button>
-								)
-							})}
-						</div>
-
-						{/* Modal Footer */}
-						<div className='mt-5 pt-3 border-t border-border flex justify-end'>
-							<button
-								type='button'
-								onClick={() => setIsDurationModalOpen(false)}
-								className='border border-border-strong bg-white/[0.04] px-4 py-1.5 text-xs text-white hover:bg-white/10 transition-colors'
-							>
-								Закрыть
-							</button>
-						</div>
-					</div>
-				</div>
+					onClose={() => setPendingTechnique(null)}
+				/>
 			)}
 
-			{/* Confirm Dialog for deleting session */}
 			{sessionToDelete && (
 				<ConfirmDialog
-					open={Boolean(sessionToDelete)}
-					title='Удалить сеанс дыхания?'
-					description={`Запись «${sessionToDelete.technique_name}» (${Math.round(sessionToDelete.duration_seconds / 60) || 1} мин, ${sessionToDelete.cycles_count} ц.) будет безвозвратно удалена из истории.`}
+					open
+					title='Удалить сеанс?'
+					description={`«${sessionToDelete.technique_name}», ${Math.max(1, Math.round(sessionToDelete.duration_seconds / 60))} мин — запись исчезнет из истории и статистики.`}
 					confirmLabel='Удалить'
 					isPending={isDeleting}
 					onConfirm={async () => {
@@ -1407,5 +1092,60 @@ export default function BreathingPage() {
 				/>
 			)}
 		</div>
+	)
+}
+
+function IconToggle({
+	label,
+	active,
+	onClick,
+	children
+}: {
+	label: string
+	active?: boolean
+	onClick: () => void
+	children: ReactNode
+}) {
+	return (
+		<button
+			type='button'
+			title={label}
+			aria-label={label}
+			aria-pressed={active}
+			onClick={onClick}
+			className={cn(
+				'grid h-9 w-9 place-items-center border-r border-border transition-colors last:border-r-0',
+				active ? 'text-primary' : 'text-subtle hover:text-fg'
+			)}
+		>
+			{children}
+		</button>
+	)
+}
+
+function VolumeSlider({
+	label,
+	value,
+	onChange
+}: {
+	label: string
+	value: number
+	onChange: (value: number) => void
+}) {
+	return (
+		<label className='mt-4 flex items-center gap-3'>
+			<span className='w-36 shrink-0 text-xs text-muted'>{label}</span>
+			<input
+				type='range'
+				min={0}
+				max={100}
+				value={value}
+				onChange={event => onChange(Number(event.target.value))}
+				className='h-1 flex-1 cursor-pointer appearance-none bg-white/15 accent-primary'
+			/>
+			<span className='w-9 text-right font-mono text-xs tabular-nums text-subtle'>
+				{value}%
+			</span>
+		</label>
 	)
 }

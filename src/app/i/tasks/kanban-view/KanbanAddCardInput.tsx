@@ -3,6 +3,8 @@ import { type Dispatch, type SetStateAction } from 'react'
 
 import type { ITaskResponse } from '@/types/task.types'
 
+import { addDraftTask } from '../add-draft-task'
+
 interface IKanbanAddCardInput {
 	filterDate?: string
 	setItems: Dispatch<SetStateAction<ITaskResponse[] | undefined>>
@@ -12,24 +14,7 @@ export function KanbanAddCardInput({
 	setItems,
 	filterDate
 }: IKanbanAddCardInput) {
-	const addCard = () => {
-		const draftId = `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`
-		setItems(prev => {
-			if (!prev) return
-
-			return [
-				...prev,
-				{
-					id: draftId,
-					clientKey: draftId,
-					name: '',
-					isCompleted: false,
-					createdAt: filterDate,
-					order: (prev.length || 0) + 1
-				}
-			]
-		})
-	}
+	const addCard = () => addDraftTask(setItems, filterDate)
 
 	return (
 		<div className='mt-1'>

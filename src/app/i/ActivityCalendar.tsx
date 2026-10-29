@@ -245,6 +245,25 @@ export function ActivityCalendar() {
 						? 'bg-primary/80'
 						: 'bg-primary-hover'
 
+	// Итоги за период: всего событий, текущая серия дней подряд и лучший день
+	const activitySummary = useMemo(() => {
+		const entries = Object.entries(counts).filter(([, value]) => value > 0)
+		const total = entries.reduce((sum, [, value]) => sum + value, 0)
+		const best = entries.reduce<[string, number] | null>(
+			(top, entry) => (!top || entry[1] > top[1] ? entry : top),
+			null
+		)
+		let streak = 0
+		const cursor = new Date(today)
+		// Если сегодня ещё пусто — серия считается со вчерашнего дня
+		if (!counts[dayKey(cursor)]) cursor.setDate(cursor.getDate() - 1)
+		while (counts[dayKey(cursor)]) {
+			streak++
+			cursor.setDate(cursor.getDate() - 1)
+		}
+		return { total, best, streak }
+	}, [counts, today])
+
 	// Calculate custom scrollbar dimensions
 	const canScroll = scrollState.scrollWidth > scrollState.clientWidth + 4
 	const thumbWidth = canScroll
@@ -257,7 +276,7 @@ export function ActivityCalendar() {
 
 	return (
 		<section
-			className='card-padded mt-4 min-w-0'
+			className='mt-4 min-w-0 border border-border bg-surface p-4 sm:p-5'
 			aria-label='Календарь активности'
 		>
 			<div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
@@ -269,8 +288,17 @@ export function ActivityCalendar() {
 				</div>
 				<div className='flex w-full flex-col gap-2 sm:w-auto sm:items-end'>
 					<div className='flex items-center justify-between gap-3 sm:justify-end'>
-						<span className='text-xs font-medium text-primary'>
-							Сегодня, {format(today, 'd MMMM', { locale: ru })}
+						<span className='font-mono text-2xs uppercase tracking-wider text-subtle'>
+							<span className='text-fg'>{activitySummary.total}</span> событий
+							{' · '}серия <span className='text-fg'>{activitySummary.streak}</span> дн.
+							{activitySummary.best && (
+								<>
+									{' · '}лучший{' '}
+									<span className='text-fg'>
+										{format(new Date(`${activitySummary.best[0]}T12:00:00`), 'd MMM', { locale: ru })}
+									</span>
+								</>
+							)}
 						</span>
 						{loading && (
 							<span className='text-xs text-subtle'>Обновляем…</span>

@@ -15,12 +15,6 @@ interface ISidebarProps {
 	onCloseMobile: () => void
 }
 
-function Logo() {
-	return (
-		<span className='h-3 w-3 shrink-0 bg-primary' />
-	)
-}
-
 export function Sidebar({
 	isCollapsed,
 	onToggleCollapse,
@@ -42,7 +36,6 @@ export function Sidebar({
 						onClick={isMobile ? onCloseMobile : undefined}
 						className='flex items-center gap-2.5'
 					>
-						<Logo />
 						<span className='text-sm font-semibold uppercase tracking-[0.2em] text-fg'>
 							Planner
 						</span>
@@ -91,9 +84,10 @@ export function Sidebar({
 					collapsed ? 'px-2.5' : 'px-3'
 				)}
 			>
-				{MENU.map(item => (
+				{MENU.map((item, index) => (
 					<MenuItem
 						item={item}
+						hotkey={index < 9 ? index + 1 : undefined}
 						key={item.link}
 						isCollapsed={collapsed}
 						onClick={isMobile ? onCloseMobile : undefined}

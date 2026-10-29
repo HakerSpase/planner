@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
+import { formatTask, sanitizeSubtasks } from '../task.mapper'
+
 export async function PUT(
 	request: Request,
 	{ params }: { params: { id: string } }
@@ -23,6 +25,16 @@ export async function PUT(
 
 	if (body.name !== undefined) updateData.name = body.name
 	if (body.note !== undefined) updateData.note = body.note
+	if (body.subtasks !== undefined) {
+		const subtasks = sanitizeSubtasks(body.subtasks)
+		if (!subtasks) {
+			return NextResponse.json(
+				{ error: 'Некорректный список подзадач' },
+				{ status: 400 }
+			)
+		}
+		updateData.subtasks = subtasks
+	}
 	if (body.priority !== undefined) updateData.priority = body.priority
 	if (body.isCompleted !== undefined) {
 		updateData.is_completed = body.isCompleted
@@ -46,17 +58,7 @@ export async function PUT(
 		return NextResponse.json({ error: error.message }, { status: 400 })
 	}
 
-	return NextResponse.json({
-		id: data.id,
-		name: data.name,
-		note: data.note ?? '',
-		priority: data.priority,
-		isCompleted: data.is_completed,
-		completedAt: data.completed_at,
-		createdAt: data.created_at,
-		updatedAt: data.updated_at,
-		order: data.order ?? 0
-	})
+	return NextResponse.json(formatTask(data))
 }
 
 export async function DELETE(

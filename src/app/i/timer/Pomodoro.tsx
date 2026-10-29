@@ -3,6 +3,8 @@
 import { Loader, Pause, Play, RefreshCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/buttons/Button'
 
@@ -14,6 +16,18 @@ import { useTimer } from './hooks/useTimer'
 import { useTimerActions } from './hooks/useTimerActions'
 import { useTodaySession } from './hooks/useTodaySession'
 import { PomodoroRounds } from './rounds/PomodoroRounds'
+import { FocusTaskPicker } from './FocusTaskPicker'
+
+const formatMinutes = (minutes: number) => {
+	const h = Math.floor(minutes / 60)
+	const m = Math.round(minutes % 60)
+	return h ? `${h} ч${m ? ` ${m} мин` : ''}` : `${m} мин`
+}
+
+const isTypingTarget = (target: EventTarget | null) =>
+	target instanceof HTMLElement &&
+	(target.isContentEditable ||
+		['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName))
 
 export function Pomodoro() {
 	const timerState = useTimer()
@@ -34,6 +48,10 @@ export function Pomodoro() {
 		)
 	)
 	const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false)
+	const [focusTaskId, setFocusTaskId] = useLocalStorage<string>({
+		key: 'pomodoro-focus-task',
+		defaultValue: ''
+	})
 	const autoCompletedRoundId = useRef<string>()
 	const { isPending, mutate } = useCreateSession(timeZone)
 	const { deleteSession, isDeletePending } = useDeleteSession(() => {
@@ -101,12 +119,61 @@ export function Pomodoro() {
 		workInterval
 	])
 
+	const canToggle =
+		!actions.isUpdateRoundPending &&
+		(Boolean(timerState.activeRound) || timerState.isBreakTime)
+	const toggleTimer = timerState.isRunning
+		? actions.pauseHandler
+		: actions.playHandler
+
+	// Пробел — старт/пауза, если фокус не в поле ввода
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.code !== 'Space' || event.repeat || isTypingTarget(event.target)) return
+			if (!canToggle || !sessionsResponse?.data) return
+			event.preventDefault()
+			toggleTimer()
+		}
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [canToggle, sessionsResponse?.data, toggleTimer])
+
+	// Обратный отсчёт во вкладке браузера, пока таймер идёт
+	useEffect(() => {
+		if (!timerState.isRunning) return
+		const previousTitle = document.title
+		document.title = `${formatTime(timerState.secondsLeft)} · ${timerState.isBreakTime ? 'Перерыв' : 'Фокус'}`
+		return () => {
+			document.title = previousTitle
+		}
+	}, [timerState.isRunning, timerState.isBreakTime, timerState.secondsLeft])
+
+	const roundsDone = rounds?.filter(round => round.isCompleted).length || 0
+	const roundsLeft = (rounds?.length || 0) - roundsDone
+	const focusStats = [
+		{ label: 'Фокус сегодня', value: formatMinutes(roundsDone * workInterval) },
+		{ label: 'Раунды', value: `${roundsDone} / ${rounds?.length || 0}` },
+		{
+			label: 'До конца',
+			value: roundsLeft
+				? `≈ ${formatMinutes(roundsLeft * workInterval + Math.max(0, roundsLeft - 1) * breakInterval)}`
+				: 'готово'
+		}
+	]
+
 	return (
-		<div className='card relative mx-auto w-full max-w-md px-5 py-8 text-center sm:py-10'>
+		<div className='relative mx-auto w-full max-w-xl border border-border bg-surface text-center'>
 			{isLoading ? (
-				<Loader />
+				<div className='py-16'>
+					<Loader />
+				</div>
 			) : sessionsResponse?.data ? (
 				<>
+					<FocusTaskPicker
+						value={focusTaskId}
+						onChange={setFocusTaskId}
+					/>
+					<div className='px-5 pb-8 pt-8 sm:pt-10'>
 					<p className='eyebrow'>
 						{timerState.isBreakTime
 							? 'Перерыв'
@@ -163,15 +230,33 @@ export function Pomodoro() {
 							<RefreshCcw size={16} />
 						</button>
 					</div>
+					<p className='mt-4 hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:block'>
+						Пробел — старт / пауза
+					</p>
+					</div>
+					<dl className='grid grid-cols-3 divide-x divide-border border-t border-border'>
+						{focusStats.map(stat => (
+							<div
+								key={stat.label}
+								className='px-3 py-4'
+							>
+								<dt className='eyebrow'>{stat.label}</dt>
+								<dd className='mt-1.5 text-sm tabular-nums text-fg'>{stat.value}</dd>
+							</div>
+						))}
+					</dl>
 				</>
 			) : (
-				<Button
-					onClick={() => mutate()}
-					className='mt-1'
-					disabled={isPending}
-				>
-					{isPending ? 'Создаём…' : 'Создать сессию'}
-				</Button>
+				<div className='px-5 py-14'>
+					<p className='text-sm text-muted'>Сегодня сессия ещё не начата</p>
+					<Button
+						onClick={() => mutate()}
+						className='mt-4'
+						disabled={isPending}
+					>
+						{isPending ? 'Создаём…' : 'Создать сессию'}
+					</Button>
+				</div>
 			)}
 			<ConfirmDialog
 				open={isResetConfirmOpen}

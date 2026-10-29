@@ -1,6 +1,6 @@
 .list {
 	.block {
-		@apply relative mb-2 flex min-h-14 min-w-0 items-center justify-between gap-2 overflow-hidden rounded-lg border border-border bg-surface-2 py-2 pl-4 pr-2 text-sm text-fg transition-colors hover:border-border-strong sm:gap-3;
+		@apply relative mb-1.5 flex min-h-14 min-w-0 items-center justify-between gap-2 overflow-hidden rounded-lg border border-border bg-surface-2 py-2 pl-4 pr-2 text-sm text-fg transition-colors hover:border-border-strong sm:gap-3;
 
 		&::before {
 			content: '';

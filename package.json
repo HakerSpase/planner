@@ -17,6 +17,15 @@
     "@supabase/supabase-js": "^2.117.3",
     "@tanstack/react-query": "^5.18.0",
     "@tanstack/react-query-devtools": "^5.18.0",
+    "@tiptap/extension-image": "^2.27.3",
+    "@tiptap/extension-link": "^2.27.3",
+    "@tiptap/extension-placeholder": "^2.27.3",
+    "@tiptap/extension-task-item": "^2.27.3",
+    "@tiptap/extension-task-list": "^2.27.3",
+    "@tiptap/extension-typography": "^2.27.3",
+    "@tiptap/pm": "^2.27.3",
+    "@tiptap/react": "^2.27.3",
+    "@tiptap/starter-kit": "^2.27.3",
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
@@ -31,7 +40,8 @@
     "react-hook-form": "^7.49.3",
     "sass": "^1.70.0",
     "sonner": "^1.4.0",
-    "tailwind-variants": "^0.1.20"
+    "tailwind-variants": "^0.1.20",
+    "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",

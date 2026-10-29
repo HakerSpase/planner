@@ -13,7 +13,7 @@ import { DatePicker } from '@/components/ui/task-edit/date-picker/DatePicker'
 
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
-import { TaskNoteEditor } from '../TaskNoteEditor'
+import { TaskDetails } from '../TaskDetails'
 import { useDeleteTask } from '../hooks/useDeleteTask'
 import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
@@ -23,14 +23,22 @@ interface IKanbanCard {
 	item: ITaskResponse
 	setItems: Dispatch<SetStateAction<ITaskResponse[] | undefined>>
 	dragHandleProps?: DraggableProvidedDragHandleProps | null
+	// Enter в названии — создать следующую задачу в той же группе
+	onAddNext?: () => void
 }
 
-export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
+export function KanbanCard({
+	item,
+	setItems,
+	dragHandleProps,
+	onAddNext
+}: IKanbanCard) {
 	const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 	const { register, control, watch } = useForm<TypeTaskFormState>({
 		defaultValues: {
 			name: item.name,
 			note: item.note ?? '',
+			subtasks: item.subtasks ?? [],
 			isCompleted: item.isCompleted,
 			createdAt: item.createdAt,
 			priority: item.priority
@@ -76,21 +84,23 @@ export function KanbanCard({ item, setItems, dragHandleProps }: IKanbanCard) {
 				<div className='flex-1 min-w-0 ml-1.5'>
 					<TransparentField
 						{...register('name')}
+						autoFocus={item.id.startsWith('draft-')}
+						onKeyDown={event => {
+							if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+							event.preventDefault()
+							event.currentTarget.blur()
+							// у черновика ещё нет id на сервере — следующую добавим после сохранения
+							if (!item.id.startsWith('draft-')) onAddNext?.()
+						}}
 						className='text-sm sm:text-[0.95rem] py-0 leading-snug'
 					/>
 				</div>
 			</div>
 
 			<div className='flex flex-col gap-1 pl-[2.05rem]'>
-				<Controller
+				<TaskDetails
 					control={control}
-					name='note'
-					render={({ field }) => (
-						<TaskNoteEditor
-							value={field.value || ''}
-							onChange={value => field.onChange(value)}
-						/>
-					)}
+					taskName={watch('name')}
 				/>
 
 				<div className={styles.cardBody}>

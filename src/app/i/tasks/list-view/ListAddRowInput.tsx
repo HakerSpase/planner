@@ -3,6 +3,8 @@ import { type Dispatch, type SetStateAction } from 'react'
 
 import { ITaskResponse } from '@/types/task.types'
 
+import { addDraftTask } from '../add-draft-task'
+
 import styles from './ListView.module.scss'
 
 interface IListAddRowInput {
@@ -11,24 +13,7 @@ interface IListAddRowInput {
 }
 
 export function ListAddRowInput({ setItems, filterDate }: IListAddRowInput) {
-	const addRow = () => {
-		const draftId = `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`
-		setItems(prev => {
-			if (!prev) return
-
-			return [
-				...prev,
-				{
-					id: draftId,
-					clientKey: draftId,
-					name: '',
-					isCompleted: false,
-					createdAt: filterDate,
-					order: (prev.length || 0) + 1
-				}
-			]
-		})
-	}
+	const addRow = () => addDraftTask(setItems, filterDate)
 
 	return (
 		<div className={styles.addRow}>

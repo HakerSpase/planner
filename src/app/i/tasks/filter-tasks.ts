@@ -21,6 +21,14 @@ export const filterTasks = (
 	const endOfNextWeek = now.add(1, 'week').endOf('isoWeek')
 
 	switch (value) {
+		case 'overdue':
+			return tasks?.filter(
+				item =>
+					!item.isCompleted &&
+					Boolean(item.createdAt) &&
+					dayjs(item.createdAt).isBefore(filters.today)
+			)
+
 		case 'today':
 			return tasks?.filter(item => {
 				if (item.isCompleted || !item.createdAt) return false
@@ -66,6 +74,7 @@ export const filterTasks = (
 					return true
 				}
 				return (
+					!d.isBefore(filters.today) &&
 					!d.isSame(filters.today, 'day') &&
 					!d.isSame(filters.tomorrow, 'day') &&
 					d.isSameOrBefore(endOfThisWeek)

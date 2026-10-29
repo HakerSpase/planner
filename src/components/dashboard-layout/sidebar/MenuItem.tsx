@@ -6,11 +6,12 @@ import { IMenuItem } from './menu.interface'
 
 interface IMenuItemProps {
 	item: IMenuItem
+	hotkey?: number
 	isCollapsed?: boolean
 	onClick?: () => void
 }
 
-export function MenuItem({ item, isCollapsed, onClick }: IMenuItemProps) {
+export function MenuItem({ item, isCollapsed, onClick, hotkey }: IMenuItemProps) {
 	const pathname = usePathname()
 	const isActive =
 		pathname === item.link ||
@@ -21,7 +22,7 @@ export function MenuItem({ item, isCollapsed, onClick }: IMenuItemProps) {
 			href={item.link}
 			onClick={onClick}
 			aria-current={isActive ? 'page' : undefined}
-			title={isCollapsed ? item.name : undefined}
+			title={hotkey ? `${item.name} · Alt+${hotkey}` : item.name}
 			className={cn(
 				'group relative flex h-9 items-center gap-3 text-sm font-medium transition-colors',
 				isActive

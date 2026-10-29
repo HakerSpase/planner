@@ -223,7 +223,6 @@ export function Auth() {
 				<header className='sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur'>
 					<div className='mx-auto flex h-14 max-w-[1240px] items-center justify-between px-5 sm:px-8'>
 						<div className='flex items-center gap-3'>
-							<span className='h-3 w-3 bg-primary' />
 							<span className='text-sm font-semibold uppercase tracking-[0.2em]'>
 								Planner
 							</span>

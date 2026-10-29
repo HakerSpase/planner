@@ -57,6 +57,9 @@ export function useTaskDnd(
 			return
 		}
 
+		// В «Просрочено» нельзя перенести — у этой группы нет своей даты
+		if (destColId === 'overdue') return
+
 		// 2. Moving between DIFFERENT columns
 		const targetTasks = (filterTasks(items, destColId) || []).filter(
 			t => t.id !== result.draggableId

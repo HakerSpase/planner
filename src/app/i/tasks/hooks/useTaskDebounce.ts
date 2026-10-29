@@ -73,7 +73,9 @@ export function useTaskDebounce({ watch, itemId, setItems }: IUseTaskDebounce) {
 	)
 
 	useEffect(() => {
-		const { unsubscribe } = watch(formData => {
+		const { unsubscribe } = watch(values => {
+			// watch отдаёт DeepPartial; поля подзадач всегда заполнены целиком
+			const formData = values as TypeTaskFormState
 			if (isDraft) {
 				latestDraftData.current = formData
 				draftRevision.current += 1
