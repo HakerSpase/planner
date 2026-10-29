@@ -213,6 +213,18 @@ export default function ThoughtsPage() {
 		}
 	}
 
+	// Менеджер загрузок дописал файл в запись, пока она была закрыта
+	useEffect(() => {
+		const onPatched = (event: Event) => {
+			const { context, content } = (event as CustomEvent).detail
+			if (context.type !== 'thought') return
+			setEntries(current => ({ ...current, [context.date]: content }))
+			if (context.date === selectedKey) setDraft(content)
+		}
+		window.addEventListener('planner:note-patched', onPatched)
+		return () => window.removeEventListener('planner:note-patched', onPatched)
+	}, [selectedKey])
+
 	// «В этот день год назад»
 	const yearAgoKey = iso(subYears(selected, 1))
 	useEffect(() => {
@@ -512,6 +524,7 @@ export default function ThoughtsPage() {
 						{!isFocus && (
 							<RichEditor
 								value={draft}
+								uploadContext={{ type: 'thought', date: selectedKey }}
 								onChange={setDraft}
 								onSubmitShortcut={() => isDirty && save(selectedKey, draft, false)}
 								placeholder={placeholder}
@@ -603,6 +616,7 @@ export default function ThoughtsPage() {
 						</div>
 						<RichEditor
 							value={draft}
+							uploadContext={{ type: 'thought', date: selectedKey }}
 							onChange={setDraft}
 							autoFocus
 							placeholder={placeholder}

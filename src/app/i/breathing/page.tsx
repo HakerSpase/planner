@@ -150,6 +150,17 @@ export default function BreathingPage() {
 		loadHistory()
 	}, [])
 
+	// Пока идёт сеанс дыхания, фоновая музыка приложения затихает
+	useEffect(() => {
+		window.dispatchEvent(new CustomEvent('planner:breathing', { detail: { active: isActive } }))
+	}, [isActive])
+	useEffect(
+		() => () => {
+			window.dispatchEvent(new CustomEvent('planner:breathing', { detail: { active: false } }))
+		},
+		[]
+	)
+
 	// Ушли со страницы или закрыли вкладку — гасим весь звук и блокировку экрана
 	useEffect(() => {
 		const stop = () => breathingAudio.shutdown()

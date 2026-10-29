@@ -52,7 +52,23 @@ function attachmentNode(name: string, dataAttr: string) {
 		},
 
 		parseHTML() {
-			return [{ tag: `div[${dataAttr}]` }]
+			const kind = dataAttr === 'data-planner-audio' ? 'audio' : 'file'
+			return [
+				{ tag: `div[${dataAttr}]` },
+				{
+					// отметка «ещё загружается»
+					tag: `div[data-planner-pending][data-kind="${kind}"]`,
+					getAttrs: element => {
+						const el = element as HTMLElement
+						return {
+							src: el.getAttribute('data-planner-pending'),
+							name: el.getAttribute('data-name') || '',
+							size: Number(el.getAttribute('data-size')) || 0,
+							mime: el.getAttribute('data-mime') || ''
+						}
+					}
+				}
+			]
 		},
 
 		renderHTML({ HTMLAttributes }) {
@@ -74,7 +90,15 @@ function attachmentNode(name: string, dataAttr: string) {
 					serialize(state: any, node: any) {
 						const { src, name, size, mime } = node.attrs
 						// пока файл грузится (blob:), в текст не пишем
-						if (!src || String(src).startsWith('blob:')) return
+						if (!src) return
+						if (String(src).startsWith('blob:')) {
+							const kind = dataAttr === 'data-planner-audio' ? 'audio' : 'file'
+							state.write(
+								`<div data-planner-pending="${escapeAttr(src)}" data-kind="${kind}" data-name="${escapeAttr(name)}" data-size="${size || 0}" data-mime="${escapeAttr(mime)}"></div>`
+							)
+							state.closeBlock(node)
+							return
+						}
 						state.write(
 							`<div ${dataAttr} data-src="${escapeAttr(src)}" data-name="${escapeAttr(name)}" data-size="${size || 0}" data-mime="${escapeAttr(mime)}"></div>`
 						)

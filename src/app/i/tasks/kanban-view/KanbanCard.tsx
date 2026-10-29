@@ -105,6 +105,7 @@ export function KanbanCard({
 				<TaskDetails
 					control={control}
 					taskName={watch('name')}
+					taskId={item.id}
 					compact
 				/>
 

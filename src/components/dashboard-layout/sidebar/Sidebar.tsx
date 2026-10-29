@@ -103,6 +103,16 @@ export function Sidebar({
 				)}
 			>
 				<LogoutButton collapsed={collapsed} />
+				{!collapsed && (
+					<a
+						href='https://t.me/w_dtc'
+						target='_blank'
+						rel='noreferrer'
+						className='mt-1 flex h-8 items-center px-2.5 text-xs text-subtle transition-colors hover:text-fg'
+					>
+						Telegram
+					</a>
+				)}
 			</footer>
 		</div>
 	)

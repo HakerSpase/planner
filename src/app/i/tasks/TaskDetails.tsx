@@ -21,6 +21,8 @@ const RichEditor = dynamic(
 interface ITaskDetails {
 	control: Control<TypeTaskFormState>
 	taskName?: string
+	// id задачи — чтобы фоновая загрузка дописала файл в заметку, даже если панель закрыли
+	taskId?: string
 	// На доске пустую строку «Подзадачи и заметка» показываем только при наведении
 	compact?: boolean
 }
@@ -47,7 +49,7 @@ const notePreview = (markdown: string) =>
  * подзадачи с прогрессом + заметка в редакторе. Всё пишется в форму задачи
  * и сохраняется тем же debounce, что и остальные поля.
  */
-export function TaskDetails({ control, taskName, compact }: ITaskDetails) {
+export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails) {
 	const [isOpen, setIsOpen] = useState(false)
 	const { field: noteField } = useController({ control, name: 'note' })
 	const { field: subtasksField } = useController({ control, name: 'subtasks' })
@@ -57,6 +59,19 @@ export function TaskDetails({ control, taskName, compact }: ITaskDetails) {
 	const doneCount = subtasks.filter(subtask => subtask.isCompleted).length
 	const preview = notePreview(note)
 	const isEmpty = !subtasks.length && !note.trim()
+
+	// Менеджер загрузок дописал файл прямо в базу — обновляем заметку в форме,
+	// иначе следующее автосохранение вернуло бы старый текст с отметкой загрузки
+	const onNoteChange = noteField.onChange
+	useEffect(() => {
+		if (!taskId) return
+		const onPatched = (event: Event) => {
+			const { context, content } = (event as CustomEvent).detail
+			if (context.type === 'task' && context.id === taskId) onNoteChange(content)
+		}
+		window.addEventListener('planner:note-patched', onPatched)
+		return () => window.removeEventListener('planner:note-patched', onPatched)
+	}, [taskId, onNoteChange])
 
 	return (
 		<>
@@ -101,6 +116,7 @@ export function TaskDetails({ control, taskName, compact }: ITaskDetails) {
 			{isOpen && (
 				<TaskDetailsPanel
 					taskName={taskName}
+					taskId={taskId}
 					note={note}
 					onNoteChange={noteField.onChange}
 					subtasks={subtasks}
@@ -114,6 +130,7 @@ export function TaskDetails({ control, taskName, compact }: ITaskDetails) {
 
 interface ITaskDetailsPanel {
 	taskName?: string
+	taskId?: string
 	note: string
 	onNoteChange: (value: string) => void
 	subtasks: ISubtask[]
@@ -123,6 +140,7 @@ interface ITaskDetailsPanel {
 
 function TaskDetailsPanel({
 	taskName,
+	taskId,
 	note,
 	onNoteChange,
 	subtasks,
@@ -304,6 +322,9 @@ function TaskDetailsPanel({
 						<h3 className='eyebrow mb-3'>Заметка</h3>
 						<RichEditor
 							value={note}
+							uploadContext={
+								taskId && !taskId.startsWith('draft-') ? { type: 'task', id: taskId } : undefined
+							}
 							onChange={onNoteChange}
 							placeholder='Детали, ссылки, фото, следующий шаг…'
 							className='bg-surface'

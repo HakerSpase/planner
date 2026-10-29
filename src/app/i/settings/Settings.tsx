@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/buttons/Button'
 
 import { BACKGROUNDS, useBackground } from '@/lib/background-preference'
 
+import { DesktopSettings, FeelSettings } from './FeelSettings'
+
 import { TypeUserForm } from '@/types/auth.types'
 
 import { useInitialData } from './useInitialData'
@@ -91,7 +93,10 @@ export function Settings() {
 	})
 
 	useInitialData(reset)
-	const [background, setBackground] = useBackground()
+	const [background, setBackground] = useBackground('app')
+	const [libraryBackground, setLibraryBackground] = useBackground('library')
+	const [isDesktop, setIsDesktop] = useState(false)
+	useEffect(() => setIsDesktop(Boolean(window.plannerDesktop)), [])
 
 	const { isPending, mutate } = useUpdateSettings()
 	const timeZoneMenuRef = useRef<HTMLDivElement>(null)
@@ -365,7 +370,40 @@ export function Settings() {
 							</button>
 						))}
 					</div>
+
+					<div className='mt-6 border-t border-border pt-5'>
+						<p className='text-sm text-fg'>Фон в архиве</p>
+						<p className='mt-0.5 text-xs text-subtle'>По умолчанию тёмный — конспекты читаются без отвлечений</p>
+						<div className='mt-3 flex flex-wrap gap-2'>
+							{BACKGROUNDS.map(option => (
+								<button
+									key={option.id}
+									type='button'
+									onClick={() => setLibraryBackground(option.id)}
+									className={`h-8 border px-3 text-xs transition-colors ${libraryBackground === option.id ? 'border-primary text-fg' : 'border-border text-muted hover:text-fg'}`}
+								>
+									{option.label}
+								</button>
+							))}
+						</div>
+					</div>
 				</Section>
+
+				<Section
+					title='Ощущения'
+					description='Переходы, фоновая музыка и вибрация. Применяются сразу, на этом устройстве.'
+				>
+					<FeelSettings />
+				</Section>
+
+				{isDesktop && (
+					<Section
+						title='Приложение на компьютере'
+						description='Трей и автозапуск — работают только в настольной версии Planner.'
+					>
+						<DesktopSettings />
+					</Section>
+				)}
 
 				<Section
 					title='Pomodoro'

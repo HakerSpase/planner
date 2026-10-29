@@ -95,6 +95,7 @@ export function ListRow({
 						<TaskDetails
 							control={control}
 							taskName={watch('name')}
+					taskId={item.id}
 						/>
 					</div>
 				</div>

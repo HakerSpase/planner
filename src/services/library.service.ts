@@ -84,6 +84,15 @@ export const libraryService = {
 		}))
 	},
 
+	// Всё для поиска разом: названия и тексты листов (личный архив — объём небольшой)
+	async getSearchIndex() {
+		return (
+			unwrap<{ id: string; topic_id: string; title: string; content: string }[]>(
+				await db().from('library_page').select('id,topic_id,title,content')
+			) || []
+		)
+	},
+
 	async getPage(id: string): Promise<ILibraryPage> {
 		const row = unwrap<Omit<ILibraryPage, 'excerpt'>>(
 			await db()

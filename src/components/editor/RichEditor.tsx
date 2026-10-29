@@ -41,7 +41,12 @@ import { toast } from 'sonner'
 import 'katex/dist/katex.min.css'
 import { Markdown } from 'tiptap-markdown'
 
-import { deleteUploads, uploadFile, uploadImage } from '@/lib/imagekit-upload'
+import { deleteUploads } from '@/lib/imagekit-upload'
+import {
+	type TypeUploadContext,
+	registerEditor,
+	startUpload
+} from '@/lib/upload-manager'
 
 import { AudioAttachment, FileAttachment } from './attachments'
 
@@ -66,6 +71,8 @@ interface IRichEditor {
 	onSubmitShortcut?: () => void
 	// false — режим чтения: без панели, ссылки и файлы кликабельны
 	editable?: boolean
+	// чья это заметка — чтобы догрузить файл, даже если редактор уже закрыли
+	uploadContext?: TypeUploadContext
 }
 
 const getMarkdown = (editor: Editor): string =>
@@ -84,8 +91,11 @@ export function RichEditor({
 	className,
 	contentClassName,
 	onSubmitShortcut,
-	editable = true
+	editable = true,
+	uploadContext
 }: IRichEditor) {
+	const uploadContextRef = useRef(uploadContext)
+	uploadContextRef.current = uploadContext
 	const [uploading, setUploading] = useState(0)
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const anyFileInputRef = useRef<HTMLInputElement>(null)
@@ -105,13 +115,12 @@ export function RichEditor({
 				toast.error('Видео пока загружать нельзя')
 				continue
 			}
-			const preview = URL.createObjectURL(file)
 			const isImage = file.type.startsWith('image/')
-			const type = isImage
-				? 'image'
-				: file.type.startsWith('audio/')
-					? 'audioAttachment'
-					: 'fileAttachment'
+			const kind = isImage ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'file'
+			const type =
+				kind === 'image' ? 'image' : kind === 'audio' ? 'audioAttachment' : 'fileAttachment'
+			// Загрузка идёт в фоне и переживает закрытие заметки
+			const preview = startUpload(file, kind, uploadContextRef.current)
 			const attrs = isImage
 				? { src: preview }
 				: { src: preview, name: file.name, size: file.size, mime: file.type }
@@ -119,20 +128,6 @@ export function RichEditor({
 			if (pos !== undefined) chain.insertContentAt(pos, { type, attrs })
 			else chain.insertContent({ type, attrs })
 			chain.run()
-
-			setUploading(count => count + 1)
-			try {
-				const src = isImage ? await uploadImage(file) : (await uploadFile(file)).url
-				await replaceImageSrc(editor, preview, src)
-			} catch (error) {
-				await replaceImageSrc(editor, preview, null)
-				toast.error(
-					error instanceof Error ? error.message : 'Не удалось загрузить файл'
-				)
-			} finally {
-				URL.revokeObjectURL(preview)
-				setUploading(count => count - 1)
-			}
 		}
 	}
 
@@ -268,6 +263,15 @@ export function RichEditor({
 	})
 
 	editorRef.current = editor
+
+	// Менеджер загрузок должен знать открытые редакторы, чтобы подставить готовый файл
+	useEffect(() => {
+		if (!editor) return
+		const unregister = registerEditor(editor)
+		return () => {
+			unregister()
+		}
+	}, [editor])
 
 	// Переключение «чтение ↔ правка» (архив)
 	useEffect(() => {

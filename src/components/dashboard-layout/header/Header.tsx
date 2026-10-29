@@ -2,6 +2,8 @@
 
 import { Menu } from 'lucide-react'
 
+import { MusicToggle } from '../MusicController'
+
 import { GlobalLoader } from './GlobalLoader'
 import { Profile } from './profile/Profile'
 
@@ -29,6 +31,7 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 			{/* Профиль пользователя */}
 			<div className='flex min-w-0 shrink items-center gap-3'>
 				<GlobalLoader />
+				<MusicToggle />
 				<Profile />
 			</div>
 		</header>

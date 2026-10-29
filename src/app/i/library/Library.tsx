@@ -21,6 +21,8 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
+import { LibrarySearch } from './LibrarySearch'
 import { Heading } from '@/components/ui/Heading'
 
 import {
@@ -52,6 +54,7 @@ export function Library() {
 	const queryClient = useQueryClient()
 	const topicId = params.get('topic')
 	const pageId = params.get('page')
+	const sectionId = params.get('section')
 
 	const { data: tree, isLoading } = useQuery({
 		queryKey: TREE_KEY,
@@ -61,14 +64,15 @@ export function Library() {
 	const sections = tree?.sections || []
 	const topics = tree?.topics || []
 	const topic = topics.find(item => item.id === topicId)
-	const section = sections.find(item => item.id === topic?.section_id)
+	const section = sections.find(item => item.id === (topic?.section_id ?? sectionId))
 
 	const [deleteTarget, setDeleteTarget] = useState<TypeDeleteTarget | null>(null)
 	const [isDeleting, setIsDeleting] = useState(false)
 
 	const navigate = useCallback(
-		(next: { topic?: string | null; page?: string | null }) => {
+		(next: { topic?: string | null; page?: string | null; section?: string | null }) => {
 			const search = new URLSearchParams()
+			if (next.section) search.set('section', next.section)
 			if (next.topic) search.set('topic', next.topic)
 			if (next.page) search.set('page', next.page)
 			const query = search.toString()
@@ -78,6 +82,18 @@ export function Library() {
 	)
 
 	const refreshTree = () => queryClient.invalidateQueries({ queryKey: TREE_KEY })
+
+	// Файл догрузился в закрытый лист — сбрасываем кэш, чтобы открыть уже с ним
+	useEffect(() => {
+		const onPatched = (event: Event) => {
+			const { context } = (event as CustomEvent).detail
+			if (context.type !== 'page') return
+			queryClient.invalidateQueries({ queryKey: pageKey(context.id) })
+			queryClient.invalidateQueries({ queryKey: ['library', 'pages'] })
+		}
+		window.addEventListener('planner:note-patched', onPatched)
+		return () => window.removeEventListener('planner:note-patched', onPatched)
+	}, [queryClient])
 
 	const confirmDelete = async () => {
 		if (!deleteTarget) return
@@ -135,6 +151,7 @@ export function Library() {
 					section={section}
 					onBack={() => navigate({ topic: topic.id })}
 					onOpenRoot={() => navigate({})}
+					onOpenSection={id => navigate({ section: id })}
 					onDelete={setDeleteTarget}
 				/>
 				{deleteDialog}
@@ -148,12 +165,21 @@ export function Library() {
 				title='Архив'
 				description='Разделы, темы и конспекты — с формулами, таблицами и файлами'
 			/>
+			<div className='mb-6 max-w-xl'>
+				<LibrarySearch
+					sections={sections}
+					topics={topics}
+					onOpenPage={(topic, page) => navigate({ topic, page })}
+					onOpenTopic={topic => navigate({ topic })}
+					onOpenSection={id => navigate({ section: id })}
+				/>
+			</div>
 		<div className='grid gap-x-12 lg:grid-cols-[15rem_minmax(0,1fr)]'>
 			{/* Дерево: на телефоне показывается, пока не выбрана тема */}
 			<aside
 				className={cn(
 					'min-w-0',
-					topicId ? 'hidden lg:block' : 'block'
+					topicId || sectionId ? 'hidden lg:block' : 'block'
 				)}
 			>
 				<LibraryTree
@@ -162,13 +188,23 @@ export function Library() {
 					isLoading={isLoading}
 					activeTopicId={topicId}
 					onOpenTopic={id => navigate({ topic: id })}
+					onOpenSection={id => navigate({ section: id })}
+					activeSectionId={!topicId ? sectionId : null}
 					onChanged={refreshTree}
 					onDelete={setDeleteTarget}
 				/>
 			</aside>
 
-			<main className={cn('min-w-0', !topicId && 'hidden lg:block')}>
-				{topic ? (
+			<main className={cn('min-w-0', !topicId && !sectionId && 'hidden lg:block')}>
+				{!topic && section ? (
+					<SectionView
+						section={section}
+						topics={topics.filter(item => item.section_id === section.id)}
+						onBack={() => navigate({})}
+						onOpenTopic={id => navigate({ topic: id })}
+						onChanged={refreshTree}
+					/>
+				) : topic ? (
 					<TopicView
 						topic={topic}
 						section={section}
@@ -196,7 +232,9 @@ function LibraryTree({
 	topics,
 	isLoading,
 	activeTopicId,
+	activeSectionId,
 	onOpenTopic,
+	onOpenSection,
 	onChanged,
 	onDelete
 }: {
@@ -204,7 +242,9 @@ function LibraryTree({
 	topics: ILibraryTopic[]
 	isLoading: boolean
 	activeTopicId: string | null
+	activeSectionId?: string | null
 	onOpenTopic: (id: string) => void
+	onOpenSection: (id: string) => void
 	onChanged: () => Promise<unknown>
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
@@ -295,17 +335,27 @@ function LibraryTree({
 								/>
 							) : (
 								<Row
-									onClick={() =>
-										setCollapsed(state => ({ ...state, [section.id]: !isCollapsed }))
-									}
+									onClick={() => onOpenSection(section.id)}
+									active={section.id === activeSectionId}
 									leading={
-										<ChevronRight
-											size={14}
-											className={cn(
-												'text-subtle transition-transform',
-												!isCollapsed && 'rotate-90'
-											)}
-										/>
+										<span
+											role='button'
+											tabIndex={0}
+											aria-label={isCollapsed ? 'Развернуть раздел' : 'Свернуть раздел'}
+											onClick={event => {
+												event.stopPropagation()
+												setCollapsed(state => ({ ...state, [section.id]: !isCollapsed }))
+											}}
+											className='-m-1 grid h-6 w-6 place-items-center'
+										>
+											<ChevronRight
+												size={14}
+												className={cn(
+													'text-subtle transition-transform',
+													!isCollapsed && 'rotate-90'
+												)}
+											/>
+										</span>
 									}
 									title={section.title}
 									titleClassName='font-semibold text-fg'
@@ -727,6 +777,7 @@ function PageView({
 	section,
 	onBack,
 	onOpenRoot,
+	onOpenSection,
 	onDelete
 }: {
 	pageId: string
@@ -734,6 +785,7 @@ function PageView({
 	section?: ILibrarySection
 	onBack: () => void
 	onOpenRoot: () => void
+	onOpenSection: (id: string) => void
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
 	const queryClient = useQueryClient()
@@ -846,7 +898,16 @@ function PageView({
 					{section && (
 						<>
 							<span className='text-white/15'>/</span>
-							<span className='truncate'>{section.title}</span>
+							<button
+								type='button'
+								onClick={async () => {
+									await flush()
+									onOpenSection(section.id)
+								}}
+								className='truncate transition-colors hover:text-fg'
+							>
+								{section.title}
+							</button>
 						</>
 					)}
 					<span className='text-white/15'>/</span>
@@ -897,7 +958,7 @@ function PageView({
 				</div>
 			</header>
 
-			<div className='mx-auto max-w-3xl pb-24 pt-10 sm:pt-16'>
+			<div className='w-full pb-24 pt-10 sm:pt-14'>
 				{isEditing ? (
 					<textarea
 						value={title}
@@ -927,13 +988,17 @@ function PageView({
 
 				<RichEditor
 					value={content}
+					uploadContext={{ type: 'page', id: pageId }}
 					editable={isEditing}
 					onChange={value => {
 						setContent(value)
 						schedule({ content: value })
 					}}
 					placeholder='Пишите или вставьте конспект. Формулы: $x^2$ в строке, $$\int f(x)\,dx$$ отдельно.'
-					className='library-page bg-bg [&_[role=toolbar]]:top-12'
+					className={cn(
+						'library-page [&_[role=toolbar]]:top-12',
+						isEditing ? 'bg-bg' : 'bg-transparent'
+					)}
 					contentClassName={cn('min-h-[50vh]', !isEditing && 'library-reading')}
 				/>
 
@@ -948,6 +1013,97 @@ function PageView({
 				)}
 			</div>
 		</article>
+	)
+}
+
+function SectionView({
+	section,
+	topics,
+	onBack,
+	onOpenTopic,
+	onChanged
+}: {
+	section: ILibrarySection
+	topics: ILibraryTopic[]
+	onBack: () => void
+	onOpenTopic: (id: string) => void
+	onChanged: () => Promise<unknown>
+}) {
+	const [isAdding, setIsAdding] = useState(false)
+
+	const createTopic = async (title: string) => {
+		setIsAdding(false)
+		if (!title) return
+		try {
+			const topic = await libraryService.createTopic(section.id, title, topics.length)
+			await onChanged()
+			onOpenTopic(topic.id)
+		} catch {
+			toast.error('Не удалось создать тему')
+		}
+	}
+
+	return (
+		<div>
+			<button
+				type='button'
+				onClick={onBack}
+				className='mb-4 flex items-center gap-1.5 text-sm text-subtle transition-colors hover:text-fg lg:hidden'
+			>
+				<ArrowLeft size={15} />
+				Разделы
+			</button>
+			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
+				<div className='min-w-0'>
+					<p className='eyebrow'>Раздел</p>
+					<h1 className='mt-2 break-words text-3xl font-semibold tracking-[-0.02em] text-fg'>
+						{section.title}
+					</h1>
+					<p className='mt-2 font-mono text-xs text-subtle'>
+						{topics.length} {plural(topics.length, 'тема', 'темы', 'тем')}
+					</p>
+				</div>
+				<button
+					type='button'
+					onClick={() => setIsAdding(true)}
+					className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
+				>
+					<Plus size={15} />
+					Новая тема
+				</button>
+			</div>
+
+			{isAdding && (
+				<div className='border-b border-border py-3'>
+					<InlineInput
+						placeholder='Название темы'
+						onSubmit={createTopic}
+					/>
+				</div>
+			)}
+
+			{topics.length ? (
+				topics.map((topic, index) => (
+					<button
+						key={topic.id}
+						type='button'
+						onClick={() => onOpenTopic(topic.id)}
+						className='group grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border py-5 text-left sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
+					>
+						<span className='font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
+						<span className='truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
+							{topic.title}
+						</span>
+						<ChevronRight
+							size={16}
+							className='text-subtle transition-transform group-hover:translate-x-0.5'
+						/>
+					</button>
+				))
+			) : (
+				<p className='py-16 text-center text-sm text-subtle'>В разделе пока нет тем</p>
+			)}
+		</div>
 	)
 }
 

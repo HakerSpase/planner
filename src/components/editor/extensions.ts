@@ -14,6 +14,18 @@ const escapeAttr = (value: string) =>
  * сохраняем HTML-тегом <img width>, а без ширины — обычным ![](url).
  */
 export const PlannerImage = Image.extend({
+	parseHTML() {
+		return [
+			...(this.parent?.() || []),
+			{
+				tag: 'div[data-planner-pending][data-kind="image"]',
+				getAttrs: element => ({
+					src: (element as HTMLElement).getAttribute('data-planner-pending')
+				})
+			}
+		]
+	},
+
 	addAttributes() {
 		return {
 			...this.parent?.(),
@@ -34,7 +46,12 @@ export const PlannerImage = Image.extend({
 				serialize(state: any, node: any) {
 					const { src, alt, width } = node.attrs
 					// локальный предпросмотр, пока фото грузится, — не сохраняем
-					if (typeof src === 'string' && src.startsWith('blob:')) return
+					if (typeof src === 'string' && src.startsWith('blob:')) {
+						// файл ещё грузится — оставляем отметку, менеджер загрузок заменит её на картинку
+						state.write(`<div data-planner-pending="${escapeAttr(src)}" data-kind="image"></div>`)
+						state.closeBlock(node)
+						return
+					}
 					if (width) {
 						state.write(
 							`<img src="${escapeAttr(src)}" alt="${escapeAttr(alt || '')}" width="${escapeAttr(width)}">`

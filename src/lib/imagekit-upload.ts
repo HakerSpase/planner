@@ -47,7 +47,30 @@ export interface IUploadedFile {
 const MAX_FILE_SIZE = 25 * 1024 * 1024
 
 // Прямая загрузка в ImageKit по одноразовой подписи с нашего сервера
-async function uploadToImageKit(file: File): Promise<IUploadedFile> {
+type TypeProgress = (fraction: number) => void
+
+// XHR вместо fetch — ради прогресса загрузки
+function postWithProgress(form: FormData, onProgress?: TypeProgress) {
+	return new Promise<any>((resolve, reject) => {
+		const xhr = new XMLHttpRequest()
+		xhr.open('POST', 'https://upload.imagekit.io/api/v1/files/upload')
+		xhr.upload.onprogress = event => {
+			if (event.lengthComputable) onProgress?.(event.loaded / event.total)
+		}
+		xhr.onload = () => {
+			let body: any = {}
+			try {
+				body = JSON.parse(xhr.responseText)
+			} catch {}
+			if (xhr.status >= 200 && xhr.status < 300 && typeof body.url === 'string') resolve(body)
+			else reject(new Error(body.message || 'Не удалось загрузить файл'))
+		}
+		xhr.onerror = () => reject(new Error('Нет соединения'))
+		xhr.send(form)
+	})
+}
+
+async function uploadToImageKit(file: File, onProgress?: TypeProgress): Promise<IUploadedFile> {
 	if (file.type.startsWith('video/')) {
 		throw new Error('Видео пока загружать нельзя')
 	}
@@ -74,14 +97,7 @@ async function uploadToImageKit(file: File): Promise<IUploadedFile> {
 	form.append('folder', auth.folder)
 	form.append('useUniqueFileName', 'true')
 
-	const uploadResponse = await fetch(
-		'https://upload.imagekit.io/api/v1/files/upload',
-		{ method: 'POST', body: form }
-	)
-	const uploaded = await uploadResponse.json()
-	if (!uploadResponse.ok || typeof uploaded.url !== 'string') {
-		throw new Error(uploaded.message || 'Не удалось загрузить файл')
-	}
+	const uploaded = await postWithProgress(form, onProgress)
 
 	return {
 		url: uploaded.url,
@@ -92,7 +108,7 @@ async function uploadToImageKit(file: File): Promise<IUploadedFile> {
 }
 
 // Картинка: сжимаем, грузим и возвращаем URL облегчённой версии для показа
-export async function uploadImage(original: File): Promise<string> {
+export async function uploadImage(original: File, onProgress?: TypeProgress): Promise<string> {
 	if (!original.type.startsWith('image/')) {
 		throw new Error('Можно загружать только изображения')
 	}
@@ -100,13 +116,14 @@ export async function uploadImage(original: File): Promise<string> {
 	if (file.size > MAX_IMAGE_SIZE) {
 		throw new Error('Фото больше 10 МБ')
 	}
-	const uploaded = await uploadToImageKit(file)
+	const uploaded = await uploadToImageKit(file, onProgress)
 	// ImageKit отдаёт картинку уже нужной ширины и в лёгком формате (WebP/AVIF)
 	return `${uploaded.url}?tr=w-1600,q-80`
 }
 
 // Любой другой файл (документ, аудио, голосовое) — как есть
-export const uploadFile = (file: File) => uploadToImageKit(file)
+export const uploadFile = (file: File, onProgress?: TypeProgress) =>
+	uploadToImageKit(file, onProgress)
 
 // Удалить файлы из ImageKit (по адресам). keepalive — чтобы запрос ушёл даже при закрытии страницы
 export function deleteUploads(urls: string[]) {

@@ -50,13 +50,13 @@ export function ConfirmDialog({
 				className='w-full max-w-sm animate-pop-in rounded-2xl border border-border bg-elevated p-5 shadow-pop'
 			>
 				<div className='flex items-start gap-3'>
-					<span className='grid h-9 w-9 shrink-0 place-items-center bg-danger/10 text-danger'>
+					<span className='mt-0.5 shrink-0 text-danger'>
 						<AlertTriangle size={17} />
 					</span>
 					<div className='min-w-0 flex-1'>
 						<h2
 							id={`${dialogId}-title`}
-							className='pt-1.5 text-base font-semibold text-fg'
+							className='text-base font-semibold text-fg'
 						>
 							{title}
 						</h2>

@@ -13,16 +13,22 @@ export const BACKGROUNDS = [
 
 export type TypeBackground = (typeof BACKGROUNDS)[number]['id']
 
-const KEY = 'app-background'
-const EVENT = 'app-background-change'
-const DEFAULT: TypeBackground = 'stars'
+// Отдельный фон для архива: по умолчанию тёмный, чтобы читать конспекты без отвлечений
+export type TypeBackgroundArea = 'app' | 'library'
 
-const read = (): TypeBackground => {
+const KEYS: Record<TypeBackgroundArea, string> = {
+	app: 'app-background',
+	library: 'app-background-library'
+}
+const DEFAULTS: Record<TypeBackgroundArea, TypeBackground> = { app: 'stars', library: 'none' }
+const EVENT = 'app-background-change'
+
+const read = (area: TypeBackgroundArea): TypeBackground => {
 	try {
-		const value = localStorage.getItem(KEY) as TypeBackground | null
-		return BACKGROUNDS.some(item => item.id === value) ? value! : DEFAULT
+		const value = localStorage.getItem(KEYS[area]) as TypeBackground | null
+		return BACKGROUNDS.some(item => item.id === value) ? value! : DEFAULTS[area]
 	} catch {
-		return DEFAULT
+		return DEFAULTS[area]
 	}
 }
 
@@ -36,11 +42,17 @@ const subscribe = (callback: () => void) => {
 }
 
 /** Выбранный фон хранится в браузере (на каждом устройстве свой) */
-export function useBackground(): [TypeBackground, (value: TypeBackground) => void] {
-	const value = useSyncExternalStore(subscribe, read, () => DEFAULT)
+export function useBackground(
+	area: TypeBackgroundArea = 'app'
+): [TypeBackground, (value: TypeBackground) => void] {
+	const value = useSyncExternalStore(
+		subscribe,
+		() => read(area),
+		() => DEFAULTS[area]
+	)
 	const setValue = (next: TypeBackground) => {
 		try {
-			localStorage.setItem(KEY, next)
+			localStorage.setItem(KEYS[area], next)
 		} catch {}
 		window.dispatchEvent(new Event(EVENT))
 	}
