@@ -238,13 +238,13 @@ export function BreathingCircle({
 							>
 								{Math.ceil(phaseRemainingSeconds)}
 							</span>
-							<span className='mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+							<span className='mt-3 font-mono text-xs font-medium uppercase tracking-wider text-fg/75'>
 								Цикл {cycleCount + 1}
 							</span>
 						</>
 					) : (
 						<>
-							<span className='font-mono text-2xs uppercase tracking-[0.25em] text-subtle'>
+							<span className='font-mono text-xs font-medium uppercase tracking-[0.2em] text-fg/75'>
 								Цикл {technique.totalCycleSeconds} с
 							</span>
 							<span

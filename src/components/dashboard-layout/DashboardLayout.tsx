@@ -5,7 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { type PropsWithChildren, useEffect, useState } from 'react'
 
 import { useBackground } from '@/lib/background-preference'
+import { watchKeyboard } from '@/lib/keyboard-state'
 import { haptic, usePreferences } from '@/lib/preferences'
+
+import { useBackClose } from '@/hooks/useBackClose'
 
 import { AppBackground } from './AppBackground'
 import { MobileNav } from './MobileNav'
@@ -27,6 +30,9 @@ export default function DashboardLayout({
 	const background = pathname.startsWith('/i/library') ? libraryBackground : appBackground
 
 	const [preferences] = usePreferences()
+
+	useBackClose(isMobileOpen, () => setIsMobileOpen(false))
+	useEffect(() => watchKeyboard(), [])
 
 	// Вибрация на телефоне: переходы, кнопки, отметки — по настройкам
 	useEffect(() => {

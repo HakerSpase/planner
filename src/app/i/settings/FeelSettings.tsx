@@ -23,6 +23,17 @@ declare global {
 	}
 }
 
+const MUSIC_STYLES: [TypeMusicStyle, string, string][] = [
+	['lofi', 'Лоу-фай', 'Бит, электропиано'],
+	['jazz', 'Ночной джаз', 'Щётки, шагающий бас'],
+	['piano', 'Фортепиано', 'Тихий перебор'],
+	['ambient', 'Эмбиент', 'Медленные пэды'],
+	['rain', 'Дождь', 'Капли и редкие ноты'],
+	['forest', 'Лес', 'Ручей и птицы'],
+	['space', 'Космос', 'Мерцание с эхом'],
+	['fire', 'Камин', 'Треск и переборы']
+]
+
 function Segmented<T extends string>({
 	value,
 	options,
@@ -127,15 +138,30 @@ export function FeelSettings() {
 					hint='Генерируется на лету, не повторяется. На время дыхания затихает.'
 				/>
 				<div className={cn('mt-3 space-y-4', !preferences.music && 'pointer-events-none opacity-40')}>
-					<Segmented<TypeMusicStyle>
-						value={preferences.musicStyle}
-						onChange={musicStyle => setPreferences({ musicStyle })}
-						options={[
-							['lofi', 'Лоу-фай'],
-							['ambient', 'Эмбиент'],
-							['rain', 'Дождь и пиано']
-						]}
-					/>
+					<div
+						role='radiogroup'
+						aria-label='Стиль музыки'
+						className='grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-4'
+					>
+						{MUSIC_STYLES.map(([style, label, hint]) => (
+							<button
+								key={style}
+								type='button'
+								role='radio'
+								aria-checked={preferences.musicStyle === style}
+								onClick={() => setPreferences({ musicStyle: style })}
+								className={cn(
+									'px-3 py-2.5 text-left transition-colors',
+									preferences.musicStyle === style
+										? 'bg-elevated text-fg shadow-[inset_0_-2px_0_rgb(var(--primary))]'
+										: 'bg-surface text-muted hover:text-fg'
+								)}
+							>
+								<span className='block text-sm'>{label}</span>
+								<span className='block text-xs leading-4 text-subtle'>{hint}</span>
+							</button>
+						))}
+					</div>
 					<label className='flex items-center gap-3'>
 						<span className='w-20 text-xs text-muted'>Громкость</span>
 						<input

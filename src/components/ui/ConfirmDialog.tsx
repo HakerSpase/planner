@@ -4,6 +4,8 @@ import { AlertTriangle, X } from 'lucide-react'
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 
+import { useBackClose } from '@/hooks/useBackClose'
+
 interface ConfirmDialogProps {
 	open: boolean
 	title: string
@@ -24,6 +26,7 @@ export function ConfirmDialog({
 	onClose
 }: ConfirmDialogProps) {
 	const dialogId = useId()
+	useBackClose(open, () => !isPending && onClose())
 	useEffect(() => {
 		if (!open) return
 		const onKeyDown = (event: KeyboardEvent) => {

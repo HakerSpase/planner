@@ -7,7 +7,15 @@ import { useSyncExternalStore } from 'react'
 
 export type TypeTransition = 'off' | 'soft' | 'smooth'
 export type TypeHapticLevel = 'off' | 'light' | 'strong'
-export type TypeMusicStyle = 'lofi' | 'ambient' | 'rain'
+export type TypeMusicStyle =
+	| 'lofi'
+	| 'jazz'
+	| 'piano'
+	| 'ambient'
+	| 'rain'
+	| 'forest'
+	| 'space'
+	| 'fire'
 
 export interface IPreferences {
 	transition: TypeTransition

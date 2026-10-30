@@ -10,7 +10,6 @@ import {
 	ChevronRight,
 	FilePlus2,
 	FolderPlus,
-	Loader2,
 	Pencil,
 	Plus,
 	Trash2
@@ -23,6 +22,8 @@ import { toast } from 'sonner'
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
+import { useLocalStorage } from '@/hooks/useLocalStorage'
+
 import { LibrarySearch } from './LibrarySearch'
 import { Heading } from '@/components/ui/Heading'
 
@@ -31,6 +32,7 @@ import {
 	type ILibrarySection,
 	type ILibraryTopic,
 	libraryService,
+	newLibraryId,
 	toExcerpt
 } from '@/services/library.service'
 
@@ -42,6 +44,49 @@ const RichEditor = dynamic(
 const TREE_KEY = ['library', 'tree']
 const pagesKey = (topicId: string) => ['library', 'pages', topicId]
 const pageKey = (pageId: string) => ['library', 'page', pageId]
+
+type TypeTree = { sections: ILibrarySection[]; topics: ILibraryTopic[] }
+
+/** Создание и переименование без ожидания базы: дерево меняется сразу, запись идёт фоном */
+function useTreeActions() {
+	const queryClient = useQueryClient()
+	const patchTree = (update: (tree: TypeTree) => TypeTree) =>
+		queryClient.setQueryData<TypeTree>(TREE_KEY, old => (old ? update(old) : old))
+	const resync = (message: string) => {
+		toast.error(message)
+		queryClient.invalidateQueries({ queryKey: TREE_KEY })
+	}
+
+	return {
+		addSection(title: string, order: number) {
+			const id = newLibraryId()
+			patchTree(tree => ({ ...tree, sections: [...tree.sections, { id, title, order }] }))
+			libraryService
+				.createSection(id, title, order)
+				.catch(() => resync('Не удалось создать раздел'))
+			return id
+		},
+		addTopic(sectionId: string, title: string, order: number) {
+			const id = newLibraryId()
+			patchTree(tree => ({
+				...tree,
+				topics: [...tree.topics, { id, section_id: sectionId, title, order }]
+			}))
+			libraryService
+				.createTopic(id, sectionId, title, order)
+				.catch(() => resync('Не удалось создать тему'))
+			return id
+		},
+		rename(table: 'library_section' | 'library_topic', id: string, title: string) {
+			const key = table === 'library_section' ? 'sections' : 'topics'
+			patchTree(tree => ({
+				...tree,
+				[key]: tree[key].map(item => (item.id === id ? { ...item, title } : item))
+			}))
+			libraryService.rename(table, id, title).catch(() => resync('Не удалось переименовать'))
+		}
+	}
+}
 
 type TypeDeleteTarget =
 	| { table: 'library_section'; id: string; title: string }
@@ -191,7 +236,6 @@ export function Library() {
 					onOpenTopic={id => navigate({ topic: id })}
 					onOpenSection={id => navigate({ section: id })}
 					activeSectionId={!topicId ? sectionId : null}
-					onChanged={refreshTree}
 					onDelete={setDeleteTarget}
 				/>
 			</aside>
@@ -203,7 +247,6 @@ export function Library() {
 						topics={topics.filter(item => item.section_id === section.id)}
 						onBack={() => navigate({})}
 						onOpenTopic={id => navigate({ topic: id })}
-						onChanged={refreshTree}
 					/>
 				) : topic ? (
 					<TopicView
@@ -211,7 +254,6 @@ export function Library() {
 						section={section}
 						onBack={() => navigate({})}
 						onOpenPage={id => navigate({ topic: topic.id, page: id })}
-						onRenamed={refreshTree}
 						onDelete={setDeleteTarget}
 					/>
 				) : (
@@ -236,7 +278,6 @@ function LibraryTree({
 	activeSectionId,
 	onOpenTopic,
 	onOpenSection,
-	onChanged,
 	onDelete
 }: {
 	sections: ILibrarySection[]
@@ -246,54 +287,39 @@ function LibraryTree({
 	activeSectionId?: string | null
 	onOpenTopic: (id: string) => void
 	onOpenSection: (id: string) => void
-	onChanged: () => Promise<unknown>
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
 	const [isAdding, setIsAdding] = useState(false)
 	const [addingTopicTo, setAddingTopicTo] = useState<string | null>(null)
 	const [renaming, setRenaming] = useState<string | null>(null)
-	const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+	// Свёрнутые разделы запоминаем на устройстве
+	const [collapsed, setCollapsed] = useLocalStorage<Record<string, boolean>>({
+		key: 'library-collapsed',
+		defaultValue: {}
+	})
 
-	const createSection = async (title: string) => {
+	const actions = useTreeActions()
+
+	const createSection = (title: string) => {
 		setIsAdding(false)
-		if (!title) return
-		try {
-			await libraryService.createSection(title, sections.length)
-			await onChanged()
-		} catch {
-			toast.error('Не удалось создать раздел')
-		}
+		if (title) actions.addSection(title, sections.length)
 	}
 
-	const createTopic = async (sectionId: string, title: string) => {
+	const createTopic = (sectionId: string, title: string) => {
 		setAddingTopicTo(null)
 		if (!title) return
-		try {
-			const topic = await libraryService.createTopic(
+		onOpenTopic(
+			actions.addTopic(
 				sectionId,
 				title,
 				topics.filter(item => item.section_id === sectionId).length
 			)
-			await onChanged()
-			onOpenTopic(topic.id)
-		} catch {
-			toast.error('Не удалось создать тему')
-		}
+		)
 	}
 
-	const rename = async (
-		table: 'library_section' | 'library_topic',
-		id: string,
-		title: string
-	) => {
+	const rename = (table: 'library_section' | 'library_topic', id: string, title: string) => {
 		setRenaming(null)
-		if (!title) return
-		try {
-			await libraryService.rename(table, id, title)
-			await onChanged()
-		} catch {
-			toast.error('Не удалось переименовать')
-		}
+		if (title) actions.rename(table, id, title)
 	}
 
 	return (
@@ -600,14 +626,12 @@ function TopicView({
 	section,
 	onBack,
 	onOpenPage,
-	onRenamed,
 	onDelete
 }: {
 	topic: ILibraryTopic
 	section?: ILibrarySection
 	onBack: () => void
 	onOpenPage: (id: string) => void
-	onRenamed: () => Promise<unknown>
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
 	const queryClient = useQueryClient()
@@ -616,21 +640,33 @@ function TopicView({
 		queryFn: () => libraryService.getPages(topic.id),
 		staleTime: 60 * 1000
 	})
-	const [isCreating, setIsCreating] = useState(false)
 	const [isRenaming, setIsRenaming] = useState(false)
 
-	const createPage = async () => {
-		setIsCreating(true)
-		try {
-			const page = await libraryService.createPage(topic.id, pages?.length || 0)
-			queryClient.setQueryData(pageKey(page.id), page)
-			queryClient.invalidateQueries({ queryKey: pagesKey(topic.id) })
-			onOpenPage(page.id)
-		} catch {
-			toast.error('Не удалось создать лист')
-		} finally {
-			setIsCreating(false)
+	const actions = useTreeActions()
+
+	// Лист появляется и открывается сразу, в базу он уходит фоном
+	const createPage = () => {
+		const id = newLibraryId()
+		const order = pages?.length || 0
+		const page = {
+			id,
+			topic_id: topic.id,
+			title: '',
+			content: '',
+			order,
+			updated_at: new Date().toISOString(),
+			excerpt: ''
 		}
+		queryClient.setQueryData(pageKey(id), page)
+		queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topic.id), old => [
+			...(old || []),
+			page
+		])
+		onOpenPage(id)
+		libraryService.createPage(id, topic.id, order).catch(() => {
+			toast.error('Не удалось создать лист')
+			queryClient.invalidateQueries({ queryKey: pagesKey(topic.id) })
+		})
 	}
 
 	return (
@@ -652,13 +688,10 @@ function TopicView({
 							autoFocus
 							defaultValue={topic.title}
 							maxLength={200}
-							onBlur={async event => {
+							onBlur={event => {
 								setIsRenaming(false)
 								const title = event.target.value.trim()
-								if (title && title !== topic.title) {
-									await libraryService.rename('library_topic', topic.id, title)
-									await onRenamed()
-								}
+								if (title && title !== topic.title) actions.rename('library_topic', topic.id, title)
 							}}
 							onKeyDown={event => {
 								if (event.key === 'Enter') event.currentTarget.blur()
@@ -688,17 +721,9 @@ function TopicView({
 					<button
 						type='button'
 						onClick={createPage}
-						disabled={isCreating}
-						className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50'
+						className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
 					>
-						{isCreating ? (
-							<Loader2
-								size={15}
-								className='animate-spin'
-							/>
-						) : (
-							<FilePlus2 size={15} />
-						)}
+						<FilePlus2 size={15} />
 						Новый лист
 					</button>
 				</div>
@@ -750,14 +775,14 @@ function PageCard({
 		<button
 			type='button'
 			onClick={onOpen}
-			className='group grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 border-b border-border py-5 text-left transition-colors sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
+			className='lazy-paint group grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 border-b border-border py-5 text-left transition-colors sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
 		>
 			<span className='pt-1 font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
 			<span className='min-w-0'>
 				<span className='block truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
 					{page.title || 'Без названия'}
 				</span>
-				<span className='mt-1 line-clamp-2 block text-sm leading-6 text-subtle'>
+				<span className='mt-1 line-clamp-2 text-sm leading-6 text-subtle sm:line-clamp-3'>
 					{page.excerpt ? <MathExcerpt text={page.excerpt} /> : 'Пустой лист'}
 				</span>
 			</span>
@@ -1022,26 +1047,19 @@ function SectionView({
 	topics,
 	onBack,
 	onOpenTopic,
-	onChanged
 }: {
 	section: ILibrarySection
 	topics: ILibraryTopic[]
 	onBack: () => void
 	onOpenTopic: (id: string) => void
-	onChanged: () => Promise<unknown>
 }) {
 	const [isAdding, setIsAdding] = useState(false)
 
-	const createTopic = async (title: string) => {
+	const actions = useTreeActions()
+
+	const createTopic = (title: string) => {
 		setIsAdding(false)
-		if (!title) return
-		try {
-			const topic = await libraryService.createTopic(section.id, title, topics.length)
-			await onChanged()
-			onOpenTopic(topic.id)
-		} catch {
-			toast.error('Не удалось создать тему')
-		}
+		if (title) onOpenTopic(actions.addTopic(section.id, title, topics.length))
 	}
 
 	return (

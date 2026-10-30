@@ -1,20 +1,33 @@
 'use client'
 
-import { Check, ChevronDown, LocateFixed, Minus, Plus, Search } from 'lucide-react'
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import {
+	Check,
+	ChevronDown,
+	LocateFixed,
+	Minus,
+	Plus,
+	Search
+} from 'lucide-react'
+import {
+	Fragment,
+	type ReactNode,
+	useEffect,
+	useMemo,
+	useRef,
+	useState
+} from 'react'
+import { createPortal } from 'react-dom'
 import { SubmitHandler, useForm } from 'react-hook-form'
 
 import { AppBackground } from '@/components/dashboard-layout/AppBackground'
 import { Button } from '@/components/ui/buttons/Button'
 
-import { BACKGROUNDS, useBackground } from '@/lib/background-preference'
-
-import { DesktopSettings, FeelSettings } from './FeelSettings'
-
 import { TypeUserForm } from '@/types/auth.types'
 
+import { DesktopSettings, FeelSettings } from './FeelSettings'
 import { useInitialData } from './useInitialData'
 import { useUpdateSettings } from './useUpdateSettings'
+import { BACKGROUNDS, useBackground } from '@/lib/background-preference'
 
 const FALLBACK_TIME_ZONES = [
 	'UTC',
@@ -179,7 +192,12 @@ export function Settings() {
 						aria-label={label}
 						min={min}
 						max={max}
-						{...register(name, { valueAsNumber: true, min, max, required: true })}
+						{...register(name, {
+							valueAsNumber: true,
+							min,
+							max,
+							required: true
+						})}
 						onBlur={event => set(Number(event.target.value) || min)}
 						className='h-9 w-14 border-x border-border bg-transparent text-center font-mono text-sm tabular-nums text-fg outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none'
 					/>
@@ -256,10 +274,15 @@ export function Settings() {
 							</span>
 							<span className='flex shrink-0 items-center gap-2 font-mono text-xs text-subtle'>
 								{selectedTimeZone &&
-									timeZones.find(zone => zone.zone === selectedTimeZone)?.offset}
+									timeZones.find(zone => zone.zone === selectedTimeZone)
+										?.offset}
 								<ChevronDown
 									size={16}
-									className={timeZoneMenuOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
+									className={
+										timeZoneMenuOpen
+											? 'rotate-180 transition-transform'
+											: 'transition-transform'
+									}
 								/>
 							</span>
 						</button>
@@ -314,7 +337,9 @@ export function Settings() {
 											</button>
 										))
 									) : (
-										<p className='px-3 py-4 text-sm text-subtle'>Ничего не найдено</p>
+										<p className='px-3 py-4 text-sm text-subtle'>
+											Ничего не найдено
+										</p>
 									)}
 								</div>
 							</div>
@@ -363,7 +388,9 @@ export function Settings() {
 										className='absolute inset-0'
 									/>
 								</span>
-								<span className='mt-2 block text-sm text-fg'>{option.label}</span>
+								<span className='mt-2 block text-sm text-fg'>
+									{option.label}
+								</span>
 								<span className='block text-xs leading-4 text-subtle'>
 									{option.description}
 								</span>
@@ -373,7 +400,9 @@ export function Settings() {
 
 					<div className='mt-6 border-t border-border pt-5'>
 						<p className='text-sm text-fg'>Фон в архиве</p>
-						<p className='mt-0.5 text-xs text-subtle'>По умолчанию тёмный — конспекты читаются без отвлечений</p>
+						<p className='mt-0.5 text-xs text-subtle'>
+							По умолчанию тёмный — конспекты читаются без отвлечений
+						</p>
 						<div className='mt-3 flex flex-wrap gap-2'>
 							{BACKGROUNDS.map(option => (
 								<button
@@ -422,7 +451,9 @@ export function Settings() {
 								{count > 1 ? ` + ${count - 1} × ${rest} мин` : ''}
 							</span>
 							<span className='text-subtle'> = </span>
-							<span className='font-medium'>{formatMinutes(sessionMinutes)}</span>
+							<span className='font-medium'>
+								{formatMinutes(sessionMinutes)}
+							</span>
 						</p>
 						<div className='mt-3 flex h-1.5 gap-px'>
 							{Array.from({ length: count }, (_, index) => (
@@ -444,32 +475,38 @@ export function Settings() {
 				</Section>
 			</div>
 
-			{/* Плашка сохранения появляется, только когда что-то изменили */}
-			{isDirty && (
-				<div className='fixed inset-x-0 bottom-0 z-40 animate-pop-in border-t border-border bg-elevated/95 backdrop-blur lg:left-auto lg:right-8 lg:bottom-6 lg:w-auto lg:border'>
-					<div className='flex items-center justify-between gap-4 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:pb-3'>
-						<span className='text-sm text-muted'>Есть несохранённые изменения</span>
-						<div className='flex items-center gap-2'>
-							<Button
-								type='button'
-								variant='ghost'
-								size='sm'
-								onClick={() => reset()}
-								disabled={isPending}
-							>
-								Отменить
-							</Button>
-							<Button
-								type='submit'
-								size='sm'
-								disabled={isPending}
-							>
-								{isPending ? 'Сохраняем…' : 'Сохранить'}
-							</Button>
+			{/* Плашка сохранения появляется, только когда что-то изменили. Рисуем её поверх
+			    всего (в body), на телефоне — над нижней панелью навигации */}
+			{isDirty &&
+				createPortal(
+					<div className='fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 animate-pop-in border-y border-border bg-elevated lg:bottom-6 lg:left-auto lg:right-8 lg:w-auto lg:border [html[data-keyboard=open]_&]:bottom-0'>
+						<div className='flex items-center justify-between gap-4 px-4 py-3'>
+							<span className='text-sm text-muted'>
+								Есть несохранённые изменения
+							</span>
+							<div className='flex items-center gap-2'>
+								<Button
+									type='button'
+									variant='ghost'
+									size='sm'
+									onClick={() => reset()}
+									disabled={isPending}
+								>
+									Отменить
+								</Button>
+								<Button
+									type='button'
+									size='sm'
+									disabled={isPending}
+									onClick={handleSubmit(onSubmit)}
+								>
+									{isPending ? 'Сохраняем…' : 'Сохранить'}
+								</Button>
+							</div>
 						</div>
-					</div>
-				</div>
-			)}
+					</div>,
+					document.body
+				)}
 		</form>
 	)
 }

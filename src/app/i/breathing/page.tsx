@@ -114,6 +114,7 @@ export default function BreathingPage() {
 	// Актуальные значения для finishSession, который вызывается из интервала со старым замыканием
 	const elapsedRef = useRef<number>(0)
 	const cyclesRef = useRef<number>(0)
+	const finishingRef = useRef(false)
 
 	// Load user settings and sessions on mount
 	useEffect(() => {
@@ -349,7 +350,9 @@ export default function BreathingPage() {
 				targetDurationSeconds > 0 &&
 				currentSessionElapsed >= targetDurationSeconds
 			) {
-				finishSession()
+				clearInterval(interval)
+				// Через ref — у интервала замыкание старого рендера
+				finishRef.current(true)
 				return
 			}
 
@@ -398,6 +401,7 @@ export default function BreathingPage() {
 		accumulatedElapsedRef.current = 0
 		elapsedRef.current = 0
 		cyclesRef.current = 0
+		finishingRef.current = false
 		setTotalElapsedSeconds(0)
 		setCompletedCycles(0)
 		setCurrentPhaseIndex(0)
@@ -441,17 +445,46 @@ export default function BreathingPage() {
 		if (keepScreenOn) breathingAudio.requestWakeLock()
 	}
 
-	const finishSession = () => {
-		const finalElapsed = elapsedRef.current
+	// Сеанс закончился сам (вышло время) или по кнопке «Завершить» — в обоих случаях
+	// сначала записываем его, а звук и блокировку экрана гасим после: если браузер
+	// откажет в чём-то из этого, запись всё равно не потеряется
+	const finishSession = (completed = false) => {
+		if (finishingRef.current) return
+		finishingRef.current = true
+		const finalElapsed = completed
+			? Math.max(elapsedRef.current, targetDurationSeconds)
+			: elapsedRef.current
 		const finalCycles = cyclesRef.current
 		setIsActive(false)
 		setIsPaused(false)
-		breathingAudio.stopSoundscape()
-		breathingAudio.stopBackgroundKeepAlive()
-		breathingAudio.releaseWakeLock()
-
 		saveSessionToHistory(finalElapsed, finalCycles)
+		if (completed) {
+			try {
+				if (soundEnabled) breathingAudio.playTone('exhale')
+				if (vibrationEnabled) navigator.vibrate?.([60, 80, 60])
+			} catch {}
+		}
+		for (const stop of [
+			() => breathingAudio.stopSoundscape(),
+			() => breathingAudio.stopBackgroundKeepAlive(),
+			() => breathingAudio.releaseWakeLock()
+		]) {
+			try {
+				stop()
+			} catch {}
+		}
 	}
+	const finishRef = useRef(finishSession)
+	finishRef.current = finishSession
+	const activeRef = useRef(false)
+	activeRef.current = isActive
+	// Ушли со страницы посреди сеанса — он тоже попадает в историю
+	useEffect(
+		() => () => {
+			if (activeRef.current) finishRef.current()
+		},
+		[]
+	)
 
 	const resetSession = () => {
 		elapsedRef.current = 0
@@ -694,7 +727,7 @@ export default function BreathingPage() {
 					</button>
 					<button
 						type='button'
-						onClick={finishSession}
+						onClick={() => finishSession()}
 						className={cn(
 							'flex items-center gap-2 border border-border px-4 text-sm font-medium text-fg transition-colors hover:border-success/50 hover:text-success',
 							h

@@ -1,7 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import { Music2 } from 'lucide-react'
+import { Headphones } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { ambientMusic } from '@/lib/ambient-music'
@@ -44,7 +44,23 @@ export function MusicToggle() {
 				preferences.music ? 'text-primary' : 'text-subtle hover:text-fg'
 			)}
 		>
-			<Music2 size={16} />
+			{preferences.music ? (
+				// Играет — живой эквалайзер; выключено — наушники
+				<span
+					aria-hidden
+					className='flex h-4 items-end gap-[3px]'
+				>
+					{[0, 1, 2, 3].map(bar => (
+						<span
+							key={bar}
+							className='music-bar w-[3px] bg-current'
+							style={{ animationDelay: `${bar * -0.27}s` }}
+						/>
+					))}
+				</span>
+			) : (
+				<Headphones size={16} />
+			)}
 		</button>
 	)
 }

@@ -69,6 +69,29 @@ export const toExcerpt = (markdown: string, length = 220) => {
 	return text.replace(/\u0000(\d+)\u0000/g, (_match, index) => `$${formulas[Number(index)]}$`)
 }
 
+/*
+ * Новые разделы, темы и листы появляются на экране сразу: id задаём на клиенте,
+ * а запись в базу идёт фоном. Любое действие с ещё не сохранённой записью
+ * дожидается её создания.
+ */
+const pending = new Map<string, Promise<unknown>>()
+
+export const newLibraryId = () => crypto.randomUUID()
+
+const track = <T>(id: string, create: () => Promise<T>) => {
+	const promise = create()
+	pending.set(id, promise)
+	promise.then(
+		() => pending.delete(id),
+		() => pending.delete(id)
+	)
+	return promise
+}
+
+const settled = async (id: string) => {
+	await pending.get(id)?.catch(() => undefined)
+}
+
 export const libraryService = {
 	async getTree() {
 		const [sections, topics] = await Promise.all([
@@ -121,43 +144,58 @@ export const libraryService = {
 		return { ...row, excerpt: toExcerpt(row.content.slice(0, 1500)) }
 	},
 
-	async createSection(title: string, order: number) {
-		return unwrap<ILibrarySection>(
-			await db().from('library_section').insert({ title, order }).select('id,title,order').single()
+	async createSection(id: string, title: string, order: number) {
+		return track(id, async () =>
+			unwrap<ILibrarySection>(
+				await db()
+					.from('library_section')
+					.insert({ id, title, order })
+					.select('id,title,order')
+					.single()
+			)
 		)
 	},
 
-	async createTopic(sectionId: string, title: string, order: number) {
-		return unwrap<ILibraryTopic>(
-			await db()
-				.from('library_topic')
-				.insert({ section_id: sectionId, title, order })
-				.select('id,section_id,title,order')
-				.single()
+	async createTopic(id: string, sectionId: string, title: string, order: number) {
+		await settled(sectionId)
+		return track(id, async () =>
+			unwrap<ILibraryTopic>(
+				await db()
+					.from('library_topic')
+					.insert({ id, section_id: sectionId, title, order })
+					.select('id,section_id,title,order')
+					.single()
+			)
 		)
 	},
 
-	async createPage(topicId: string, order: number) {
-		return unwrap<ILibraryPage>(
-			await db()
-				.from('library_page')
-				.insert({ topic_id: topicId, title: '', content: '', order })
-				.select('id,topic_id,title,order,updated_at,content')
-				.single()
+	async createPage(id: string, topicId: string, order: number) {
+		await settled(topicId)
+		return track(id, async () =>
+			unwrap<ILibraryPage>(
+				await db()
+					.from('library_page')
+					.insert({ id, topic_id: topicId, title: '', content: '', order })
+					.select('id,topic_id,title,order,updated_at,content')
+					.single()
+			)
 		)
 	},
 
 	async rename(table: 'library_section' | 'library_topic', id: string, title: string) {
+		await settled(id)
 		unwrap(await db().from(table).update({ title }).eq('id', id))
 	},
 
 	async updatePage(id: string, patch: { title?: string; content?: string }) {
+		await settled(id)
 		return unwrap<{ updated_at: string }>(
 			await db().from('library_page').update(patch).eq('id', id).select('updated_at').single()
 		)
 	},
 
 	async remove(table: 'library_section' | 'library_topic' | 'library_page', id: string) {
+		await settled(id)
 		unwrap(await db().from(table).delete().eq('id', id))
 	}
 }

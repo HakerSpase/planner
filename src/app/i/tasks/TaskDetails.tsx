@@ -9,6 +9,8 @@ import { type Control, useController } from 'react-hook-form'
 
 import type { ISubtask, TypeTaskFormState } from '@/types/task.types'
 
+import { useBackClose } from '@/hooks/useBackClose'
+
 // Редактор тяжёлый (Tiptap + ProseMirror) — грузим его только когда он нужен
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
@@ -151,6 +153,7 @@ function TaskDetailsPanel({
 	const newInputRef = useRef<HTMLInputElement>(null)
 	const doneCount = subtasks.filter(subtask => subtask.isCompleted).length
 	const progress = subtasks.length ? (doneCount / subtasks.length) * 100 : 0
+	useBackClose(true, onClose)
 
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {

@@ -31,6 +31,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
+import { useBackClose } from '@/hooks/useBackClose'
 import { useProfile } from '@/hooks/useProfile'
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 
@@ -280,6 +281,7 @@ export default function ThoughtsPage() {
 		setIsFocus(false)
 		if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
 	}, [])
+	useBackClose(isFocus, exitFocus)
 	useEffect(() => {
 		if (!isFocus) return
 		const onKey = (event: KeyboardEvent) => {
@@ -555,7 +557,7 @@ export default function ThoughtsPage() {
 									return (
 										<article
 											key={key}
-											className='border border-border bg-surface p-5 sm:p-7'
+											className='lazy-paint border border-border bg-surface p-5 sm:p-7'
 										>
 											<header className='mb-4 flex items-center justify-between gap-3 border-b border-border pb-3'>
 												<button
