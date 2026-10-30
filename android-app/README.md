@@ -24,7 +24,7 @@ APK собирает GitHub Actions (`.github/workflows/android.yml`) при и�
 - `ANDROID_KEYSTORE_BASE64` — ключ подписи в base64;
 - `ANDROID_KEYSTORE_PASSWORD` — пароль к нему.
 
-Ключ лежит вне репозитория (`../../android-signing/`). **Не теряйте его**: без того же ключа
+Секреты уже добавлены. Ключ лежит вне репозитория (`../../android-signing/`). **Не теряйте его**: без того же ключа
 новая версия не встанет поверх старой.
 
 Локально (нужны JDK 21 и Android SDK): `npm ci && npx cap sync android && cd android && ./gradlew assembleRelease`.
