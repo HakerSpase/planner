@@ -8,7 +8,6 @@ import { toast } from 'sonner'
 import { type TypeSttModel, usePreferences } from '@/lib/preferences'
 import {
 	getVoices,
-	isNativeSpeech,
 	isSpeechSupported,
 	onVoicesChanged,
 	sortVoices,
@@ -20,6 +19,8 @@ import { STT_MODELS, isModelCached, preloadModel } from '@/lib/transcribe'
 
 const SAMPLE =
 	'Привет! Так будут звучать твои конспекты. Формулы я пропускаю, а текст читаю по предложениям.'
+const SAMPLE_EN =
+	'Hello! This is how your study notes will sound when reading English text.'
 
 /** Озвучка: голос, скорость, высота — с прослушиванием */
 export function SpeechSettings() {
@@ -29,48 +30,48 @@ export function SpeechSettings() {
 	const speech = useSpeech()
 	// Поддержку узнаём только в браузере — иначе разметка сервера и клиента разойдётся
 	const [supported, setSupported] = useState(true)
-	const [native, setNative] = useState(false)
 
 	useEffect(() => {
 		setSupported(isSpeechSupported())
-		setNative(isNativeSpeech())
 		const update = () => setVoices(sortVoices(getVoices()))
 		update()
 		return onVoicesChanged(update)
 	}, [])
 
-	const russian = voices.filter(voice =>
-		voice.lang.toLowerCase().startsWith('ru')
+	const russian = voices.filter(
+		voice =>
+			voice.lang.toLowerCase().startsWith('ru') ||
+			/multilingual/i.test(voice.voiceURI)
 	)
 	const list = showAll || !russian.length ? voices : russian
 	const selected =
 		voices.find(voice => voice.voiceURI === preferences.ttsVoice) ?? voices[0]
 	const testing = speech.status !== 'idle' && speech.title === 'Проверка голоса'
 
+	const sampleForVoice = (voice?: SpeechSynthesisVoice) =>
+		voice &&
+		voice.lang.toLowerCase().startsWith('en') &&
+		!/multilingual/i.test(voice.voiceURI)
+			? SAMPLE_EN
+			: SAMPLE
+
 	return (
 		<div className='space-y-5'>
-			{native ? (
-				<p className='border border-border px-4 py-3 text-sm leading-6 text-muted'>
-					В приложении читает голос Android. Русский и английский переключаются
-					сами — по языку фразы. Сменить голос или скачать получше: Настройки
-					Android → «Синтез речи» (движок Google).
-				</p>
-			) : !supported ? (
+			{!supported ? (
 				<p className='text-sm text-subtle'>
-					В этом браузере нет голосов системы — откройте планер в Chrome или
-					Edge.
+					В этом браузере озвучка недоступна.
 				</p>
 			) : (
 				<div>
 					<div className='mb-2 flex items-center justify-between gap-3'>
-						<p className='eyebrow'>Голос</p>
+						<p className='eyebrow'>Голос Edge TTS</p>
 						{russian.length > 0 && russian.length < voices.length && (
 							<button
 								type='button'
 								onClick={() => setShowAll(value => !value)}
 								className='text-xs text-subtle transition-colors hover:text-fg'
 							>
-								{showAll ? 'Только русские' : `Все языки (${voices.length})`}
+								{showAll ? 'Русские и мультиязычные' : `Все голоса (${voices.length})`}
 							</button>
 						)}
 					</div>
@@ -84,7 +85,7 @@ export function SpeechSettings() {
 										type='button'
 										onClick={() => {
 											setPreferences({ ttsVoice: voice.voiceURI })
-											speak(SAMPLE, 'Проверка голоса')
+											speak(sampleForVoice(voice), 'Проверка голоса')
 										}}
 										className={cn(
 											'flex min-w-0 items-center gap-3 px-3 py-2.5 text-left transition-colors',
@@ -109,9 +110,9 @@ export function SpeechSettings() {
 											</span>
 											<span className='block truncate text-2xs text-subtle'>
 												{voice.lang}
-												{/natural|neural|online/i.test(voice.name) &&
-													' · нейросетевой'}
-												{!voice.localService && ' · нужен интернет'}
+												{/multilingual/i.test(voice.voiceURI)
+													? ' · RU / EN нейросетевой'
+													: ' · нейросетевой Edge TTS'}
 											</span>
 										</span>
 									</button>
@@ -124,13 +125,14 @@ export function SpeechSettings() {
 								size={14}
 								className='animate-spin'
 							/>
-							Загружаю голоса системы…
+							Загружаю голоса…
 						</p>
 					)}
 					<p className='mt-2 text-xs leading-5 text-subtle'>
-						Голоса берутся из системы — бесплатно. Самые живые — нейросетевые
-						«Online (Natural)» в Microsoft Edge (Светлана, Дмитрий) и голос
-						Google на Android.
+						Озвучка работает через нейросетевые голоса Microsoft Edge TTS
+						(Светлана, Дмитрий, Дария и мультиязычные голоса) одинаково на
+						компьютере, в браузере и в мобильном приложении. Без интернета
+						автоматически включается системный голос устройства.
 					</p>
 				</div>
 			)}
@@ -157,7 +159,9 @@ export function SpeechSettings() {
 			<button
 				type='button'
 				onClick={() =>
-					testing ? stopSpeech() : speak(SAMPLE, 'Проверка голоса')
+					testing
+						? stopSpeech()
+						: speak(sampleForVoice(selected), 'Проверка голоса')
 				}
 				className='flex h-10 items-center gap-2 border border-border px-4 text-sm text-fg transition-colors hover:bg-white/[0.05]'
 			>

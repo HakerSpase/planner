@@ -4,10 +4,10 @@ import { nativePlugin } from './native'
 import { getPreferences } from './preferences'
 
 /*
- * Озвучка текста — встроенным в браузер и систему синтезатором (Web Speech API):
- * бесплатно, без сервера, работает на Android, iPhone, в Chrome/Edge и в приложении на Windows.
- * Текст режется на предложения: длинную фразу Chrome обрывает примерно через 15 секунд,
- * а по предложениям можно листать вперёд и назад.
+ * Озвучка текста — через нейросетевые голоса Microsoft Edge TTS (/api/tts):
+ * работает одинаково качественно на компьютере (в любом браузере и в Planner.exe)
+ * и на телефоне (в мобильном браузере и в Android-приложении).
+ * При отсутствии интернета автоматически переключается на системный синтезатор (Android / Web Speech API).
  */
 
 export interface ISpeechState {
@@ -37,13 +37,11 @@ const emit = (patch: Partial<ISpeechState>) => {
 	listeners.forEach(listener => listener())
 }
 
-// В Android-приложении WebView не умеет говорить — озвучивает движок Android (плагин)
+// В Android-приложении резервный офлайн-движок — системный плагин TextToSpeech
 const nativeTts = () => nativePlugin('TextToSpeech')
 export const isNativeSpeech = () => Boolean(nativeTts())
 
-export const isSpeechSupported = () =>
-	typeof window !== 'undefined' &&
-	(isNativeSpeech() || 'speechSynthesis' in window)
+export const isSpeechSupported = () => typeof window !== 'undefined'
 
 const hasWebSpeech = () =>
 	typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -55,37 +53,80 @@ export function langOf(text: string) {
 	return latin > cyrillic ? 'en-US' : 'ru-RU'
 }
 
-function cancelSynth() {
-	const native = nativeTts()
-	if (native) void native.stop().catch(() => {})
-	else if (hasWebSpeech()) window.speechSynthesis.cancel()
+/* ---------- Голоса Edge TTS ---------- */
+
+function createEdgeVoice(
+	voiceURI: string,
+	name: string,
+	lang: string
+): SpeechSynthesisVoice {
+	return {
+		voiceURI,
+		name,
+		lang,
+		localService: false,
+		default: voiceURI === 'ru-RU-SvetlanaNeural'
+	}
 }
 
-/* ---------- Голоса ---------- */
+export const EDGE_VOICES: SpeechSynthesisVoice[] = [
+	createEdgeVoice(
+		'ru-RU-SvetlanaNeural',
+		'Светлана · Edge Neural',
+		'ru-RU'
+	),
+	createEdgeVoice(
+		'ru-RU-DmitryNeural',
+		'Дмитрий · Edge Neural',
+		'ru-RU'
+	),
+	createEdgeVoice(
+		'ru-RU-DariyaNeural',
+		'Дария · Edge Neural',
+		'ru-RU'
+	),
+	createEdgeVoice(
+		'en-US-AvaMultilingualNeural',
+		'Ava Multilingual · Edge Neural',
+		'en-US'
+	),
+	createEdgeVoice(
+		'en-US-AndrewMultilingualNeural',
+		'Andrew Multilingual · Edge Neural',
+		'en-US'
+	),
+	createEdgeVoice(
+		'en-US-EmmaMultilingualNeural',
+		'Emma Multilingual · Edge Neural',
+		'en-US'
+	),
+	createEdgeVoice(
+		'en-US-BrianMultilingualNeural',
+		'Brian Multilingual · Edge Neural',
+		'en-US'
+	),
+	createEdgeVoice('en-US-AriaNeural', 'Aria · Edge Neural', 'en-US'),
+	createEdgeVoice('en-US-GuyNeural', 'Guy · Edge Neural', 'en-US'),
+	createEdgeVoice('en-GB-SoniaNeural', 'Sonia · Edge Neural', 'en-GB'),
+	createEdgeVoice('en-GB-RyanNeural', 'Ryan · Edge Neural', 'en-GB')
+]
 
-let voicesCache: SpeechSynthesisVoice[] = []
+const EDGE_VOICE_SET = new Set(EDGE_VOICES.map(v => v.voiceURI))
 
-export function getVoices() {
-	if (!hasWebSpeech()) return []
-	const voices = window.speechSynthesis.getVoices()
-	if (voices.length) voicesCache = voices
-	return voicesCache
+export function getVoices(): SpeechSynthesisVoice[] {
+	return EDGE_VOICES
 }
 
-/** Голоса грузятся асинхронно (особенно на Android) — ждём событие */
-export function onVoicesChanged(callback: () => void) {
-	if (!hasWebSpeech()) return () => {}
-	window.speechSynthesis.addEventListener('voiceschanged', callback)
-	return () =>
-		window.speechSynthesis.removeEventListener('voiceschanged', callback)
+export function onVoicesChanged(_callback: () => void) {
+	return () => {}
 }
 
-// Чем выше, тем лучше звучит: нейросетевые голоса Edge/Google — первыми
 const voiceScore = (voice: SpeechSynthesisVoice) =>
+	(EDGE_VOICE_SET.has(voice.voiceURI) ? 200 : 0) +
 	(voice.lang.toLowerCase().startsWith('ru') ? 100 : 0) +
-	(/natural|neural|online/i.test(voice.name) ? 20 : 0) +
-	(/google/i.test(voice.name) ? 10 : 0) +
-	(voice.localService ? 0 : 2)
+	(voice.voiceURI === 'ru-RU-SvetlanaNeural' ? 50 : 0) +
+	(/multilingual/i.test(voice.voiceURI) ? 30 : 0) +
+	(/natural|neural|online/i.test(voice.name) ? 20 : 0)
 
 export function sortVoices(voices: SpeechSynthesisVoice[]) {
 	return [...voices].sort(
@@ -93,17 +134,38 @@ export function sortVoices(voices: SpeechSynthesisVoice[]) {
 	)
 }
 
-/** Выбранный голос; если фраза на другом языке — лучший голос этого языка */
-function pickVoice(lang = 'ru-RU') {
-	const voices = getVoices()
+/** Подбираем голос Edge TTS для текущего языка фразы */
+function pickEdgeVoice(lang = 'ru-RU'): string {
 	const { ttsVoice } = getPreferences()
-	const prefix = lang.slice(0, 2)
-	const chosen = voices.find(voice => voice.voiceURI === ttsVoice)
-	if (chosen?.lang.toLowerCase().startsWith(prefix)) return chosen
+	const chosen = EDGE_VOICE_SET.has(ttsVoice) ? ttsVoice : ''
+
+	// Мультиязычные голоса Edge свободно читают и русский, и английский
+	if (chosen && /multilingual/i.test(chosen)) {
+		return chosen
+	}
+
+	const isRu = lang.toLowerCase().startsWith('ru')
+	if (isRu) {
+		if (chosen && chosen.startsWith('ru-')) return chosen
+		return 'ru-RU-SvetlanaNeural'
+	}
+
+	if (chosen && chosen.startsWith('en-')) return chosen
+	// Если выбран мужской русский голос (Дмитрий), английские фразы читаем мужским Andrew
+	if (chosen === 'ru-RU-DmitryNeural') return 'en-US-AndrewMultilingualNeural'
+	return 'en-US-AvaMultilingualNeural'
+}
+
+/** Резервный системный голос для офлайн-режима */
+function pickFallbackBrowserVoice(lang = 'ru-RU') {
+	if (!hasWebSpeech()) return undefined
+	const voices = window.speechSynthesis.getVoices()
+	if (!voices.length) return undefined
+	const prefix = lang.slice(0, 2).toLowerCase()
 	const sameLang = voices.filter(voice =>
 		voice.lang.toLowerCase().startsWith(prefix)
 	)
-	if (sameLang.length)
+	if (sameLang.length) {
 		return [...sameLang].sort(
 			(a, b) =>
 				(/natural|neural|online/i.test(b.name) ? 2 : 0) +
@@ -111,7 +173,100 @@ function pickVoice(lang = 'ru-RU') {
 				((/natural|neural|online/i.test(a.name) ? 2 : 0) +
 					(/google/i.test(a.name) ? 1 : 0))
 		)[0]
-	return chosen ?? sortVoices(voices)[0]
+	}
+	return voices[0]
+}
+
+/* ---------- Кэш и предзагрузка аудио Edge TTS ---------- */
+
+const MAX_AUDIO_CACHE = 50
+const audioCache = new Map<string, Promise<string>>()
+const resolvedBlobUrls = new Map<string, string>()
+
+function makeTtsKey(text: string, voice: string, rate: number, pitch: number) {
+	return `${voice}|${rate.toFixed(2)}|${pitch.toFixed(2)}|${text}`
+}
+
+function fetchEdgeAudioUrl(
+	text: string,
+	voice: string,
+	rate: number,
+	pitch: number
+): Promise<string> {
+	const key = makeTtsKey(text, voice, rate, pitch)
+	const existing = audioCache.get(key)
+	if (existing) return existing
+
+	if (audioCache.size >= MAX_AUDIO_CACHE) {
+		const oldestKey = audioCache.keys().next().value
+		if (oldestKey) {
+			audioCache.delete(oldestKey)
+			const oldUrl = resolvedBlobUrls.get(oldestKey)
+			if (oldUrl) {
+				URL.revokeObjectURL(oldUrl)
+				resolvedBlobUrls.delete(oldestKey)
+			}
+		}
+	}
+
+	const promise = fetch('/api/tts', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text, voice, rate, pitch })
+	})
+		.then(async res => {
+			if (!res.ok) throw new Error(`TTS HTTP ${res.status}`)
+			const blob = await res.blob()
+			if (!blob.size) throw new Error('Empty TTS blob')
+			const url = URL.createObjectURL(blob)
+			resolvedBlobUrls.set(key, url)
+			return url
+		})
+		.catch(err => {
+			audioCache.delete(key)
+			throw err
+		})
+
+	audioCache.set(key, promise)
+	return promise
+}
+
+function prefetchChunk(index: number) {
+	if (index < 0 || index >= chunks.length) return
+	const text = chunks[index]
+	if (!text) return
+	const { ttsRate, ttsPitch } = getPreferences()
+	const voice = pickEdgeVoice(langOf(text))
+	void fetchEdgeAudioUrl(text, voice, ttsRate, ttsPitch).catch(() => {})
+}
+
+/* ---------- Управление активным аудио ---------- */
+
+let currentAudio: HTMLAudioElement | null = null
+let pausedAudio: HTMLAudioElement | null = null
+let pausedIndex = -1
+
+function stopCurrentAudio(keepPaused = false) {
+	if (currentAudio) {
+		currentAudio.onended = null
+		currentAudio.onerror = null
+		currentAudio.pause()
+		if (!keepPaused) {
+			currentAudio.removeAttribute('src')
+			currentAudio = null
+		}
+	}
+	if (!keepPaused) {
+		pausedAudio = null
+		pausedIndex = -1
+	}
+}
+
+function cancelSynth(keepPaused = false) {
+	stopCurrentAudio(keepPaused)
+	const native = nativeTts()
+	if (native) void native.stop().catch(() => {})
+	else if (hasWebSpeech()) window.speechSynthesis.cancel()
 }
 
 /* ---------- Подготовка текста ---------- */
@@ -210,22 +365,16 @@ export function selectedSpeechText() {
 
 /* ---------- Плеер ---------- */
 
-function speakChunk(index: number) {
-	const my = ++generation
-	cancelSynth()
-	if (index >= chunks.length) {
-		stopSpeech()
-		return
-	}
+function speakFallbackChunk(index: number, my: number) {
 	const { ttsRate, ttsPitch } = getPreferences()
-	const lang = langOf(chunks[index])
+	const text = chunks[index]
+	const lang = langOf(text)
 
 	const native = nativeTts()
 	if (native) {
-		emit({ status: 'playing', index, current: chunks[index] })
 		native
 			.speak({
-				text: chunks[index],
+				text,
 				lang,
 				rate: ttsRate,
 				pitch: ttsPitch,
@@ -241,9 +390,14 @@ function speakChunk(index: number) {
 		return
 	}
 
+	if (!hasWebSpeech()) {
+		stopSpeech()
+		return
+	}
+
 	const synth = window.speechSynthesis
-	const utterance = new SpeechSynthesisUtterance(chunks[index])
-	const voice = pickVoice(lang)
+	const utterance = new SpeechSynthesisUtterance(text)
+	const voice = pickFallbackBrowserVoice(lang)
 	if (voice) utterance.voice = voice
 	utterance.lang = voice?.lang || lang
 	utterance.rate = ttsRate
@@ -260,11 +414,50 @@ function speakChunk(index: number) {
 			return
 		stopSpeech()
 	}
-	emit({ status: 'playing', index, current: chunks[index] })
-	// cancel() в Chrome срабатывает не мгновенно — говорим на следующем такте
 	setTimeout(() => {
 		if (my === generation) synth.speak(utterance)
 	}, 30)
+}
+
+function speakChunk(index: number) {
+	const my = ++generation
+	cancelSynth()
+	if (index >= chunks.length) {
+		stopSpeech()
+		return
+	}
+	const text = chunks[index]
+	const { ttsRate, ttsPitch } = getPreferences()
+	const lang = langOf(text)
+	const voice = pickEdgeVoice(lang)
+
+	emit({ status: 'playing', index, current: text })
+	// Предзагружаем следующую фразу параллельно, чтобы переход между предложениями был бесшовным
+	prefetchChunk(index + 1)
+
+	fetchEdgeAudioUrl(text, voice, ttsRate, ttsPitch)
+		.then(url => {
+			if (my !== generation || state.status !== 'playing') return
+			const audio = new Audio(url)
+			currentAudio = audio
+			audio.onended = () => {
+				if (my === generation && state.status === 'playing') {
+					speakChunk(index + 1)
+				}
+			}
+			audio.onerror = () => {
+				if (my !== generation) return
+				speakFallbackChunk(index, my)
+			}
+			audio.play().catch(() => {
+				if (my !== generation) return
+				speakFallbackChunk(index, my)
+			})
+		})
+		.catch(() => {
+			if (my !== generation) return
+			speakFallbackChunk(index, my)
+		})
 }
 
 export function speak(text: string, title = '') {
@@ -278,14 +471,49 @@ export function speak(text: string, title = '') {
 
 export function pauseSpeech() {
 	if (state.status !== 'playing') return
-	// pause() на Android глохнет навсегда — останавливаемся и продолжаем с этой же фразы
 	generation++
-	cancelSynth()
+	if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
+		pausedAudio = currentAudio
+		pausedIndex = state.index
+		cancelSynth(true)
+	} else {
+		cancelSynth()
+	}
 	emit({ status: 'paused' })
 }
 
 export function resumeSpeech() {
-	if (state.status === 'paused') speakChunk(state.index)
+	if (state.status !== 'paused') return
+	if (
+		pausedAudio &&
+		pausedIndex === state.index &&
+		pausedAudio.currentTime > 0 &&
+		!pausedAudio.ended
+	) {
+		const my = ++generation
+		const audio = pausedAudio
+		const index = state.index
+		pausedAudio = null
+		pausedIndex = -1
+		currentAudio = audio
+		emit({ status: 'playing' })
+		prefetchChunk(index + 1)
+		audio.onended = () => {
+			if (my === generation && state.status === 'playing') {
+				speakChunk(index + 1)
+			}
+		}
+		audio.onerror = () => {
+			if (my !== generation) return
+			speakChunk(index)
+		}
+		audio.play().catch(() => {
+			if (my !== generation) return
+			speakChunk(index)
+		})
+		return
+	}
+	speakChunk(state.index)
 }
 
 export function seekSpeech(delta: number) {
@@ -309,30 +537,43 @@ export function stopSpeech() {
 export function sayCue(text: string) {
 	if (!isSpeechSupported()) return
 	stopSpeech()
+	const my = ++generation
 	const { ttsRate, ttsPitch } = getPreferences()
-	const native = nativeTts()
-	if (native) {
-		// stop() асинхронный — говорим чуть позже, чтобы он не оборвал подсказку
-		setTimeout(() => {
-			void native
-				.speak({
-					text,
-					lang: langOf(text),
-					rate: Math.min(1.2, ttsRate),
-					pitch: ttsPitch,
-					category: 'playback'
-				})
-				.catch(() => {})
-		}, 60)
-		return
-	}
-	const utterance = new SpeechSynthesisUtterance(text)
-	const voice = pickVoice(langOf(text))
-	if (voice) utterance.voice = voice
-	utterance.lang = voice?.lang || langOf(text)
-	utterance.rate = Math.min(1.2, ttsRate)
-	utterance.pitch = ttsPitch
-	window.speechSynthesis.speak(utterance)
+	const rate = Math.min(1.2, ttsRate)
+	const lang = langOf(text)
+	const voice = pickEdgeVoice(lang)
+
+	fetchEdgeAudioUrl(text, voice, rate, ttsPitch)
+		.then(url => {
+			if (my !== generation) return
+			const audio = new Audio(url)
+			currentAudio = audio
+			audio.play().catch(() => {})
+		})
+		.catch(() => {
+			if (my !== generation) return
+			const native = nativeTts()
+			if (native) {
+				void native
+					.speak({
+						text,
+						lang,
+						rate,
+						pitch: ttsPitch,
+						category: 'playback'
+					})
+					.catch(() => {})
+				return
+			}
+			if (!hasWebSpeech()) return
+			const utterance = new SpeechSynthesisUtterance(text)
+			const fallbackVoice = pickFallbackBrowserVoice(lang)
+			if (fallbackVoice) utterance.voice = fallbackVoice
+			utterance.lang = fallbackVoice?.lang || lang
+			utterance.rate = rate
+			utterance.pitch = ttsPitch
+			window.speechSynthesis.speak(utterance)
+		})
 }
 
 const subscribe = (listener: () => void) => {
