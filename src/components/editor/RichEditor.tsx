@@ -248,7 +248,9 @@ export function RichEditor({
 		content: value,
 		editorProps: {
 			attributes: {
-				class: cn('rich-editor-content', contentClassName)
+				class: cn('rich-editor-content', contentClassName),
+				spellcheck: 'false',
+				autocorrect: 'off'
 			},
 			handleKeyDown(_view, event) {
 				if (wikiKeyRef.current?.(event)) return true
@@ -334,14 +336,17 @@ export function RichEditor({
 
 	// Переключение «чтение ↔ правка» (архив)
 	useEffect(() => {
-		if (!editor || editor.isDestroyed || editor.isEditable === editable) return
+		if (!editor || editor.isDestroyed) return
+		editor.view.dom.className = cn('ProseMirror rich-editor-content', contentClassName)
+		editor.view.dom.setAttribute('spellcheck', 'false')
+		if (editor.isEditable === editable) return
 		if (!editable) {
 			editor.commands.setContent(getMarkdown(editor), false)
 		}
 		editor.setEditable(editable)
 		// формулы в режиме чтения и правки рисуются по-разному
 		editor.view.dispatch(editor.state.tr.setMeta('mathRefresh', true))
-	}, [editor, editable])
+	}, [editor, editable, contentClassName])
 
 	// Внешняя смена значения (другой день, другая задача) — подменяем содержимое
 	useEffect(() => {
@@ -365,6 +370,7 @@ export function RichEditor({
 
 	return (
 		<div
+			spellCheck={false}
 			className={cn('flex min-h-0 flex-col', selfCheck && 'self-check', className)}
 			onClickCapture={event => {
 				// Нажатие по закрытому — открыть (или снова закрыть)

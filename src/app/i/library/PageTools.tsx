@@ -54,7 +54,7 @@ function useActiveHeading(headings: IHeading[]) {
 	const [active, setActive] = useState<number[]>([0])
 	useEffect(() => {
 		if (!headings.length) return
-		const scroller = headings[0].element.closest('main')
+		const scroller = headings[0].element.closest<HTMLElement>('[data-scroll-root], main')
 		const update = () => {
 			const top = 72
 			const bottom = window.innerHeight
@@ -114,7 +114,7 @@ export function PageOutline({ headings, onPick }: { headings: IHeading[]; onPick
 export function ReadingProgress({ anchorRef }: { anchorRef: RefObject<HTMLElement> }) {
 	const barRef = useRef<HTMLDivElement>(null)
 	useEffect(() => {
-		const scroller = anchorRef.current?.closest('main')
+		const scroller = anchorRef.current?.closest<HTMLElement>('[data-scroll-root], main')
 		if (!scroller) return
 		const update = () => {
 			const max = scroller.scrollHeight - scroller.clientHeight
@@ -203,12 +203,16 @@ export function PageMenu({
 	selfCheck,
 	onToggleSelfCheck,
 	onOpenOutline,
+	showOutline,
+	onToggleOutline,
 	onShare,
 	onDelete
 }: {
 	selfCheck: boolean
 	onToggleSelfCheck: () => void
 	onOpenOutline: () => void
+	showOutline?: boolean
+	onToggleOutline?: () => void
 	onShare: () => void
 	onDelete: () => void
 }) {
@@ -227,6 +231,17 @@ export function PageMenu({
 	const items = [
 		{ icon: Eye, label: selfCheck ? 'Выключить проверку' : 'Режим проверки', hint: 'Закрыть ответы и формулы', action: onToggleSelfCheck },
 		{ icon: ListTree, label: 'Содержание', hint: 'Перейти к разделу листа', action: onOpenOutline, mobileOnly: true },
+		...(onToggleOutline
+			? [
+					{
+						icon: ListTree,
+						label: showOutline ? 'Скрыть содержание' : 'Показать содержание',
+						hint: 'Боковая панель справа',
+						action: onToggleOutline,
+						desktopOnly: true
+					}
+				]
+			: []),
 		{ icon: Printer, label: 'Печать или PDF', hint: 'Сохранить как PDF в окне печати', action: () => window.print() },
 		{ icon: Link2, label: 'Поделиться ссылкой', hint: 'Только для чтения', action: onShare },
 		{ icon: Trash2, label: 'Удалить лист', hint: '', action: onDelete, danger: true }
@@ -254,7 +269,7 @@ export function PageMenu({
 					role='menu'
 					className='absolute right-0 top-full z-40 mt-1 w-64 animate-pop-in border border-border bg-elevated p-1 shadow-pop'
 				>
-					{items.map(({ icon: Icon, label, hint, action, danger, mobileOnly }) => (
+					{items.map(({ icon: Icon, label, hint, action, danger, mobileOnly, desktopOnly }) => (
 						<button
 							key={label}
 							type='button'
@@ -265,7 +280,8 @@ export function PageMenu({
 							}}
 							className={cn(
 								'flex w-full items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-white/[0.06]',
-								mobileOnly && 'xl:hidden'
+								mobileOnly && 'xl:hidden',
+								desktopOnly && 'hidden xl:flex'
 							)}
 						>
 							<Icon

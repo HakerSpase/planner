@@ -13,19 +13,25 @@ import {
 	FilePlus2,
 	FolderTree,
 	FolderPlus,
+	ListTree,
+	Maximize2,
+	Minimize2,
 	Pencil,
 	Plus,
 	Trash2,
-	Waypoints
+	Waypoints,
+	X
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
+import { useBackClose } from '@/hooks/useBackClose'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 
 import { LibrarySearch } from './LibrarySearch'
@@ -975,12 +981,42 @@ function PageView({
 	// Уходим со страницы — досохраняем
 	useEffect(() => () => void flush(), [flush])
 
-	// Чтение: оглавление, прогресс, проверка, ссылка «поделиться»
+	// Чтение: оглавление, прогресс, проверка, ссылка «поделиться», полный экран
 	const articleRef = useRef<HTMLElement>(null)
 	const [selfCheck, setSelfCheck] = useState(false)
 	const [outlineOpen, setOutlineOpen] = useState(false)
+	const [showOutline, setShowOutline] = useLocalStorage<boolean>({
+		key: 'planner:library:outline-visible',
+		defaultValue: true
+	})
 	const [shareOpen, setShareOpen] = useState(false)
-	const headings = useHeadings(articleRef, `${isEditing}:${Boolean(page)}`)
+	const [isFocus, setIsFocus] = useState(false)
+	const headings = useHeadings(articleRef, `${isEditing}:${Boolean(page)}:${isFocus}`)
+
+	const enterFocus = () => {
+		setIsFocus(true)
+		document.documentElement.requestFullscreen?.().catch(() => {})
+	}
+	const exitFocus = useCallback(() => {
+		setIsFocus(false)
+		if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+	}, [])
+	useBackClose(isFocus, exitFocus)
+	useEffect(() => {
+		if (!isFocus) return
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') exitFocus()
+		}
+		const onFullscreen = () => {
+			if (!document.fullscreenElement) setIsFocus(false)
+		}
+		window.addEventListener('keydown', onKey)
+		document.addEventListener('fullscreenchange', onFullscreen)
+		return () => {
+			window.removeEventListener('keydown', onKey)
+			document.removeEventListener('fullscreenchange', onFullscreen)
+		}
+	}, [isFocus, exitFocus])
 
 	if (isLoading || !page) {
 		return (
@@ -992,16 +1028,27 @@ function PageView({
 		)
 	}
 
-	return (
+	const articleBody = (
 		<article
 			ref={articleRef}
-			className='library-article'
+			className={cn('library-article', isFocus && 'mx-auto max-w-6xl')}
 		>
-			<header className='sticky top-[calc(-1*max(0.5rem,env(safe-area-inset-top)))] z-20 -mx-4 lg:-top-3 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
+			<header
+				className={cn(
+					'sticky z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10',
+					isFocus
+						? 'top-0'
+						: 'top-[calc(-1*max(0.5rem,env(safe-area-inset-top)))] lg:-top-3'
+				)}
+			>
 				<ReadingProgress anchorRef={articleRef} />
 				<button
 					type='button'
 					onClick={async () => {
+						if (isFocus) {
+							exitFocus()
+							return
+						}
 						await flush()
 						onBack()
 					}}
@@ -1020,6 +1067,7 @@ function PageView({
 					<button
 						type='button'
 						onClick={async () => {
+							if (isFocus) exitFocus()
 							await flush()
 							onOpenRoot()
 						}}
@@ -1033,6 +1081,7 @@ function PageView({
 							<button
 								type='button'
 								onClick={async () => {
+									if (isFocus) exitFocus()
 									await flush()
 									onOpenSection(section.id)
 								}}
@@ -1046,6 +1095,7 @@ function PageView({
 					<button
 						type='button'
 						onClick={async () => {
+							if (isFocus) exitFocus()
 							await flush()
 							onBack()
 						}}
@@ -1074,6 +1124,20 @@ function PageView({
 							Проверка
 						</button>
 					)}
+					{headings.length > 1 && (
+						<button
+							type='button'
+							onClick={() => setShowOutline(value => !value)}
+							title={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
+							aria-label={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
+							className={cn(
+								'hidden h-9 w-9 place-items-center border border-border transition-colors xl:grid',
+								showOutline ? 'bg-white/[0.06] text-fg' : 'text-subtle hover:text-fg'
+							)}
+						>
+							<ListTree size={15} />
+						</button>
+					)}
 					<PageMenu
 						selfCheck={selfCheck}
 						onToggleSelfCheck={() => {
@@ -1081,6 +1145,10 @@ function PageView({
 							setIsEditing(false)
 						}}
 						onOpenOutline={() => setOutlineOpen(true)}
+						showOutline={headings.length > 1 ? showOutline : undefined}
+						onToggleOutline={
+							headings.length > 1 ? () => setShowOutline(value => !value) : undefined
+						}
 						onShare={() => setShareOpen(true)}
 						onDelete={() => onDelete({ table: 'library_page', id: page.id, title })}
 					/>
@@ -1101,10 +1169,36 @@ function PageView({
 						{isEditing ? <Check size={15} /> : <Pencil size={14} />}
 						{isEditing ? 'Готово' : 'Править'}
 					</button>
+					{isFocus ? (
+						<button
+							type='button'
+							onClick={exitFocus}
+							title='Выйти из полноэкранного режима (Esc)'
+							className='flex h-9 items-center gap-2 border border-border px-3 text-sm text-muted transition-colors hover:text-fg'
+						>
+							<Minimize2 size={14} />
+							<span className='hidden sm:inline'>Выйти · Esc</span>
+						</button>
+					) : (
+						<button
+							type='button'
+							onClick={enterFocus}
+							title='На весь экран (выход — Esc)'
+							aria-label='На весь экран'
+							className='grid h-9 w-9 place-items-center border border-border text-subtle transition-colors hover:text-fg'
+						>
+							<Maximize2 size={15} />
+						</button>
+					)}
 				</div>
 			</header>
 
-			<div className='grid w-full grid-cols-[minmax(0,1fr)] gap-10 pb-24 pt-10 sm:pt-14 xl:grid-cols-[minmax(0,1fr)_13rem]'>
+			<div
+				className={cn(
+					'grid w-full grid-cols-[minmax(0,1fr)] gap-10 pb-24 pt-10 sm:pt-14',
+					headings.length > 1 && showOutline && 'xl:grid-cols-[minmax(0,1fr)_13rem]'
+				)}
+			>
 			<div className='min-w-0'>
 				{isEditing ? (
 					<textarea
@@ -1171,11 +1265,22 @@ function PageView({
 				)}
 			</div>
 
-			{/* Оглавление сбоку — на широком экране */}
-			{headings.length > 1 && (
+			{/* Оглавление сбоку — на широком экране, скрывается по желанию */}
+			{headings.length > 1 && showOutline && (
 				<aside className='hidden print:hidden xl:block'>
 					<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto'>
-						<p className='eyebrow mb-3'>Содержание</p>
+						<div className='mb-3 flex items-center justify-between gap-2'>
+							<p className='eyebrow'>Содержание</p>
+							<button
+								type='button'
+								onClick={() => setShowOutline(false)}
+								title='Скрыть содержание'
+								aria-label='Скрыть содержание'
+								className='grid h-6 w-6 place-items-center text-subtle transition-colors hover:text-fg'
+							>
+								<X size={14} />
+							</button>
+						</div>
 						<PageOutline headings={headings} />
 					</div>
 				</aside>
@@ -1201,6 +1306,20 @@ function PageView({
 			)}
 		</article>
 	)
+
+	if (isFocus && typeof document !== 'undefined') {
+		return createPortal(
+			<div
+				data-scroll-root
+				className='fixed inset-0 z-[120] animate-fade-in overflow-y-auto overscroll-contain bg-bg px-4 pt-[env(safe-area-inset-top)] sm:px-6 lg:px-8 xl:px-10'
+			>
+				{articleBody}
+			</div>,
+			document.body
+		)
+	}
+
+	return articleBody
 }
 
 function SectionView({
