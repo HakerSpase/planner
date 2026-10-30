@@ -6,6 +6,8 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
 import {
 	ArrowLeft,
+	Brain,
+	Eye,
 	Check,
 	ChevronRight,
 	FilePlus2,
@@ -27,6 +29,15 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
 
 import { LibrarySearch } from './LibrarySearch'
+import {
+	OutlineSheet,
+	PageBacklinks,
+	PageMenu,
+	PageOutline,
+	ReadingProgress,
+	ShareDialog,
+	useHeadings
+} from './PageTools'
 import { Heading } from '@/components/ui/Heading'
 
 import {
@@ -41,6 +52,11 @@ import {
 const LibraryGraph = dynamic(() => import('./LibraryGraph').then(mod => mod.LibraryGraph), {
 	ssr: false,
 	loading: () => <div className='h-[min(70vh,44rem)] animate-pulse border border-border bg-white/[0.02]' />
+})
+
+const LibraryCards = dynamic(() => import('./LibraryCards').then(mod => mod.LibraryCards), {
+	ssr: false,
+	loading: () => <div className='h-64 animate-pulse border border-border bg-white/[0.02]' />
 })
 
 const RichEditor = dynamic(
@@ -108,7 +124,9 @@ export function Library() {
 	const topicId = params.get('topic')
 	const pageId = params.get('page')
 	const sectionId = params.get('section')
-	const isGraph = params.get('view') === 'graph'
+	const view = params.get('view')
+	const isGraph = view === 'graph'
+	const isCards = view === 'cards'
 
 	const { data: tree, isLoading } = useQuery({
 		queryKey: TREE_KEY,
@@ -128,7 +146,7 @@ export function Library() {
 			topic?: string | null
 			page?: string | null
 			section?: string | null
-			view?: 'graph' | null
+			view?: 'graph' | 'cards' | null
 		}) => {
 			const search = new URLSearchParams()
 			if (next.view) search.set('view', next.view)
@@ -212,6 +230,7 @@ export function Library() {
 					onBack={() => navigate({ topic: topic.id })}
 					onOpenRoot={() => navigate({})}
 					onOpenSection={id => navigate({ section: id })}
+					onOpenPage={(topic, page) => navigate({ topic, page })}
 					onDelete={setDeleteTarget}
 				/>
 				{deleteDialog}
@@ -238,10 +257,10 @@ export function Library() {
 				<div
 					role='tablist'
 					aria-label='Вид архива'
-					className='flex h-11 divide-x divide-border border border-border'
+					className='flex h-11 w-full divide-x divide-border border border-border sm:w-auto'
 				>
 					<ViewTab
-						active={!isGraph}
+						active={!isGraph && !isCards}
 						onClick={() => navigate({})}
 					>
 						<FolderTree size={15} />
@@ -254,10 +273,23 @@ export function Library() {
 						<Waypoints size={15} />
 						Граф
 					</ViewTab>
+					<ViewTab
+						active={isCards}
+						onClick={() => navigate({ view: 'cards' })}
+					>
+						<Brain size={15} />
+						Карточки
+					</ViewTab>
 				</div>
 			</div>
 
-			{isGraph ? (
+			{isCards ? (
+				<LibraryCards
+					sections={sections}
+					topics={topics}
+					onOpenPage={(topic, page) => navigate({ topic, page })}
+				/>
+			) : isGraph ? (
 				<LibraryGraph
 					sections={sections}
 					topics={topics}
@@ -315,7 +347,7 @@ function ViewTab({ active, onClick, children }: { active: boolean; onClick: () =
 			aria-selected={active}
 			onClick={onClick}
 			className={cn(
-				'flex items-center gap-2 px-3.5 text-sm transition-colors',
+				'flex flex-1 items-center justify-center gap-2 px-2.5 text-sm transition-colors sm:flex-none sm:px-3.5',
 				active ? 'bg-white/[0.08] text-fg' : 'text-muted hover:text-fg'
 			)}
 		>
@@ -862,6 +894,7 @@ function PageView({
 	onBack,
 	onOpenRoot,
 	onOpenSection,
+	onOpenPage,
 	onDelete
 }: {
 	pageId: string
@@ -870,6 +903,7 @@ function PageView({
 	onBack: () => void
 	onOpenRoot: () => void
 	onOpenSection: (id: string) => void
+	onOpenPage: (topicId: string, pageId: string) => void
 	onDelete: (target: TypeDeleteTarget) => void
 }) {
 	const queryClient = useQueryClient()
@@ -938,6 +972,13 @@ function PageView({
 	// Уходим со страницы — досохраняем
 	useEffect(() => () => void flush(), [flush])
 
+	// Чтение: оглавление, прогресс, проверка, ссылка «поделиться»
+	const articleRef = useRef<HTMLElement>(null)
+	const [selfCheck, setSelfCheck] = useState(false)
+	const [outlineOpen, setOutlineOpen] = useState(false)
+	const [shareOpen, setShareOpen] = useState(false)
+	const headings = useHeadings(articleRef, `${isEditing}:${Boolean(page)}`)
+
 	if (isLoading || !page) {
 		return (
 			<div className='mx-auto max-w-3xl space-y-4 px-4 py-10 sm:px-8'>
@@ -949,8 +990,12 @@ function PageView({
 	}
 
 	return (
-		<article>
-			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
+		<article
+			ref={articleRef}
+			className='library-article'
+		>
+			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
+				<ReadingProgress anchorRef={articleRef} />
 				<button
 					type='button'
 					onClick={async () => {
@@ -1016,18 +1061,32 @@ function PageView({
 									? 'Ошибка сохранения'
 									: ''}
 					</span>
-					<IconButton
-						label='Удалить лист'
-						danger
-						onClick={() => onDelete({ table: 'library_page', id: page.id, title })}
-					>
-						<Trash2 size={15} />
-					</IconButton>
+					{selfCheck && !isEditing && (
+						<button
+							type='button'
+							onClick={() => setSelfCheck(false)}
+							className='hidden h-9 items-center gap-1.5 border border-primary/60 px-3 text-sm text-fg sm:flex'
+						>
+							<Eye size={14} />
+							Проверка
+						</button>
+					)}
+					<PageMenu
+						selfCheck={selfCheck}
+						onToggleSelfCheck={() => {
+							setSelfCheck(value => !value)
+							setIsEditing(false)
+						}}
+						onOpenOutline={() => setOutlineOpen(true)}
+						onShare={() => setShareOpen(true)}
+						onDelete={() => onDelete({ table: 'library_page', id: page.id, title })}
+					/>
 					<button
 						type='button'
 						onClick={async () => {
 							if (isEditing) await flush()
 							setIsEditing(!isEditing)
+							setSelfCheck(false)
 						}}
 						className={cn(
 							'flex h-9 items-center gap-2 px-3.5 text-sm font-medium transition-colors',
@@ -1042,7 +1101,8 @@ function PageView({
 				</div>
 			</header>
 
-			<div className='w-full pb-24 pt-10 sm:pt-14'>
+			<div className='grid w-full gap-10 pb-24 pt-10 sm:pt-14 xl:grid-cols-[minmax(0,1fr)_13rem]'>
+			<div className='min-w-0'>
 				{isEditing ? (
 					<textarea
 						value={title}
@@ -1084,6 +1144,7 @@ function PageView({
 						isEditing ? 'bg-bg' : 'bg-transparent'
 					)}
 					contentClassName={cn('min-h-[50vh]', !isEditing && 'library-reading')}
+					selfCheck={selfCheck && !isEditing}
 				/>
 
 				{!isEditing && !content.trim() && (
@@ -1095,7 +1156,46 @@ function PageView({
 						Начать писать
 					</button>
 				)}
+
+				{!isEditing && (
+					<div className='print:hidden'>
+						<PageBacklinks
+							pageId={pageId}
+							title={title}
+							onOpen={onOpenPage}
+						/>
+					</div>
+				)}
 			</div>
+
+			{/* Оглавление сбоку — на широком экране */}
+			{headings.length > 1 && (
+				<aside className='hidden print:hidden xl:block'>
+					<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto'>
+						<p className='eyebrow mb-3'>Содержание</p>
+						<PageOutline headings={headings} />
+					</div>
+				</aside>
+			)}
+			</div>
+
+			{selfCheck && (
+				<p className='fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2 border border-primary/40 bg-elevated px-4 py-2 text-xs text-muted shadow-pop print:hidden lg:bottom-6'>
+					Режим проверки: нажмите на размытое, чтобы открыть
+				</p>
+			)}
+			{outlineOpen && (
+				<OutlineSheet
+					headings={headings}
+					onClose={() => setOutlineOpen(false)}
+				/>
+			)}
+			{shareOpen && (
+				<ShareDialog
+					pageId={pageId}
+					onClose={() => setShareOpen(false)}
+				/>
+			)}
 		</article>
 	)
 }

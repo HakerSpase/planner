@@ -10,6 +10,7 @@ import type { ITaskResponse } from '@/types/task.types'
 import { useProfile } from '@/hooks/useProfile'
 
 import { useTasks } from './tasks/hooks/useTasks'
+import { CardsDue } from './CardsDue'
 
 const greeting = (hour: number) =>
 	hour < 5
@@ -117,6 +118,8 @@ export function Dashboard() {
 					{firstName ? `, ${firstName}` : ''}
 				</h1>
 			</header>
+
+			<CardsDue />
 
 			<div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
 				{/* Ключевые цифры */}

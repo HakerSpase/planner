@@ -899,3 +899,69 @@ body {
 		cursor: pointer;
 	}
 }
+
+/* ---------- Печать и PDF: только сам лист, светлая бумага ---------- */
+@media print {
+	:root {
+		--bg: 255 255 255;
+		--surface: 248 248 250;
+		--surface-2: 242 242 245;
+		--elevated: 255 255 255;
+		--fg: 17 17 20;
+		--muted: 70 70 78;
+		--subtle: 110 110 118;
+		--annot: 79 70 229;
+		color-scheme: light;
+	}
+
+	body {
+		overflow: visible !important;
+		background: #fff !important;
+	}
+
+	/* Оболочка приложения: меню, навигация, фон, кнопки — не печатаем */
+	aside,
+	nav,
+	header,
+	[role='toolbar'],
+	.app-bg-aurora,
+	canvas,
+	[data-sonner-toaster] {
+		display: none !important;
+	}
+
+	.h-\[100dvh\],
+	main {
+		height: auto !important;
+		overflow: visible !important;
+	}
+
+	.library-article {
+		max-width: none;
+	}
+
+	.rich-editor-content {
+		color: #111;
+		font-size: 11.5pt;
+		line-height: 1.6;
+
+		h1,
+		h2,
+		h3 {
+			break-after: avoid;
+		}
+
+		table,
+		pre,
+		.visual-node,
+		blockquote,
+		.math-display,
+		img {
+			break-inside: avoid;
+		}
+
+		.link-preview--video .link-preview-frame {
+			display: none;
+		}
+	}
+}
