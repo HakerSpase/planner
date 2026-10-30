@@ -20,6 +20,8 @@ export interface IAnnotation {
 	label: string
 	/** Цвет для текста и фона; для остальных групп не нужен */
 	color?: string
+	/** Свой цвет линий подчёркивания, подписи или значка морфемы: {подл:red|…} */
+	lineColor?: string
 }
 
 const color = (code: string, label: string, value: string): IAnnotation => ({
@@ -165,7 +167,21 @@ const ALIASES: Record<string, string> = {
 const HEX = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i
 
 /** Разобрать код пометки; неизвестный код — не пометка, а обычный текст в фигурных скобках */
+const colorByName = (raw: string) => {
+	const name = ALIASES[raw.toLowerCase()] ?? raw.toLowerCase()
+	if (HEX.test(name)) return name
+	return TEXT_COLORS.find(item => item.code === name)?.color
+}
+
 export function resolveAnnotation(raw: string): IAnnotation | null {
+	// Член предложения, часть речи или морфема со своим цветом линии: {подл:red|…}, {корень:#22d3ee|…}
+	const split = raw.indexOf(':')
+	if (split > 0) {
+		const base = resolveAnnotation(raw.slice(0, split))
+		const lineColor = colorByName(raw.slice(split + 1))
+		if (!base || !lineColor || !['syntax', 'pos', 'morpheme'].includes(base.group)) return null
+		return { ...base, code: `${base.code}:${raw.slice(split + 1).toLowerCase()}`, lineColor }
+	}
 	const code = ALIASES[raw.toLowerCase()] ?? raw.toLowerCase()
 	if (BY_CODE.has(code)) return BY_CODE.get(code)!
 	if (HEX.test(code)) return { code, group: 'color', label: code, color: code }
@@ -176,7 +192,8 @@ export function resolveAnnotation(raw: string): IAnnotation | null {
 
 /* ---------------- Markdown: разбор {код|текст} ---------------- */
 
-const OPENER = /^\{([^\s|{}]{1,24})\|/
+// В таблицах «|» делит ячейки, поэтому там пометка пишется как {код\|текст}
+const OPENER = /^\{([^\s|{}\\]{1,24})\\?\|/
 
 // Где закрывается пометка, открытая на позиции start (с учётом вложенных скобок)
 function findClose(src: string, from: number) {
@@ -262,7 +279,8 @@ const createAnnotationMark = (name: string, groups: TypeAnnotationGroup[], optio
 				{
 					tag: 'span[data-annot]',
 					getAttrs: element => {
-						const annotation = resolveAnnotation((element as HTMLElement).dataset.annot || '')
+						const data = (element as HTMLElement).dataset
+						const annotation = resolveAnnotation(data.code || data.annot || '')
 						return annotation && groups.includes(annotation.group) ? { code: annotation.code } : false
 					}
 				}
@@ -277,13 +295,17 @@ const createAnnotationMark = (name: string, groups: TypeAnnotationGroup[], optio
 					? `color: ${annotation.color}`
 					: annotation.group === 'highlight'
 						? `background-color: ${annotation.color}`
-						: undefined
+						: annotation.lineColor
+							? `--annot-line: ${annotation.lineColor}`
+							: undefined
+			const base = annotation.code.split(':')[0]
 			return [
 				'span',
 				mergeAttributes({
-					'data-annot': annotation.code,
+					'data-annot': base,
+					'data-code': annotation.code,
 					class: `annot annot-${annotation.group}`,
-					...(annotation.group === 'pos' && { 'data-label': annotation.code }),
+					...(annotation.group === 'pos' && { 'data-label': base }),
 					...(style && { style })
 				}),
 				0
@@ -294,7 +316,8 @@ const createAnnotationMark = (name: string, groups: TypeAnnotationGroup[], optio
 			return {
 				markdown: {
 					serialize: {
-						open: (_state: unknown, mark: { attrs: { code: string } }) => `{${mark.attrs.code}|`,
+						open: (state: { inTable?: boolean }, mark: { attrs: { code: string } }) =>
+							`{${mark.attrs.code}${state.inTable ? '\\|' : '|'}`,
 						close: '}',
 						expelEnclosingWhitespace: true
 					},
@@ -336,7 +359,7 @@ export function stripAnnotations(text: string) {
 	let result = text
 	while (result !== previous) {
 		previous = result
-		result = result.replace(/\{([^\s|{}]{1,24})\|([^{}]*)\}/g, (match, code, inner) =>
+		result = result.replace(/\{([^\s|{}\\]{1,24})\\?\|([^{}]*)\}/g, (match, code, inner) =>
 			resolveAnnotation(code) ? inner : match
 		)
 	}

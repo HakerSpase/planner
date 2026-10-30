@@ -261,7 +261,7 @@ export function RichEditor({
 			// Скопировали страницу чата целиком — убираем подписи кнопок ChatGPT и других ИИ
 			transformPastedText(text) {
 				return text.replace(
-					/^[ \t]*(Оставить отзыв|Create image|Создать изображение|Drag point \S+|Перетащите точку \S+|Copy code|Копировать код|Copy|Edit|Share|Поделиться)[ \t]*\r?\n/gim,
+					/^[ \t]*(Оставить отзыв|Create image|Создать изображение|Drag point \S+|Перетащите точку \S+|Copy code|Копировать код|Фрагмент кода|Code snippet|Copy|Edit|Share|Поделиться)[ \t]*\r?\n/gim,
 					''
 				)
 			},

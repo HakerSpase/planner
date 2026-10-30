@@ -6,6 +6,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import katex from 'katex'
 
 import { KATEX_MACROS } from './katex-macros'
+import { resolveAnnotation } from './annotations'
 import { WIKI_LINK } from './wiki-links'
 
 /*
@@ -158,6 +159,17 @@ function buildDecorations(doc: PMNode, selection: { from: number; to: number }, 
 	const decorations: Decoration[] = []
 	doc.descendants((node, pos, parent) => {
 		if (!node.isText || !node.text || parent?.type.name === 'codeBlock') return
+		// Формула рисуется вне обёртки пометки — цвет и фон переносим на неё сами
+		const tint = node.marks
+			.filter(mark => mark.type.name === 'textColor' || mark.type.name === 'textHighlight')
+			.map(mark => {
+				const annotation = resolveAnnotation(mark.attrs.code || '')
+				if (!annotation?.color) return ''
+				return mark.type.name === 'textColor'
+					? `color: ${annotation.color};`
+					: `background-color: ${annotation.color};`
+			})
+			.join(' ')
 		for (const match of Array.from(node.text.matchAll(MATH_REGEX))) {
 			const from = pos + (match.index ?? 0)
 			const to = from + match[0].length
@@ -175,6 +187,7 @@ function buildDecorations(doc: PMNode, selection: { from: number; to: number }, 
 					() => {
 						const element = document.createElement('span')
 						element.className = display ? 'math-render math-display' : 'math-render'
+						if (tint) element.setAttribute('style', tint)
 						try {
 							katex.render(content, element, {
 								displayMode: display,
@@ -187,7 +200,7 @@ function buildDecorations(doc: PMNode, selection: { from: number; to: number }, 
 						}
 						return element
 					},
-					{ key: `${display ? 'd' : 'i'}:${content}`, side: -1 }
+					{ key: `${display ? 'd' : 'i'}:${tint}:${content}`, side: -1 }
 				)
 			)
 		}

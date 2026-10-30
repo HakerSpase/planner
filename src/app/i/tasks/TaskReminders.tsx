@@ -109,27 +109,52 @@ export function TaskReminders({
 			</div>
 
 			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex h-10 items-center gap-2 border border-border bg-surface-2 px-3 focus-within:border-primary/70'>
+				{/* Часы и минуты — двумя списками: системные «часы» Android вылезали за край экрана */}
+				<div className='flex h-10 items-center gap-1 border border-border bg-surface-2 px-3 focus-within:border-primary/70'>
 					<Clock
 						size={15}
-						className='text-subtle'
+						className='mr-1 text-subtle'
 					/>
-					<input
-						type='time'
-						value={time}
-						onChange={event => {
-							const value = event.target.value
-							if (!value) return onChange({ dueAt: null, reminders: null })
-							onChange({
-								dueAt: combineDateTime(day, value),
-								// Первое время — «в момент» и «за 15 минут»; при смене времени
-								// «в момент» есть всегда, чтобы уведомление пришло ко времени события
-								reminders: !list.length ? [15, 0] : list.includes(0) ? list : [...list, 0]
-							})
-						}}
-						className='bg-transparent font-mono text-base text-fg outline-none [color-scheme:dark]'
-					/>
-				</label>
+					{(['hours', 'minutes'] as const).map((part, index) => {
+						const [hours, minutes] = (time || '').split(':')
+						const current = part === 'hours' ? hours : minutes
+						return (
+							<span
+								key={part}
+								className='flex items-center'
+							>
+								{index === 1 && <span className='px-0.5 font-mono text-base text-subtle'>:</span>}
+								<select
+									aria-label={part === 'hours' ? 'Часы' : 'Минуты'}
+									value={current ?? ''}
+									onChange={event => {
+										const nextHours = part === 'hours' ? event.target.value : hours || '09'
+										const nextMinutes = part === 'minutes' ? event.target.value : minutes || '00'
+										onChange({
+											dueAt: combineDateTime(day, `${nextHours}:${nextMinutes}`),
+											// Первое время — «в момент» и «за 15 минут»; при смене времени
+											// «в момент» есть всегда, чтобы уведомление пришло ко времени события
+											reminders: !list.length ? [15, 0] : list.includes(0) ? list : [...list, 0]
+										})
+									}}
+									className='appearance-none bg-transparent font-mono text-base text-fg outline-none [color-scheme:dark]'
+								>
+									{!time && <option value=''>--</option>}
+									{Array.from({ length: part === 'hours' ? 24 : 60 }, (_, value) => String(value).padStart(2, '0')).map(
+										value => (
+											<option
+												key={value}
+												value={value}
+											>
+												{value}
+											</option>
+										)
+									)}
+								</select>
+							</span>
+						)
+					})}
+				</div>
 				{dueDate && (
 					<span className={cn('text-sm', isPast ? 'text-danger' : 'text-muted')}>
 						{dueDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' })}

@@ -3,6 +3,8 @@ import type { Node as PMNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
+import { markdownFixups } from './markdown-fixups'
+
 /*
  * Учебная разметка поверх обычного Markdown:
  *
@@ -182,6 +184,7 @@ export const StudyMarkup = Extension.create({
 				parse: {
 					setup(markdownit: any) {
 						markdownit.use(markdownCallouts)
+						markdownit.use(markdownFixups)
 					}
 				}
 			}

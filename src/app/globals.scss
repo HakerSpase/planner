@@ -522,7 +522,7 @@ body {
 /* Члены предложения — как на уроке: подлежащее одной чертой, сказуемое двумя,
    определение волной, дополнение пунктиром, обстоятельство точка-тире */
 .annot-syntax {
-	text-decoration-color: rgb(var(--annot));
+	text-decoration-color: var(--annot-line, rgb(var(--annot)));
 	text-decoration-thickness: 1.5px;
 	text-underline-offset: 0.28em;
 	text-decoration-skip-ink: none;
@@ -552,9 +552,9 @@ body {
 		padding-bottom: 0.32em;
 		background-image: repeating-linear-gradient(
 			90deg,
-			rgb(var(--annot)) 0 7px,
+			var(--annot-line, rgb(var(--annot))) 0 7px,
 			transparent 7px 10px,
-			rgb(var(--annot)) 10px 12px,
+			var(--annot-line, rgb(var(--annot))) 10px 12px,
 			transparent 12px 15px
 		);
 		background-position: 0 100%;
@@ -584,7 +584,7 @@ body {
 		line-height: 1;
 		letter-spacing: 0.04em;
 		white-space: nowrap;
-		color: rgb(var(--annot));
+		color: var(--annot-line, rgb(var(--annot)));
 		pointer-events: none;
 	}
 }
@@ -599,7 +599,7 @@ body {
 		content: '';
 		position: absolute;
 		pointer-events: none;
-		border-color: rgb(var(--annot));
+		border-color: var(--annot-line, rgb(var(--annot)));
 	}
 
 	/* приставка ⌝ */
@@ -638,14 +638,14 @@ body {
 		left: 0.12em;
 		right: 0.12em;
 		height: 0.42em;
-		background: rgb(var(--annot));
+		background: var(--annot-line, rgb(var(--annot)));
 		clip-path: polygon(0 100%, 50% 0, 100% 100%, calc(100% - 1.5px) 100%, 50% 4px, 1.5px 100%);
 	}
 
 	/* окончание □ */
 	&[data-annot='оконч'] {
 		padding: 0 1px;
-		box-shadow: inset 0 0 0 1.5px rgb(var(--annot));
+		box-shadow: inset 0 0 0 1.5px var(--annot-line, rgb(var(--annot)));
 	}
 
 	/* основа ⌊⌋ — снизу */
@@ -975,5 +975,40 @@ body {
 		.link-preview--video .link-preview-frame {
 			display: none;
 		}
+	}
+}
+
+/* Печать / PDF: графики без кнопок, всё скрытое и свёрнутое — открыто, размытия нет */
+@media print {
+	.visual-block {
+		break-inside: avoid;
+
+		button,
+		input[type='range'],
+		.absolute {
+			display: none !important;
+		}
+	}
+
+	.rich-editor-content .annot-hidden,
+	.self-check * {
+		color: inherit !important;
+		filter: none !important;
+		opacity: 1 !important;
+		visibility: visible !important;
+	}
+
+	.rich-editor-content blockquote.callout.is-collapsed > :not(.callout-title) {
+		display: block !important;
+	}
+
+	.rich-editor-content table {
+		display: table;
+		width: 100% !important;
+		overflow: visible;
+	}
+
+	.link-preview--card {
+		display: none;
 	}
 }

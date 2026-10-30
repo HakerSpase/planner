@@ -36,8 +36,22 @@ const META = {
 	chart: { icon: BarChart3, title: 'Диаграмма' }
 }
 
+/*
+ * Нейросети (Gemini, ChatGPT) при копировании часто теряют язык блока — узнаём график,
+ * окружность и диаграмму по содержимому
+ */
+function detectKind(language: string, source: string) {
+	const known = VISUAL_LANGUAGES[language.toLowerCase()]
+	if (known || (language && !/^(text|plaintext|txt)$/i.test(language))) return known
+	if (/^\s*(type|тип)\s*:\s*(bar|line|pie|столб|лин|круг)/im.test(source)) return 'chart'
+	if (/^\s*(angle|угол|θ)\s*[=:]/im.test(source) && source.trim().split('\n').length <= 4) return 'circle'
+	if (/^\s*[xy]\s*:\s*[-−]?[\dπ.,\s]*(pi|π)?\s*\.\./im.test(source) || /^\s*(y|f\(x\))\s*=/im.test(source))
+		return 'plot'
+	return undefined
+}
+
 function CodeBlockView({ node, editor }: NodeViewProps) {
-	const kind = VISUAL_LANGUAGES[(node.attrs.language || '').toLowerCase()]
+	const kind = detectKind(node.attrs.language || '', node.textContent)
 	const [showCode, setShowCode] = useState(false)
 	const [editable, setEditable] = useState(editor.isEditable)
 	useEffect(() => {

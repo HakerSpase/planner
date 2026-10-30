@@ -100,8 +100,15 @@ export function AnnotationMenu({ editor }: { editor: Editor }) {
 		}
 	}, [open])
 
+	// Цвет линий для подчёркиваний, подписей частей речи и значков морфем
+	const [lineColor, setLineColor] = useState<string | null>(null)
+
 	const choose = (annotation: IAnnotation) => {
-		apply(editor, annotation)
+		const colored =
+			lineColor && ['syntax', 'pos', 'morpheme'].includes(annotation.group)
+				? resolveAnnotation(`${annotation.code}:${lineColor}`)
+				: null
+		apply(editor, colored ?? annotation)
 		setOpen(false)
 	}
 
@@ -200,6 +207,42 @@ export function AnnotationMenu({ editor }: { editor: Editor }) {
 								/>
 							))}
 						</div>
+					</Group>
+
+					<Group title='Цвет линий разбора'>
+						<div className='flex flex-wrap items-center gap-1.5'>
+							<button
+								type='button'
+								onClick={() => setLineColor(null)}
+								aria-pressed={!lineColor}
+								className={cn(
+									'h-7 border px-2 text-xs transition-colors',
+									!lineColor ? 'border-fg text-fg' : 'border-border text-muted hover:text-fg'
+								)}
+							>
+								Обычный
+							</button>
+							{TEXT_COLORS.map(item => (
+								<button
+									key={item.code}
+									type='button'
+									title={item.label}
+									aria-label={`Линии: ${item.label}`}
+									aria-pressed={lineColor === item.code}
+									onClick={() => setLineColor(item.code)}
+									className={cn(
+										'grid h-7 w-7 place-items-center border transition-colors',
+										lineColor === item.code ? 'border-fg' : 'border-transparent hover:border-white/30'
+									)}
+								>
+									<span
+										className='h-0.5 w-4'
+										style={{ background: item.color }}
+									/>
+								</button>
+							))}
+						</div>
+						<p className='mt-1.5 text-xs text-subtle'>Применится к подчёркиваниям, подписям и морфемам ниже</p>
 					</Group>
 
 					<Group title='Члены предложения'>
