@@ -87,10 +87,14 @@ export function ChartView({ source }: { source: string }) {
 					{(chart.type === 'pie' ? chart.rows.map(row => row.label) : chart.series).map((label, index) => (
 						<span
 							key={label + index}
-							className='flex items-center gap-1.5'
+							onPointerEnter={() => chart.type === 'pie' && setActive(index)}
+							onPointerLeave={() => chart.type === 'pie' && setActive(null)}
+							className={`flex items-center gap-1.5 transition-colors ${
+								chart.type === 'pie' && active === index ? 'text-fg' : ''
+							}`}
 						>
 							<span
-								className='h-2.5 w-2.5'
+								className='h-2.5 w-2.5 shrink-0'
 								style={{ background: VISUAL_COLORS[index % VISUAL_COLORS.length] }}
 							/>
 							{label}
@@ -278,11 +282,11 @@ function Pie({
 	let angle = -Math.PI / 2
 
 	return (
-		<div className='flex flex-wrap items-center justify-center gap-6'>
+		<div className='flex flex-col items-center'>
 			<svg
 				width={size}
 				height={size}
-				className='block select-none'
+				className='block shrink-0 select-none'
 				onPointerLeave={() => setActive(null)}
 			>
 				{values.map((value, index) => {
@@ -325,14 +329,18 @@ function Pie({
 					)
 				})}
 			</svg>
-			{active !== null && (
-				<div className='min-w-[8rem] text-sm'>
-					<p className='text-fg'>{chart.rows[active].label}</p>
-					<p className='font-mono text-muted'>
-						{formatNumber(values[active])} · {Math.round((values[active] / total) * 100)}%
-					</p>
-				</div>
-			)}
+			<div className='mt-2 flex min-h-[2.5rem] flex-col items-center justify-center text-center text-sm'>
+				{active !== null ? (
+					<>
+						<p className='text-fg'>{chart.rows[active].label}</p>
+						<p className='font-mono text-xs text-muted'>
+							{formatNumber(values[active])} · {Math.round((values[active] / total) * 100)}%
+						</p>
+					</>
+				) : (
+					<p className='text-xs text-subtle'>Наведите на сектор</p>
+				)}
+			</div>
 		</div>
 	)
 }
