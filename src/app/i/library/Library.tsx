@@ -7,12 +7,12 @@ import 'dayjs/locale/ru'
 import {
 	ArrowLeft,
 	Brain,
-	Eye,
 	Check,
 	ChevronRight,
+	Eye,
 	FilePlus2,
-	FolderTree,
 	FolderPlus,
+	FolderTree,
 	ListTree,
 	Maximize2,
 	Minimize2,
@@ -27,10 +27,9 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
-import { isSpeechSupported, speak, speechFromNode } from '@/lib/speech'
-
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Heading } from '@/components/ui/Heading'
 
 import { useBackClose } from '@/hooks/useBackClose'
 import { useLocalStorage } from '@/hooks/useLocalStorage'
@@ -45,8 +44,7 @@ import {
 	ShareDialog,
 	useHeadings
 } from './PageTools'
-import { Heading } from '@/components/ui/Heading'
-
+import { isSpeechSupported, speak, speechFromNode } from '@/lib/speech'
 import {
 	type ILibraryPageMeta,
 	type ILibrarySection,
@@ -56,19 +54,32 @@ import {
 	toExcerpt
 } from '@/services/library.service'
 
-const LibraryGraph = dynamic(() => import('./LibraryGraph').then(mod => mod.LibraryGraph), {
-	ssr: false,
-	loading: () => <div className='h-[min(70vh,44rem)] animate-pulse border border-border bg-white/[0.02]' />
-})
+const LibraryGraph = dynamic(
+	() => import('./LibraryGraph').then(mod => mod.LibraryGraph),
+	{
+		ssr: false,
+		loading: () => (
+			<div className='h-[min(70vh,44rem)] animate-pulse border border-border bg-white/[0.02]' />
+		)
+	}
+)
 
-const LibraryCards = dynamic(() => import('./LibraryCards').then(mod => mod.LibraryCards), {
-	ssr: false,
-	loading: () => <div className='h-64 animate-pulse border border-border bg-white/[0.02]' />
-})
+const LibraryCards = dynamic(
+	() => import('./LibraryCards').then(mod => mod.LibraryCards),
+	{
+		ssr: false,
+		loading: () => (
+			<div className='h-64 animate-pulse border border-border bg-white/[0.02]' />
+		)
+	}
+)
 
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
-	{ ssr: false, loading: () => <div className='h-64 animate-pulse bg-white/[0.02]' /> }
+	{
+		ssr: false,
+		loading: () => <div className='h-64 animate-pulse bg-white/[0.02]' />
+	}
 )
 
 const TREE_KEY = ['library', 'tree']
@@ -81,7 +92,9 @@ type TypeTree = { sections: ILibrarySection[]; topics: ILibraryTopic[] }
 function useTreeActions() {
 	const queryClient = useQueryClient()
 	const patchTree = (update: (tree: TypeTree) => TypeTree) =>
-		queryClient.setQueryData<TypeTree>(TREE_KEY, old => (old ? update(old) : old))
+		queryClient.setQueryData<TypeTree>(TREE_KEY, old =>
+			old ? update(old) : old
+		)
 	const resync = (message: string) => {
 		toast.error(message)
 		queryClient.invalidateQueries({ queryKey: TREE_KEY })
@@ -90,7 +103,10 @@ function useTreeActions() {
 	return {
 		addSection(title: string, order: number) {
 			const id = newLibraryId()
-			patchTree(tree => ({ ...tree, sections: [...tree.sections, { id, title, order }] }))
+			patchTree(tree => ({
+				...tree,
+				sections: [...tree.sections, { id, title, order }]
+			}))
 			libraryService
 				.createSection(id, title, order)
 				.catch(() => resync('Не удалось создать раздел'))
@@ -107,13 +123,21 @@ function useTreeActions() {
 				.catch(() => resync('Не удалось создать тему'))
 			return id
 		},
-		rename(table: 'library_section' | 'library_topic', id: string, title: string) {
+		rename(
+			table: 'library_section' | 'library_topic',
+			id: string,
+			title: string
+		) {
 			const key = table === 'library_section' ? 'sections' : 'topics'
 			patchTree(tree => ({
 				...tree,
-				[key]: tree[key].map(item => (item.id === id ? { ...item, title } : item))
+				[key]: tree[key].map(item =>
+					item.id === id ? { ...item, title } : item
+				)
 			}))
-			libraryService.rename(table, id, title).catch(() => resync('Не удалось переименовать'))
+			libraryService
+				.rename(table, id, title)
+				.catch(() => resync('Не удалось переименовать'))
 		}
 	}
 }
@@ -143,9 +167,13 @@ export function Library() {
 	const sections = tree?.sections || []
 	const topics = tree?.topics || []
 	const topic = topics.find(item => item.id === topicId)
-	const section = sections.find(item => item.id === (topic?.section_id ?? sectionId))
+	const section = sections.find(
+		item => item.id === (topic?.section_id ?? sectionId)
+	)
 
-	const [deleteTarget, setDeleteTarget] = useState<TypeDeleteTarget | null>(null)
+	const [deleteTarget, setDeleteTarget] = useState<TypeDeleteTarget | null>(
+		null
+	)
 	const [isDeleting, setIsDeleting] = useState(false)
 
 	const navigate = useCallback(
@@ -166,7 +194,8 @@ export function Library() {
 		[pathname, router]
 	)
 
-	const refreshTree = () => queryClient.invalidateQueries({ queryKey: TREE_KEY })
+	const refreshTree = () =>
+		queryClient.invalidateQueries({ queryKey: TREE_KEY })
 
 	// Файл догрузился в закрытый лист — сбрасываем кэш, чтобы открыть уже с ним
 	useEffect(() => {
@@ -191,8 +220,10 @@ export function Library() {
 			} else {
 				await refreshTree()
 				if (
-					(deleteTarget.table === 'library_topic' && deleteTarget.id === topicId) ||
-					(deleteTarget.table === 'library_section' && deleteTarget.id === section?.id)
+					(deleteTarget.table === 'library_topic' &&
+						deleteTarget.id === topicId) ||
+					(deleteTarget.table === 'library_section' &&
+						deleteTarget.id === section?.id)
 				)
 					navigate({})
 			}
@@ -306,7 +337,12 @@ export function Library() {
 			) : (
 				<div className='grid gap-x-12 lg:grid-cols-[17rem_minmax(0,1fr)]'>
 					{/* Дерево: на телефоне показывается, пока не выбрана тема */}
-					<aside className={cn('min-w-0', topicId || sectionId ? 'hidden lg:block' : 'block')}>
+					<aside
+						className={cn(
+							'min-w-0',
+							topicId || sectionId ? 'hidden lg:block' : 'block'
+						)}
+					>
 						<LibraryTree
 							sections={sections}
 							topics={topics}
@@ -319,7 +355,12 @@ export function Library() {
 						/>
 					</aside>
 
-					<main className={cn('min-w-0', !topicId && !sectionId && 'hidden lg:block')}>
+					<main
+						className={cn(
+							'min-w-0',
+							!topicId && !sectionId && 'hidden lg:block'
+						)}
+					>
 						{!topic && section ? (
 							<SectionView
 								section={section}
@@ -346,7 +387,15 @@ export function Library() {
 	)
 }
 
-function ViewTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+function ViewTab({
+	active,
+	onClick,
+	children
+}: {
+	active: boolean
+	onClick: () => void
+	children: ReactNode
+}) {
 	return (
 		<button
 			type='button'
@@ -414,7 +463,11 @@ function LibraryTree({
 		)
 	}
 
-	const rename = (table: 'library_section' | 'library_topic', id: string, title: string) => {
+	const rename = (
+		table: 'library_section' | 'library_topic',
+		id: string,
+		title: string
+	) => {
 		setRenaming(null)
 		if (title) actions.rename(table, id, title)
 	}
@@ -445,7 +498,9 @@ function LibraryTree({
 				)}
 
 				{sections.map(section => {
-					const sectionTopics = topics.filter(item => item.section_id === section.id)
+					const sectionTopics = topics.filter(
+						item => item.section_id === section.id
+					)
 					const isCollapsed = collapsed[section.id]
 					return (
 						<div
@@ -455,7 +510,9 @@ function LibraryTree({
 							{renaming === section.id ? (
 								<InlineInput
 									initial={section.title}
-									onSubmit={title => rename('library_section', section.id, title)}
+									onSubmit={title =>
+										rename('library_section', section.id, title)
+									}
 								/>
 							) : (
 								<Row
@@ -465,10 +522,15 @@ function LibraryTree({
 										<span
 											role='button'
 											tabIndex={0}
-											aria-label={isCollapsed ? 'Развернуть раздел' : 'Свернуть раздел'}
+											aria-label={
+												isCollapsed ? 'Развернуть раздел' : 'Свернуть раздел'
+											}
 											onClick={event => {
 												event.stopPropagation()
-												setCollapsed(state => ({ ...state, [section.id]: !isCollapsed }))
+												setCollapsed(state => ({
+													...state,
+													[section.id]: !isCollapsed
+												}))
 											}}
 											className='-m-1 grid h-6 w-6 shrink-0 place-items-center'
 										>
@@ -488,7 +550,10 @@ function LibraryTree({
 											<IconButton
 												label='Новая тема'
 												onClick={() => {
-													setCollapsed(state => ({ ...state, [section.id]: false }))
+													setCollapsed(state => ({
+														...state,
+														[section.id]: false
+													}))
 													setAddingTopicTo(section.id)
 												}}
 											>
@@ -525,7 +590,9 @@ function LibraryTree({
 											<InlineInput
 												key={topic.id}
 												initial={topic.title}
-												onSubmit={title => rename('library_topic', topic.id, title)}
+												onSubmit={title =>
+													rename('library_topic', topic.id, title)
+												}
 											/>
 										) : (
 											<Row
@@ -791,7 +858,8 @@ function TopicView({
 							onBlur={event => {
 								setIsRenaming(false)
 								const title = event.target.value.trim()
-								if (title && title !== topic.title) actions.rename('library_topic', topic.id, title)
+								if (title && title !== topic.title)
+									actions.rename('library_topic', topic.id, title)
 							}}
 							onKeyDown={event => {
 								if (event.key === 'Enter') event.currentTarget.blur()
@@ -807,14 +875,22 @@ function TopicView({
 						</h1>
 					)}
 					<p className='mt-2 font-mono text-xs text-subtle'>
-						{pages ? `${pages.length} ${plural(pages.length, 'лист', 'листа', 'листов')}` : ' '}
+						{pages
+							? `${pages.length} ${plural(pages.length, 'лист', 'листа', 'листов')}`
+							: ' '}
 					</p>
 				</div>
 				<div className='flex items-center gap-2'>
 					<IconButton
 						label='Удалить тему'
 						danger
-						onClick={() => onDelete({ table: 'library_topic', id: topic.id, title: topic.title })}
+						onClick={() =>
+							onDelete({
+								table: 'library_topic',
+								id: topic.id,
+								title: topic.title
+							})
+						}
 					>
 						<Trash2 size={15} />
 					</IconButton>
@@ -854,7 +930,8 @@ function TopicView({
 					<p className='text-sm text-muted'>В теме пока нет листов</p>
 					<p className='mx-auto mt-1 max-w-sm text-xs leading-5 text-subtle'>
 						Лист — это конспект: текст, формулы LaTeX, таблицы, фото, файлы и
-						голосовые. Можно вставить готовый ответ нейросети — разметка сохранится.
+						голосовые. Можно вставить готовый ответ нейросети — разметка
+						сохранится.
 					</p>
 				</div>
 			)}
@@ -877,7 +954,9 @@ function PageCard({
 			onClick={onOpen}
 			className='lazy-paint group grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 border-b border-border py-5 text-left transition-colors sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
 		>
-			<span className='pt-1 font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
+			<span className='pt-1 font-mono text-xs text-subtle'>
+				{String(index + 1).padStart(2, '0')}
+			</span>
 			<span className='min-w-0'>
 				<span className='block truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
 					{page.title || 'Без названия'}
@@ -896,6 +975,77 @@ function PageCard({
 /* ------------------------------------------------------------------ */
 /* Лист: чтение по умолчанию, правка по кнопке                          */
 /* ------------------------------------------------------------------ */
+
+/** Уходим с несохранёнными правками: сохранить, выбросить или остаться */
+function UnsavedDialog({
+	onSave,
+	onDiscard,
+	onCancel
+}: {
+	onSave: () => void
+	onDiscard: () => void
+	onCancel: () => void
+}) {
+	useBackClose(true, onCancel)
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') onCancel()
+		}
+		window.addEventListener('keydown', onKey)
+		return () => window.removeEventListener('keydown', onKey)
+	}, [onCancel])
+
+	return createPortal(
+		<div
+			className='fixed inset-0 z-[110] flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm'
+			onMouseDown={event => {
+				if (event.target === event.currentTarget) onCancel()
+			}}
+		>
+			<section
+				role='alertdialog'
+				aria-modal='true'
+				aria-labelledby='unsaved-title'
+				className='w-full max-w-sm animate-pop-in rounded-2xl border border-border bg-elevated p-5 shadow-pop'
+			>
+				<h2
+					id='unsaved-title'
+					className='text-base font-semibold text-fg'
+				>
+					Сохранить изменения?
+				</h2>
+				<p className='mt-1.5 text-sm text-muted'>
+					В листе есть правки, которые ещё не сохранены.
+				</p>
+				<div className='mt-5 flex flex-wrap justify-end gap-2'>
+					<button
+						type='button'
+						onClick={onCancel}
+						className='h-9 px-3 text-sm text-subtle transition-colors hover:text-fg'
+					>
+						Остаться
+					</button>
+					<button
+						type='button'
+						onClick={onDiscard}
+						className='h-9 border border-border px-3 text-sm text-danger transition-colors hover:bg-danger/10'
+					>
+						Не сохранять
+					</button>
+					<button
+						type='button'
+						autoFocus
+						onClick={onSave}
+						className='h-9 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
+					>
+						Сохранить
+					</button>
+				</div>
+			</section>
+		</div>,
+		document.body
+	)
+}
 
 function PageView({
 	pageId,
@@ -926,10 +1076,22 @@ function PageView({
 	const [title, setTitle] = useState('')
 	const [content, setContent] = useState('')
 	const [isEditing, setIsEditing] = useState(false)
-	const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+	const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
+		'idle'
+	)
 	const loaded = useRef(false)
+	// Правки копятся здесь и уходят в базу только по «Сохранить» (или Ctrl+S)
 	const dirty = useRef<{ title?: string; content?: string }>({})
-	const timer = useRef<ReturnType<typeof setTimeout>>()
+	const [isDirty, setIsDirty] = useState(false)
+	// Куда хотели уйти с несохранёнными правками — спрашиваем, что с ними делать
+	const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null)
+	const [draft, setDraft] = useState<{
+		title?: string
+		content?: string
+		at: number
+	} | null>(null)
+	const router = useRouter()
+	const draftKey = `planner:draft:${pageId}`
 
 	useEffect(() => {
 		if (!page || loaded.current) return
@@ -938,13 +1100,27 @@ function PageView({
 		setContent(page.content)
 		// новый пустой лист сразу открываем на правку
 		if (!page.title && !page.content) setIsEditing(true)
-	}, [page])
+		// Черновик, который не сохранили в прошлый раз
+		try {
+			const saved = JSON.parse(localStorage.getItem(draftKey) || 'null')
+			if (
+				saved &&
+				((saved.content !== undefined && saved.content !== page.content) ||
+					(saved.title !== undefined && saved.title !== page.title))
+			)
+				setDraft(saved)
+			else localStorage.removeItem(draftKey)
+		} catch {}
+	}, [page, draftKey])
 
 	const flush = useCallback(async () => {
-		clearTimeout(timer.current)
 		const patch = dirty.current
 		if (!Object.keys(patch).length) return
 		dirty.current = {}
+		setIsDirty(false)
+		try {
+			localStorage.removeItem(draftKey)
+		} catch {}
 		setStatus('saving')
 		try {
 			const saved = await libraryService.updatePage(pageId, patch)
@@ -952,35 +1128,110 @@ function PageView({
 			queryClient.setQueryData(pageKey(pageId), (old: any) =>
 				old ? { ...old, ...patch, updated_at: saved.updated_at } : old
 			)
-			queryClient.setQueryData(pagesKey(topic.id), (old: ILibraryPageMeta[] | undefined) =>
-				old?.map(item =>
-					item.id === pageId
-						? {
-								...item,
-								...(patch.title !== undefined && { title: patch.title }),
-								...(patch.content !== undefined && {
-									excerpt: toExcerpt(patch.content.slice(0, 1500))
-								}),
-								updated_at: saved.updated_at
-							}
-						: item
-				)
+			queryClient.setQueryData(
+				pagesKey(topic.id),
+				(old: ILibraryPageMeta[] | undefined) =>
+					old?.map(item =>
+						item.id === pageId
+							? {
+									...item,
+									...(patch.title !== undefined && { title: patch.title }),
+									...(patch.content !== undefined && {
+										excerpt: toExcerpt(patch.content.slice(0, 1500))
+									}),
+									updated_at: saved.updated_at
+								}
+							: item
+					)
 			)
 		} catch {
 			dirty.current = { ...patch, ...dirty.current }
+			setIsDirty(true)
 			setStatus('error')
 		}
-	}, [pageId, queryClient, topic.id])
+	}, [pageId, queryClient, topic.id, draftKey])
 
 	const schedule = (patch: { title?: string; content?: string }) => {
 		dirty.current = { ...dirty.current, ...patch }
-		setStatus('saving')
-		clearTimeout(timer.current)
-		timer.current = setTimeout(flush, 900)
+		setIsDirty(true)
+		setStatus('idle')
 	}
 
-	// Уходим со страницы — досохраняем
-	useEffect(() => () => void flush(), [flush])
+	/** Отменить правки: вернуть текст из базы */
+	const discard = () => {
+		dirty.current = {}
+		setIsDirty(false)
+		try {
+			localStorage.removeItem(draftKey)
+		} catch {}
+		const saved =
+			queryClient.getQueryData<{ title: string; content: string }>(
+				pageKey(pageId)
+			) ?? page
+		if (saved) {
+			setTitle(saved.title)
+			setContent(saved.content)
+		}
+	}
+
+	/** Уйти со страницы: с несохранёнными правками — сначала спросить */
+	const leave = (action: () => void) => {
+		if (Object.keys(dirty.current).length) setPendingLeave(() => action)
+		else action()
+	}
+
+	// Ушли без ответа (жест «назад», закрытие) — правки не теряем: черновик в браузере
+	useEffect(
+		() => () => {
+			if (!Object.keys(dirty.current).length) return
+			try {
+				localStorage.setItem(
+					draftKey,
+					JSON.stringify({ ...dirty.current, at: Date.now() })
+				)
+			} catch {}
+		},
+		[draftKey]
+	)
+
+	// Закрытие вкладки — браузер переспросит; ссылки в меню — наш вопрос; Ctrl+S — сохранить
+	useEffect(() => {
+		if (!isDirty) return
+		const onBeforeUnload = (event: BeforeUnloadEvent) => {
+			event.preventDefault()
+			event.returnValue = ''
+		}
+		const onClick = (event: MouseEvent) => {
+			const link = (event.target as HTMLElement).closest?.(
+				'a[href]'
+			) as HTMLAnchorElement | null
+			if (!link || link.target === '_blank' || event.ctrlKey || event.metaKey)
+				return
+			if (link.closest('.rich-editor-content')) return
+			const url = new URL(link.href, window.location.href)
+			if (url.origin !== window.location.origin) return
+			event.preventDefault()
+			event.stopPropagation()
+			setPendingLeave(() => () => router.push(url.pathname + url.search))
+		}
+		window.addEventListener('beforeunload', onBeforeUnload)
+		document.addEventListener('click', onClick, true)
+		return () => {
+			window.removeEventListener('beforeunload', onBeforeUnload)
+			document.removeEventListener('click', onClick, true)
+		}
+	}, [isDirty, router])
+
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if ((event.ctrlKey || event.metaKey) && event.code === 'KeyS') {
+				event.preventDefault()
+				void flush()
+			}
+		}
+		window.addEventListener('keydown', onKey)
+		return () => window.removeEventListener('keydown', onKey)
+	}, [flush])
 
 	// Чтение: оглавление, прогресс, проверка, ссылка «поделиться», полный экран
 	const articleRef = useRef<HTMLElement>(null)
@@ -992,7 +1243,10 @@ function PageView({
 	})
 	const [shareOpen, setShareOpen] = useState(false)
 	const [isFocus, setIsFocus] = useState(false)
-	const headings = useHeadings(articleRef, `${isEditing}:${Boolean(page)}:${isFocus}`)
+	const headings = useHeadings(
+		articleRef,
+		`${isEditing}:${Boolean(page)}:${isFocus}`
+	)
 
 	const enterFocus = () => {
 		setIsFocus(true)
@@ -1050,8 +1304,7 @@ function PageView({
 							exitFocus()
 							return
 						}
-						await flush()
-						onBack()
+						leave(onBack)
 					}}
 					className='flex shrink-0 items-center gap-1.5 text-sm text-subtle transition-colors hover:text-fg sm:hidden'
 				>
@@ -1069,8 +1322,7 @@ function PageView({
 						type='button'
 						onClick={async () => {
 							if (isFocus) exitFocus()
-							await flush()
-							onOpenRoot()
+							leave(onOpenRoot)
 						}}
 						className='shrink-0 transition-colors hover:text-fg'
 					>
@@ -1083,8 +1335,7 @@ function PageView({
 								type='button'
 								onClick={async () => {
 									if (isFocus) exitFocus()
-									await flush()
-									onOpenSection(section.id)
+									leave(() => onOpenSection(section.id))
 								}}
 								className='truncate transition-colors hover:text-fg'
 							>
@@ -1097,8 +1348,7 @@ function PageView({
 						type='button'
 						onClick={async () => {
 							if (isFocus) exitFocus()
-							await flush()
-							onBack()
+							leave(onBack)
 						}}
 						className='truncate transition-colors hover:text-fg'
 					>
@@ -1109,12 +1359,27 @@ function PageView({
 					<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
 						{status === 'saving'
 							? 'Сохранение…'
-							: status === 'saved'
-								? 'Сохранено'
-								: status === 'error'
-									? 'Ошибка сохранения'
-									: ''}
+							: status === 'error'
+								? 'Ошибка сохранения'
+								: isDirty
+									? 'Не сохранено'
+									: status === 'saved'
+										? 'Сохранено'
+										: ''}
 					</span>
+					{isDirty && (
+						<button
+							type='button'
+							onClick={() => {
+								discard()
+								setIsEditing(false)
+							}}
+							title='Отменить все несохранённые правки'
+							className='h-9 border border-border px-3 text-sm text-muted transition-colors hover:text-fg'
+						>
+							Отменить
+						</button>
+					)}
 					{selfCheck && !isEditing && (
 						<button
 							type='button'
@@ -1130,10 +1395,14 @@ function PageView({
 							type='button'
 							onClick={() => setShowOutline(value => !value)}
 							title={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
-							aria-label={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
+							aria-label={
+								showOutline ? 'Скрыть содержание' : 'Показать содержание'
+							}
 							className={cn(
 								'hidden h-9 w-9 place-items-center border border-border transition-colors xl:grid',
-								showOutline ? 'bg-white/[0.06] text-fg' : 'text-subtle hover:text-fg'
+								showOutline
+									? 'bg-white/[0.06] text-fg'
+									: 'text-subtle hover:text-fg'
 							)}
 						>
 							<ListTree size={15} />
@@ -1148,37 +1417,50 @@ function PageView({
 						onOpenOutline={() => setOutlineOpen(true)}
 						showOutline={headings.length > 1 ? showOutline : undefined}
 						onToggleOutline={
-							headings.length > 1 ? () => setShowOutline(value => !value) : undefined
+							headings.length > 1
+								? () => setShowOutline(value => !value)
+								: undefined
 						}
 						onShare={() => setShareOpen(true)}
 						onSpeak={
 							isSpeechSupported()
 								? () => {
-										const content = document.querySelector('.library-page .rich-editor-content')
+										const content = document.querySelector(
+											'.library-page .rich-editor-content'
+										)
 										const text = content ? speechFromNode(content) : ''
-										if (!speak(`${title}.
-${text}`, title || 'Лист')) toast.error('На листе нечего читать')
+										if (
+											!speak(
+												`${title}.
+${text}`,
+												title || 'Лист'
+											)
+										)
+											toast.error('На листе нечего читать')
 									}
 								: undefined
 						}
-						onDelete={() => onDelete({ table: 'library_page', id: page.id, title })}
+						onDelete={() =>
+							onDelete({ table: 'library_page', id: page.id, title })
+						}
 					/>
 					<button
 						type='button'
 						onClick={async () => {
-							if (isEditing) await flush()
-							setIsEditing(!isEditing)
+							if (isDirty) await flush()
+							setIsEditing(isDirty ? false : !isEditing)
 							setSelfCheck(false)
 						}}
+						title={isDirty ? 'Сохранить (Ctrl+S)' : undefined}
 						className={cn(
 							'flex h-9 items-center gap-2 px-3.5 text-sm font-medium transition-colors',
-							isEditing
+							isEditing || isDirty
 								? 'bg-primary text-white hover:bg-primary-hover'
 								: 'border border-border text-fg hover:bg-white/[0.05]'
 						)}
 					>
-						{isEditing ? <Check size={15} /> : <Pencil size={14} />}
-						{isEditing ? 'Готово' : 'Править'}
+						{isEditing || isDirty ? <Check size={15} /> : <Pencil size={14} />}
+						{isDirty ? 'Сохранить' : isEditing ? 'Готово' : 'Править'}
 					</button>
 					{isFocus ? (
 						<button
@@ -1207,74 +1489,113 @@ ${text}`, title || 'Лист')) toast.error('На листе нечего чит
 			<div
 				className={cn(
 					'grid w-full grid-cols-[minmax(0,1fr)] gap-10 pb-24 pt-10 sm:pt-14',
-					headings.length > 1 && showOutline && 'xl:grid-cols-[minmax(0,1fr)_13rem]'
+					headings.length > 1 &&
+						showOutline &&
+						'xl:grid-cols-[minmax(0,1fr)_13rem]'
 				)}
 			>
-			<div className='min-w-0'>
-				{isEditing ? (
-					<textarea
-						value={title}
-						rows={1}
-						maxLength={300}
-						placeholder='Название листа'
-						onChange={event => {
-							setTitle(event.target.value.replace(/\n/g, ' '))
-							schedule({ title: event.target.value.replace(/\n/g, ' ') })
-						}}
-						ref={element => {
-							if (element) {
-								element.style.height = 'auto'
-								element.style.height = `${element.scrollHeight}px`
-							}
-						}}
-						className='w-full resize-none overflow-hidden bg-transparent text-3xl font-semibold leading-tight tracking-[-0.02em] text-fg outline-none placeholder:text-subtle sm:text-4xl'
-					/>
-				) : (
-					<h1 className='break-words text-3xl font-semibold leading-tight tracking-[-0.02em] text-fg sm:text-4xl'>
-						{title || 'Без названия'}
-					</h1>
-				)}
-				<p className='mb-8 mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
-					{dayjs(page.updated_at).locale('ru').format('D MMMM YYYY, HH:mm')}
-				</p>
-
-				<RichEditor
-					value={content}
-					uploadContext={{ type: 'page', id: pageId }}
-					editable={isEditing}
-					onChange={value => {
-						setContent(value)
-						schedule({ content: value })
-					}}
-					placeholder='Пишите или вставьте конспект. Формулы: $x^2$ в строке, $$\int f(x)\,dx$$ отдельно.'
-					className={cn(
-						'library-page [&_[role=toolbar]]:top-12',
-						isEditing ? 'bg-bg' : 'bg-transparent'
+				<div className='min-w-0'>
+					{draft && (
+						<div className='mb-6 mt-4 flex flex-wrap items-center gap-3 border border-warning/40 bg-warning/[0.06] px-4 py-3 text-sm'>
+							<span className='min-w-0 flex-1 text-fg'>
+								Есть несохранённые правки от{' '}
+								{dayjs(draft.at).locale('ru').format('D MMMM, HH:mm')}
+							</span>
+							<button
+								type='button'
+								onClick={() => {
+									try {
+										localStorage.removeItem(draftKey)
+									} catch {}
+									setDraft(null)
+								}}
+								className='h-8 px-3 text-muted transition-colors hover:text-fg'
+							>
+								Удалить
+							</button>
+							<button
+								type='button'
+								onClick={() => {
+									const { at: _at, ...patch } = draft
+									if (patch.title !== undefined) setTitle(patch.title)
+									if (patch.content !== undefined) setContent(patch.content)
+									schedule(patch)
+									setIsEditing(true)
+									setDraft(null)
+								}}
+								className='h-8 bg-primary px-3 font-medium text-white transition-colors hover:bg-primary-hover'
+							>
+								Вернуть правки
+							</button>
+						</div>
 					)}
-					contentClassName={cn(isEditing && 'min-h-[50vh]', !isEditing && 'library-reading')}
-					selfCheck={selfCheck && !isEditing}
-				/>
-
-				{!isEditing && (
-					<div className='print:hidden'>
-						<PageBacklinks
-							pageId={pageId}
-							title={title}
-							onOpen={onOpenPage}
+					{isEditing ? (
+						<textarea
+							value={title}
+							rows={1}
+							maxLength={300}
+							placeholder='Название листа'
+							onChange={event => {
+								setTitle(event.target.value.replace(/\n/g, ' '))
+								schedule({ title: event.target.value.replace(/\n/g, ' ') })
+							}}
+							ref={element => {
+								if (element) {
+									element.style.height = 'auto'
+									element.style.height = `${element.scrollHeight}px`
+								}
+							}}
+							className='w-full resize-none overflow-hidden bg-transparent text-3xl font-semibold leading-tight tracking-[-0.02em] text-fg outline-none placeholder:text-subtle sm:text-4xl'
 						/>
-					</div>
-				)}
-			</div>
+					) : (
+						<h1 className='break-words text-3xl font-semibold leading-tight tracking-[-0.02em] text-fg sm:text-4xl'>
+							{title || 'Без названия'}
+						</h1>
+					)}
+					<p className='mb-8 mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+						{dayjs(page.updated_at).locale('ru').format('D MMMM YYYY, HH:mm')}
+					</p>
 
-			{/* Оглавление сбоку — на широком экране, скрывается по желанию */}
-			{headings.length > 1 && showOutline && (
-				<aside className='hidden print:hidden xl:block'>
-					<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
-						<p className='eyebrow mb-3'>Содержание</p>
-						<PageOutline headings={headings} />
-					</div>
-				</aside>
-			)}
+					<RichEditor
+						value={content}
+						uploadContext={{ type: 'page', id: pageId }}
+						editable={isEditing}
+						onChange={value => {
+							setContent(value)
+							schedule({ content: value })
+						}}
+						placeholder='Пишите или вставьте конспект. Формулы: $x^2$ в строке, $$\int f(x)\,dx$$ отдельно.'
+						className={cn(
+							'library-page [&_[role=toolbar]]:top-12',
+							isEditing ? 'bg-bg' : 'bg-transparent'
+						)}
+						contentClassName={cn(
+							isEditing && 'min-h-[50vh]',
+							!isEditing && 'library-reading'
+						)}
+						selfCheck={selfCheck && !isEditing}
+					/>
+
+					{!isEditing && (
+						<div className='print:hidden'>
+							<PageBacklinks
+								pageId={pageId}
+								title={title}
+								onOpen={onOpenPage}
+							/>
+						</div>
+					)}
+				</div>
+
+				{/* Оглавление сбоку — на широком экране, скрывается по желанию */}
+				{headings.length > 1 && showOutline && (
+					<aside className='hidden print:hidden xl:block'>
+						<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+							<p className='eyebrow mb-3'>Содержание</p>
+							<PageOutline headings={headings} />
+						</div>
+					</aside>
+				)}
 			</div>
 
 			{selfCheck && (
@@ -1292,6 +1613,23 @@ ${text}`, title || 'Лист')) toast.error('На листе нечего чит
 				<ShareDialog
 					pageId={pageId}
 					onClose={() => setShareOpen(false)}
+				/>
+			)}
+			{pendingLeave && (
+				<UnsavedDialog
+					onSave={async () => {
+						const action = pendingLeave
+						setPendingLeave(null)
+						await flush()
+						if (!Object.keys(dirty.current).length) action()
+					}}
+					onDiscard={() => {
+						const action = pendingLeave
+						setPendingLeave(null)
+						discard()
+						action()
+					}}
+					onCancel={() => setPendingLeave(null)}
 				/>
 			)}
 		</article>
@@ -1316,7 +1654,7 @@ function SectionView({
 	section,
 	topics,
 	onBack,
-	onOpenTopic,
+	onOpenTopic
 }: {
 	section: ILibrarySection
 	topics: ILibraryTopic[]
@@ -1379,7 +1717,9 @@ function SectionView({
 						onClick={() => onOpenTopic(topic.id)}
 						className='group grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border py-5 text-left sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
 					>
-						<span className='font-mono text-xs text-subtle'>{String(index + 1).padStart(2, '0')}</span>
+						<span className='font-mono text-xs text-subtle'>
+							{String(index + 1).padStart(2, '0')}
+						</span>
 						<span className='truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
 							{topic.title}
 						</span>
@@ -1390,7 +1730,9 @@ function SectionView({
 					</button>
 				))
 			) : (
-				<p className='py-16 text-center text-sm text-subtle'>В разделе пока нет тем</p>
+				<p className='py-16 text-center text-sm text-subtle'>
+					В разделе пока нет тем
+				</p>
 			)}
 		</div>
 	)
@@ -1401,12 +1743,14 @@ function EmptyState({ hasSections }: { hasSections: boolean }) {
 		<div className='flex min-h-[22rem] flex-col items-center justify-center px-6 text-center lg:items-start lg:pt-10 lg:text-left'>
 			<p className='eyebrow'>Архив</p>
 			<h2 className='mt-3 text-2xl font-semibold tracking-[-0.02em] text-fg'>
-				{hasSections ? 'Выберите тему слева' : 'Соберите свою библиотеку знаний'}
+				{hasSections
+					? 'Выберите тему слева'
+					: 'Соберите свою библиотеку знаний'}
 			</h2>
 			<p className='mt-3 max-w-md text-sm leading-6 text-subtle'>
-				Разделы — для больших направлений («Подготовка к экзамену», «Английский»,
-				«Личный проект»), внутри — темы, в темах — конспекты с формулами, таблицами,
-				фото и файлами.
+				Разделы — для больших направлений («Подготовка к экзамену»,
+				«Английский», «Личный проект»), внутри — темы, в темах — конспекты с
+				формулами, таблицами, фото и файлами.
 			</p>
 		</div>
 	)

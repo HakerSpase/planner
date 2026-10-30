@@ -1,17 +1,25 @@
 'use client'
 
+import Placeholder from '@tiptap/extension-placeholder'
 import Table from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
-import Placeholder from '@tiptap/extension-placeholder'
 import TaskItem from '@tiptap/extension-task-item'
 import TaskList from '@tiptap/extension-task-list'
 import Typography from '@tiptap/extension-typography'
-import { BubbleMenu, type Editor, EditorContent, useEditor } from '@tiptap/react'
+import {
+	BubbleMenu,
+	type Editor,
+	EditorContent,
+	useEditor
+} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import cn from 'clsx'
+import 'katex/dist/katex.min.css'
 import {
+	ArrowDown,
+	ArrowUp,
 	Bold,
 	Code,
 	Heading1,
@@ -23,34 +31,29 @@ import {
 	ListChecks,
 	ListOrdered,
 	Loader2,
-	Quote,
-	Strikethrough,
-	ArrowDown,
-	ArrowUp,
-	Trash2,
 	Mic,
 	Paperclip,
+	Quote,
+	Redo2,
 	Sigma,
 	Square,
+	Strikethrough,
 	Table as TableIcon,
+	Trash2,
+	Undo2,
 	X
 } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import 'katex/dist/katex.min.css'
 import { Markdown } from 'tiptap-markdown'
 
-import { deleteUploads } from '@/lib/imagekit-upload'
-import {
-	type TypeUploadContext,
-	registerEditor,
-	startUpload
-} from '@/lib/upload-manager'
-
 import { AnnotationMenu } from './AnnotationMenu'
+import { CalloutMenu } from './CalloutMenu'
+import { SelectionBubble, TableBubble } from './EditorBubbles'
+import { LinkMenu } from './LinkMenu'
+import { WikiSuggest } from './WikiSuggest'
 import { ANNOTATION_MARKS } from './annotations'
 import { AudioAttachment, FileAttachment } from './attachments'
-
 import {
 	IMAGE_WIDTHS,
 	PlannerImage,
@@ -60,16 +63,22 @@ import {
 	moveSelectedNode,
 	replaceImageSrc
 } from './extensions'
-import { CalloutMenu } from './CalloutMenu'
-import { SelectionBubble, TableBubble } from './EditorBubbles'
-import { LinkMenu } from './LinkMenu'
-import { WikiSuggest } from './WikiSuggest'
-import { type ILinkMenuRequest, LinkPreviews, PlannerLink } from './link-previews'
+import {
+	type ILinkMenuRequest,
+	LinkPreviews,
+	PlannerLink
+} from './link-previews'
 import { MathRender, MathText } from './math'
 import { StudyMarkup } from './study'
-import { WikiLinks } from './wiki-links'
 import { InsertVisualMenu } from './visuals/InsertVisualMenu'
 import { VisualCodeBlock } from './visuals/VisualCodeBlock'
+import { WikiLinks } from './wiki-links'
+import { deleteUploads } from '@/lib/imagekit-upload'
+import {
+	type TypeUploadContext,
+	registerEditor,
+	startUpload
+} from '@/lib/upload-manager'
 
 interface IRichEditor {
 	value: string
@@ -123,15 +132,24 @@ export function RichEditor({
 			// Видео не принимаем — бесплатного места в ImageKit на них не хватит
 			if (
 				file.type.startsWith('video/') ||
-				(/\.(mp4|mov|avi|mkv)$/i.test(file.name) && !file.type.startsWith('audio/'))
+				(/\.(mp4|mov|avi|mkv)$/i.test(file.name) &&
+					!file.type.startsWith('audio/'))
 			) {
 				toast.error('Видео пока загружать нельзя')
 				continue
 			}
 			const isImage = file.type.startsWith('image/')
-			const kind = isImage ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'file'
+			const kind = isImage
+				? 'image'
+				: file.type.startsWith('audio/')
+					? 'audio'
+					: 'file'
 			const type =
-				kind === 'image' ? 'image' : kind === 'audio' ? 'audioAttachment' : 'fileAttachment'
+				kind === 'image'
+					? 'image'
+					: kind === 'audio'
+						? 'audioAttachment'
+						: 'fileAttachment'
 			// Загрузка идёт в фоне и переживает закрытие заметки
 			const preview = startUpload(file, kind, uploadContextRef.current)
 			const attrs = isImage
@@ -160,9 +178,11 @@ export function RichEditor({
 	const startRecording = async () => {
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-			const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'].find(type =>
-				MediaRecorder.isTypeSupported(type)
-			)
+			const mimeType = [
+				'audio/webm;codecs=opus',
+				'audio/mp4',
+				'audio/webm'
+			].find(type => MediaRecorder.isTypeSupported(type))
 			// 32 кбит/с Opus — речь звучит чисто, а минута весит ~240 КБ
 			const recorder = new MediaRecorder(stream, {
 				...(mimeType && { mimeType }),
@@ -213,7 +233,11 @@ export function RichEditor({
 		editable,
 		autofocus: autoFocus ? 'end' : false,
 		extensions: [
-			StarterKit.configure({ heading: { levels: [1, 2, 3] }, text: false, codeBlock: false }),
+			StarterKit.configure({
+				heading: { levels: [1, 2, 3] },
+				text: false,
+				codeBlock: false
+			}),
 			VisualCodeBlock,
 			MathText,
 			MathRender,
@@ -275,7 +299,10 @@ export function RichEditor({
 				const html = event.clipboardData?.getData('text/html') || ''
 				// Word и OneNote кладут рядом с текстом его картинку — тогда вставляем текст, а не картинку
 				const htmlText = html.replace(/<img\b[^>]*>|<[^>]+>|&nbsp;|\s/gi, '')
-				const files = text.trim() && htmlText ? [] : Array.from(event.clipboardData?.files || [])
+				const files =
+					text.trim() && htmlText
+						? []
+						: Array.from(event.clipboardData?.files || [])
 				const hasPlannerSyntax =
 					/\{[^\s|{}]{1,24}\\?\||\$\$|\$[^$\n]+\$|^```|^> \[!| :: |\[\[[^\]]+\]\]|^#{1,3} |\*\*[^*\n]+\*\*/m.test(
 						text
@@ -298,7 +325,8 @@ export function RichEditor({
 					if (html && !hasRichHtml && hasPlannerSyntax) {
 						event.preventDefault()
 						const cleaned =
-							view.someProp('transformPastedText', f => f(text, false, view)) ?? text
+							view.someProp('transformPastedText', f => f(text, false, view)) ??
+							text
 						editorRef.current?.commands.insertContent(cleaned)
 						normalizeAfterPaste()
 						return true
@@ -343,7 +371,10 @@ export function RichEditor({
 	// Переключение «чтение ↔ правка» (архив)
 	useEffect(() => {
 		if (!editor || editor.isDestroyed) return
-		editor.view.dom.className = cn('ProseMirror rich-editor-content', contentClassName)
+		editor.view.dom.className = cn(
+			'ProseMirror rich-editor-content',
+			contentClassName
+		)
 		editor.view.dom.setAttribute('spellcheck', 'false')
 		if (editor.isEditable === editable) return
 		if (!editable) {
@@ -371,20 +402,34 @@ export function RichEditor({
 			editor.chain().focus().extendMarkRange('link').unsetLink().run()
 			return
 		}
-		editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run()
+		editor
+			.chain()
+			.focus()
+			.extendMarkRange('link')
+			.setLink({ href: url.trim() })
+			.run()
 	}
 
 	return (
 		<div
 			spellCheck={false}
-			className={cn('relative flex min-h-0 flex-col', selfCheck && 'self-check', className)}
+			className={cn(
+				'relative flex min-h-0 flex-col',
+				selfCheck && 'self-check',
+				className
+			)}
 			onDragOver={event => {
-				if (!editable || !Array.from(event.dataTransfer.types).includes('Files')) return
+				if (
+					!editable ||
+					!Array.from(event.dataTransfer.types).includes('Files')
+				)
+					return
 				event.preventDefault()
 				if (!dragOver) setDragOver(true)
 			}}
 			onDragLeave={event => {
-				if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOver(false)
+				if (!event.currentTarget.contains(event.relatedTarget as Node))
+					setDragOver(false)
 			}}
 			onDrop={event => {
 				setDragOver(false)
@@ -414,16 +459,35 @@ export function RichEditor({
 					className='sticky top-0 z-10 -mx-1 mb-3 flex flex-wrap items-center gap-px border-b border-border bg-inherit pb-2'
 				>
 					<ToolButton
+						label='Отменить (Ctrl+Z)'
+						disabled={!editor.can().undo()}
+						onClick={() => editor.chain().focus().undo().run()}
+					>
+						<Undo2 size={15} />
+					</ToolButton>
+					<ToolButton
+						label='Повторить (Ctrl+Y или Ctrl+Shift+Z)'
+						disabled={!editor.can().redo()}
+						onClick={() => editor.chain().focus().redo().run()}
+					>
+						<Redo2 size={15} />
+					</ToolButton>
+					<Divider />
+					<ToolButton
 						label='Заголовок'
 						active={editor.isActive('heading', { level: 1 })}
-						onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+						onClick={() =>
+							editor.chain().focus().toggleHeading({ level: 1 }).run()
+						}
 					>
 						<Heading1 size={16} />
 					</ToolButton>
 					<ToolButton
 						label='Подзаголовок'
 						active={editor.isActive('heading', { level: 2 })}
-						onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+						onClick={() =>
+							editor.chain().focus().toggleHeading({ level: 2 }).run()
+						}
 					>
 						<Heading2 size={16} />
 					</ToolButton>
@@ -539,7 +603,9 @@ export function RichEditor({
 					<ToolButton
 						label={recordingSince ? 'Остановить запись' : 'Записать голосовое'}
 						active={Boolean(recordingSince)}
-						onClick={() => (recordingSince ? stopRecording() : startRecording())}
+						onClick={() =>
+							recordingSince ? stopRecording() : startRecording()
+						}
 					>
 						<Mic size={15} />
 					</ToolButton>
@@ -548,7 +614,12 @@ export function RichEditor({
 						label='Формула (LaTeX)'
 						onClick={() => {
 							const { from } = editor.state.selection
-							editor.chain().focus().insertContent('$$  $$').setTextSelection(from + 3).run()
+							editor
+								.chain()
+								.focus()
+								.insertContent('$$  $$')
+								.setTextSelection(from + 3)
+								.run()
 						}}
 					>
 						<Sigma size={15} />
@@ -606,62 +677,70 @@ export function RichEditor({
 			)}
 			{dragOver && (
 				<div className='pointer-events-none absolute inset-0 z-20 grid place-items-center border-2 border-dashed border-primary/70 bg-primary/[0.06]'>
-					<span className='bg-elevated px-4 py-2 text-sm text-fg shadow-pop'>Отпустите, чтобы вставить файл</span>
+					<span className='bg-elevated px-4 py-2 text-sm text-fg shadow-pop'>
+						Отпустите, чтобы вставить файл
+					</span>
 				</div>
 			)}
 			{/* BubbleMenu уносит свой элемент в body — держим его в постоянной обёртке,
 			    иначе React падает, вставляя панель/плашку записи «перед» ним */}
 			<div className='contents'>
-			{editor && (
-				<BubbleMenu
-					editor={editor}
-					shouldShow={({ editor }) => editor.isEditable && editor.isActive('image')}
-					tippyOptions={{ placement: 'top', maxWidth: 'none' }}
-				>
-					<div className='flex items-center border border-border bg-elevated shadow-pop'>
-						<ToolButton
-							label='Выше'
-							onClick={() => moveSelectedNode(editor, -1)}
-						>
-							<ArrowUp size={15} />
-						</ToolButton>
-						<ToolButton
-							label='Ниже'
-							onClick={() => moveSelectedNode(editor, 1)}
-						>
-							<ArrowDown size={15} />
-						</ToolButton>
-						<Divider />
-						{IMAGE_WIDTHS.map(width => (
-							<button
-								key={width || 'full'}
-								type='button'
-								onMouseDown={event => event.preventDefault()}
-								onClick={() =>
-									editor.chain().focus().updateAttributes('image', { width }).run()
-								}
-								className={cn(
-									'h-8 px-2 font-mono text-xs transition-colors',
-									(editor.getAttributes('image').width ?? null) === width
-										? 'bg-white/[0.08] text-fg'
-										: 'text-subtle hover:text-fg'
-								)}
+				{editor && (
+					<BubbleMenu
+						editor={editor}
+						shouldShow={({ editor }) =>
+							editor.isEditable && editor.isActive('image')
+						}
+						tippyOptions={{ placement: 'top', maxWidth: 'none' }}
+					>
+						<div className='flex items-center border border-border bg-elevated shadow-pop'>
+							<ToolButton
+								label='Выше'
+								onClick={() => moveSelectedNode(editor, -1)}
 							>
-								{width ? width.replace('%', '') : '100'}
-							</button>
-						))}
-						<Divider />
-						<ToolButton
-							label='Удалить фото'
-							onClick={() => editor.chain().focus().deleteSelection().run()}
-						>
-							<Trash2 size={14} />
-						</ToolButton>
-					</div>
-				</BubbleMenu>
-			)}
-			{editor && <SelectionBubble editor={editor} />}
-			{editor && <TableBubble editor={editor} />}
+								<ArrowUp size={15} />
+							</ToolButton>
+							<ToolButton
+								label='Ниже'
+								onClick={() => moveSelectedNode(editor, 1)}
+							>
+								<ArrowDown size={15} />
+							</ToolButton>
+							<Divider />
+							{IMAGE_WIDTHS.map(width => (
+								<button
+									key={width || 'full'}
+									type='button'
+									onMouseDown={event => event.preventDefault()}
+									onClick={() =>
+										editor
+											.chain()
+											.focus()
+											.updateAttributes('image', { width })
+											.run()
+									}
+									className={cn(
+										'h-8 px-2 font-mono text-xs transition-colors',
+										(editor.getAttributes('image').width ?? null) === width
+											? 'bg-white/[0.08] text-fg'
+											: 'text-subtle hover:text-fg'
+									)}
+								>
+									{width ? width.replace('%', '') : '100'}
+								</button>
+							))}
+							<Divider />
+							<ToolButton
+								label='Удалить фото'
+								onClick={() => editor.chain().focus().deleteSelection().run()}
+							>
+								<Trash2 size={14} />
+							</ToolButton>
+						</div>
+					</BubbleMenu>
+				)}
+				{editor && <SelectionBubble editor={editor} />}
+				{editor && <TableBubble editor={editor} />}
 			</div>
 			{editor && linkMenu && (
 				<LinkMenu
@@ -698,11 +777,13 @@ export function RichEditor({
 function ToolButton({
 	label,
 	active,
+	disabled,
 	onClick,
 	children
 }: {
 	label: string
 	active?: boolean
+	disabled?: boolean
 	onClick: () => void
 	children: ReactNode
 }) {
@@ -713,9 +794,10 @@ function ToolButton({
 			aria-label={label}
 			aria-pressed={active}
 			onMouseDown={event => event.preventDefault()}
+			disabled={disabled}
 			onClick={onClick}
 			className={cn(
-				'grid h-8 w-8 place-items-center transition-colors',
+				'grid h-8 w-8 place-items-center transition-colors disabled:pointer-events-none disabled:opacity-30',
 				active
 					? 'bg-white/[0.08] text-fg'
 					: 'text-subtle hover:bg-white/[0.04] hover:text-fg'
