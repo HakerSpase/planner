@@ -64,6 +64,13 @@ export const toExcerpt = (markdown: string, length = 220) => {
 		.replace(/^```[\s\S]*?^```/gm, ' ')
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+		// [[Лист]] и [[Лист|подпись]] — подписью; ⟦…⟧ превью покажет как ссылку
+		.replace(/\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]+))?\]\]/g, (_match, title: string, label?: string) =>
+			`⟦${(label || title).trim()}⟧`
+		)
+		// Метки выносок [!rule] и разделитель карточек
+		.replace(/\[![a-zA-Zа-яёА-ЯЁ]+\][+-]?/g, ' ')
+		.replace(/ :: /g, ' → ')
 		.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
 		.replace(/^[#>\-*\s]+|\[[ x]]\s?|\|/gim, ' ')
 		.replace(/[*_~`]/g, '')
@@ -72,6 +79,7 @@ export const toExcerpt = (markdown: string, length = 220) => {
 		.trim()
 		.slice(0, length)
 		.replace(/\u0000\d*$/, '')
+		.replace(/⟦[^⟧]*$/, '')
 	return text.replace(/\u0000(\d+)\u0000/g, (_match, index) => `$${formulas[Number(index)]}$`)
 }
 

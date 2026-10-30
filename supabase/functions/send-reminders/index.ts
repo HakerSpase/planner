@@ -103,6 +103,8 @@ async function runSchedule() {
 		for (const offset of (task.reminders as number[]) || []) {
 			const fireAt = dueAt.getTime() - offset * MINUTE
 			if (fireAt > now || fireAt <= now - CATCH_UP) continue
+			// «Через 15 мин», когда событие уже прошло, только путает
+			if (offset > 0 && now > dueAt.getTime()) continue
 			// Запись в журнал — замок: второй параллельный запуск получит конфликт и не отправит повторно
 			const { error: lockError } = await admin
 				.from('reminder_log')

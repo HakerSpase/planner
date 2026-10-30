@@ -7,6 +7,7 @@ import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
+import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { normalizeTitle } from '@/components/editor/wiki-links'
 import { useBackClose } from '@/hooks/useBackClose'
 
@@ -179,7 +180,9 @@ export function PageBacklinks({
 							className='block h-full w-full border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-primary/50'
 						>
 							<span className='block truncate text-sm font-medium text-fg'>{page.title || 'Без названия'}</span>
-							<span className='mt-1 line-clamp-2 block text-xs leading-5 text-subtle'>{context}</span>
+							<span className='mt-1 line-clamp-2 text-xs leading-5 text-subtle'>
+								<MathExcerpt text={context} />
+							</span>
 						</button>
 					</li>
 				))}

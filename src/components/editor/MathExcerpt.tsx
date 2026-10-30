@@ -6,13 +6,22 @@ import { memo } from 'react'
 
 import { KATEX_MACROS } from './katex-macros'
 
-/** Строка превью (из toExcerpt): текст как есть, $…$ — нарисованная формула */
+/** Строка превью (из toExcerpt): текст как есть, $…$ — нарисованная формула, ⟦…⟧ — ссылка на лист */
 export const MathExcerpt = memo(function MathExcerpt({ text }: { text: string }) {
 	// Правило как в редакторе: «$5 и $10» — не формула
-	const parts = text.split(/(\$(?!\s)[^$\n]+?(?<!\s)\$(?!\d))/g)
+	const parts = text.split(/(\$(?!\s)[^$\n]+?(?<!\s)\$(?!\d)|⟦[^⟧]+⟧)/g)
 	return (
 		<>
 			{parts.map((part, index) => {
+				if (part.startsWith('⟦') && part.endsWith('⟧'))
+					return (
+						<span
+							key={index}
+							className='text-primary/90'
+						>
+							{part.slice(1, -1)}
+						</span>
+					)
 				if (!(part.length > 2 && part.startsWith('$') && part.endsWith('$'))) return part
 				let html: string
 				try {

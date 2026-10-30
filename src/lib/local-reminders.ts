@@ -29,7 +29,7 @@ const describe = (offset: number, dueAt: Date) => {
 /** Ближайшие напоминания из задач — для настольного приложения, которое показывает их само */
 export function upcomingReminders(tasks: ITaskResponse[] | undefined) {
 	const now = Date.now()
-	const items: { key: string; title: string; body: string; at: number }[] = []
+	const items: { key: string; title: string; body: string; at: number; due: number }[] = []
 	for (const task of tasks || []) {
 		if (task.isCompleted || !task.dueAt || !task.reminders?.length) continue
 		const dueAt = new Date(task.dueAt)
@@ -40,7 +40,8 @@ export function upcomingReminders(tasks: ITaskResponse[] | undefined) {
 				key: `${task.id}:${task.dueAt}:${offset}`,
 				title: task.name || 'Задача',
 				body: describe(offset, dueAt),
-				at
+				at,
+				due: dueAt.getTime()
 			})
 		}
 	}

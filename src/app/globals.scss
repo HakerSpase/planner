@@ -347,11 +347,23 @@ body {
 
 	/* Таблица не сжимается в ширину экрана: столбцы по содержимому, а лишнее листается
 	   вбок пальцем — без видимой полосы прокрутки */
+	/* В режиме чтения у таблицы нет обёртки — прокручивается сама таблица (блоком),
+	   а ячейки внутри раскладываются как обычно */
 	table {
 		@apply my-4 border-collapse text-sm;
+		display: block;
 		table-layout: auto;
 		width: max-content !important;
-		min-width: 100% !important;
+		max-width: 100%;
+		min-width: 0 !important;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
 	}
 
 	th,

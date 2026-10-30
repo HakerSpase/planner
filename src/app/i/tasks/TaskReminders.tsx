@@ -122,8 +122,9 @@ export function TaskReminders({
 							if (!value) return onChange({ dueAt: null, reminders: null })
 							onChange({
 								dueAt: combineDateTime(day, value),
-								// Первое время — сразу «в момент» и «за 15 минут»
-								...(!time && !list.length && { reminders: [15, 0] })
+								// Первое время — «в момент» и «за 15 минут»; при смене времени
+								// «в момент» есть всегда, чтобы уведомление пришло ко времени события
+								reminders: !list.length ? [15, 0] : list.includes(0) ? list : [...list, 0]
 							})
 						}}
 						className='bg-transparent font-mono text-base text-fg outline-none [color-scheme:dark]'
