@@ -3,6 +3,7 @@
 import cn from 'clsx'
 import { AudioLines, Pause, Play, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Waveform } from '@/components/editor/voice'
 
@@ -38,6 +39,21 @@ export function SpeechPlayer() {
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
 	}, [speech.status])
+
+	// Нейроголос не смог — объясняем, а не подменяем голос молча
+	useEffect(() => {
+		const onError = () =>
+			toast.error('Нейроголос не готов', {
+				description:
+					'Скачайте модель в настройках или включите системный голос.',
+				action: {
+					label: 'Настройки',
+					onClick: () => (window.location.href = '/i/settings')
+				}
+			})
+		window.addEventListener('planner:tts-error', onError)
+		return () => window.removeEventListener('planner:tts-error', onError)
+	}, [])
 
 	// Уходим со страницы — замолкаем
 	useEffect(() => () => stopSpeech(), [])

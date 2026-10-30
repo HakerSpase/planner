@@ -1,14 +1,29 @@
 'use client'
 
 import cn from 'clsx'
-import { AudioLines, Check, Cpu, Download, Loader2, Square } from 'lucide-react'
+import {
+	AudioLines,
+	Check,
+	Cpu,
+	Download,
+	Loader2,
+	Sparkles,
+	Square,
+	Trash2
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+	NEURAL_VOICES,
+	isNeuralCached,
+	preloadNeural,
+	removeNeural
+} from '@/lib/neural-tts'
 import { type TypeSttModel, usePreferences } from '@/lib/preferences'
 import {
 	getVoices,
-	isSpeechSupported,
+	isNativeSpeech,
 	onVoicesChanged,
 	sortVoices,
 	speak,
@@ -19,73 +34,208 @@ import { STT_MODELS, isModelCached, preloadModel } from '@/lib/transcribe'
 
 const SAMPLE =
 	'Привет! Так будут звучать твои конспекты. Формулы я пропускаю, а текст читаю по предложениям.'
-const SAMPLE_EN =
-	'Hello! This is how your study notes will sound when reading English text.'
 
-/** Озвучка: голос, скорость, высота — с прослушиванием */
+/** Озвучка: движок (нейросеть на устройстве или системный голос), голос, скорость */
 export function SpeechSettings() {
 	const [preferences, setPreferences] = usePreferences()
-	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
-	const [showAll, setShowAll] = useState(false)
 	const speech = useSpeech()
-	// Поддержку узнаём только в браузере — иначе разметка сервера и клиента разойдётся
-	const [supported, setSupported] = useState(true)
+	const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([])
+	const [showAll, setShowAll] = useState(false)
+	const [native, setNative] = useState(false)
+	const [cached, setCached] = useState<boolean | null>(null)
+	const [download, setDownload] = useState<number | null>(null)
+	const neural = preferences.ttsEngine === 'neural'
+	const testing = speech.status !== 'idle' && speech.title === 'Проверка голоса'
 
 	useEffect(() => {
-		setSupported(isSpeechSupported())
-		const update = () => setVoices(sortVoices(getVoices()))
+		setNative(isNativeSpeech())
+		isNeuralCached().then(setCached)
+		const update = () => setSystemVoices(sortVoices(getVoices()))
 		update()
 		return onVoicesChanged(update)
 	}, [])
 
-	const russian = voices.filter(
-		voice =>
-			voice.lang.toLowerCase().startsWith('ru') ||
-			/multilingual/i.test(voice.voiceURI)
-	)
-	const list = showAll || !russian.length ? voices : russian
-	const selected =
-		voices.find(voice => voice.voiceURI === preferences.ttsVoice) ?? voices[0]
-	const testing = speech.status !== 'idle' && speech.title === 'Проверка голоса'
+	const startDownload = async () => {
+		if (download !== null) return
+		setDownload(0)
+		try {
+			await preloadNeural(setDownload)
+			setCached(true)
+			setPreferences({ ttsEngine: 'neural' })
+			toast.success('Нейроголос готов', {
+				description:
+					'Теперь озвучка работает на устройстве, даже без интернета.'
+			})
+		} catch (error) {
+			toast.error('Не удалось скачать модель', {
+				description:
+					error instanceof Error ? error.message.slice(0, 160) : undefined
+			})
+		} finally {
+			setDownload(null)
+		}
+	}
 
-	const sampleForVoice = (voice?: SpeechSynthesisVoice) =>
-		voice &&
-		voice.lang.toLowerCase().startsWith('en') &&
-		!/multilingual/i.test(voice.voiceURI)
-			? SAMPLE_EN
-			: SAMPLE
+	const chooseEngine = (engine: 'neural' | 'system') => {
+		stopSpeech()
+		if (engine === 'neural' && !cached) return void startDownload()
+		setPreferences({ ttsEngine: engine })
+	}
+
+	const russian = systemVoices.filter(voice =>
+		voice.lang.toLowerCase().startsWith('ru')
+	)
+	const systemList = showAll || !russian.length ? systemVoices : russian
+	const systemSelected =
+		systemVoices.find(voice => voice.voiceURI === preferences.ttsVoice) ??
+		systemVoices[0]
 
 	return (
 		<div className='space-y-5'>
-			{!supported ? (
-				<p className='text-sm text-subtle'>
-					В этом браузере озвучка недоступна.
+			{/* Движок */}
+			<div className='grid gap-px border border-border bg-border sm:grid-cols-2'>
+				<EngineCard
+					active={neural}
+					icon={<Sparkles size={15} />}
+					title='Нейросеть на устройстве'
+					hint={
+						download !== null
+							? `Скачиваю… ${Math.round(download * 100)}%`
+							: cached
+								? 'Supertonic 3 · скачана, работает без интернета'
+								: 'Supertonic 3 · ≈ 400 МБ один раз'
+					}
+					progress={download}
+					onClick={() => chooseEngine('neural')}
+				/>
+				<EngineCard
+					active={!neural}
+					icon={<AudioLines size={15} />}
+					title='Системный голос'
+					hint={native ? 'Голос Android' : 'Голос браузера или Windows'}
+					onClick={() => chooseEngine('system')}
+				/>
+			</div>
+
+			{neural ? (
+				<div>
+					<p className='eyebrow mb-2'>Голос</p>
+					<div className='grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-5'>
+						{NEURAL_VOICES.map(voice => {
+							const active = preferences.ttsNeuralVoice === voice.id
+							return (
+								<button
+									key={voice.id}
+									type='button'
+									onClick={() => {
+										setPreferences({ ttsNeuralVoice: voice.id })
+										speak(SAMPLE, 'Проверка голоса')
+									}}
+									className={cn(
+										'flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors',
+										active
+											? 'bg-primary/10 text-fg'
+											: 'bg-surface text-muted hover:bg-white/[0.04] hover:text-fg'
+									)}
+								>
+									<span
+										className={cn(
+											'grid h-6 w-6 shrink-0 place-items-center rounded-full text-2xs',
+											active
+												? 'bg-primary text-white'
+												: 'bg-white/[0.05] text-subtle'
+										)}
+									>
+										{active ? <Check size={12} /> : voice.id}
+									</span>
+									{voice.name}
+								</button>
+							)
+						})}
+					</div>
+
+					<p className='eyebrow mb-2 mt-5'>Качество</p>
+					<div className='grid grid-cols-3 gap-px border border-border bg-border'>
+						{QUALITY.map(option => (
+							<button
+								key={option.steps}
+								type='button'
+								onClick={() => setPreferences({ ttsSteps: option.steps })}
+								className={cn(
+									'px-3 py-2.5 text-left transition-colors',
+									preferences.ttsSteps === option.steps
+										? 'bg-primary/10'
+										: 'bg-surface hover:bg-white/[0.04]'
+								)}
+							>
+								<span className='block text-sm text-fg'>{option.label}</span>
+								<span className='block text-2xs text-subtle'>
+									{option.hint}
+								</span>
+							</button>
+						))}
+					</div>
+
+					<div className='mt-3 flex items-start justify-between gap-3 text-xs leading-5 text-subtle'>
+						<p className='flex gap-2'>
+							<Cpu
+								size={14}
+								className='mt-0.5 shrink-0'
+							/>
+							Модель Supertonic 3 работает прямо на этом устройстве: 31 язык,
+							русский и английский переключаются сами. Следующая фраза
+							готовится, пока звучит текущая.
+						</p>
+						{cached && (
+							<button
+								type='button'
+								onClick={async () => {
+									stopSpeech()
+									await removeNeural()
+									setCached(false)
+									setPreferences({ ttsEngine: 'system' })
+									toast('Модель удалена с устройства')
+								}}
+								className='flex shrink-0 items-center gap-1 text-subtle transition-colors hover:text-danger'
+							>
+								<Trash2 size={12} />
+								Удалить
+							</button>
+						)}
+					</div>
+				</div>
+			) : native ? (
+				<p className='border border-border px-4 py-3 text-sm leading-6 text-muted'>
+					Читает голос Android. Сменить или скачать голос получше: Настройки
+					Android → «Синтез речи».
 				</p>
 			) : (
 				<div>
 					<div className='mb-2 flex items-center justify-between gap-3'>
-						<p className='eyebrow'>Голос Edge TTS</p>
-						{russian.length > 0 && russian.length < voices.length && (
+						<p className='eyebrow'>Голос системы</p>
+						{russian.length > 0 && russian.length < systemVoices.length && (
 							<button
 								type='button'
 								onClick={() => setShowAll(value => !value)}
 								className='text-xs text-subtle transition-colors hover:text-fg'
 							>
-								{showAll ? 'Русские и мультиязычные' : `Все голоса (${voices.length})`}
+								{showAll
+									? 'Только русские'
+									: `Все языки (${systemVoices.length})`}
 							</button>
 						)}
 					</div>
-					{list.length ? (
+					{systemList.length ? (
 						<div className='grid max-h-72 gap-px overflow-y-auto border border-border bg-border sm:grid-cols-2'>
-							{list.map(voice => {
-								const active = selected?.voiceURI === voice.voiceURI
+							{systemList.map(voice => {
+								const active = systemSelected?.voiceURI === voice.voiceURI
 								return (
 									<button
 										key={voice.voiceURI}
 										type='button'
 										onClick={() => {
 											setPreferences({ ttsVoice: voice.voiceURI })
-											speak(sampleForVoice(voice), 'Проверка голоса')
+											speak(SAMPLE, 'Проверка голоса')
 										}}
 										className={cn(
 											'flex min-w-0 items-center gap-3 px-3 py-2.5 text-left transition-colors',
@@ -110,9 +260,6 @@ export function SpeechSettings() {
 											</span>
 											<span className='block truncate text-2xs text-subtle'>
 												{voice.lang}
-												{/multilingual/i.test(voice.voiceURI)
-													? ' · RU / EN нейросетевой'
-													: ' · нейросетевой Edge TTS'}
 											</span>
 										</span>
 									</button>
@@ -125,15 +272,9 @@ export function SpeechSettings() {
 								size={14}
 								className='animate-spin'
 							/>
-							Загружаю голоса…
+							Загружаю голоса системы…
 						</p>
 					)}
-					<p className='mt-2 text-xs leading-5 text-subtle'>
-						Озвучка работает через нейросетевые голоса Microsoft Edge TTS
-						(Светлана, Дмитрий, Дария и мультиязычные голоса) одинаково на
-						компьютере, в браузере и в мобильном приложении. Без интернета
-						автоматически включается системный голос устройства.
-					</p>
 				</div>
 			)}
 
@@ -141,29 +282,30 @@ export function SpeechSettings() {
 				label='Скорость'
 				value={preferences.ttsRate}
 				min={0.5}
-				max={2.5}
+				max={2}
 				step={0.05}
 				format={value => `${Number(value.toFixed(2))}×`}
 				onChange={value => setPreferences({ ttsRate: value })}
 			/>
-			<Slider
-				label='Высота голоса'
-				value={preferences.ttsPitch}
-				min={0.5}
-				max={1.5}
-				step={0.05}
-				format={value => String(Number(value.toFixed(2)))}
-				onChange={value => setPreferences({ ttsPitch: value })}
-			/>
+			{!neural && (
+				<Slider
+					label='Высота голоса'
+					value={preferences.ttsPitch}
+					min={0.5}
+					max={1.5}
+					step={0.05}
+					format={value => String(Number(value.toFixed(2)))}
+					onChange={value => setPreferences({ ttsPitch: value })}
+				/>
+			)}
 
 			<button
 				type='button'
+				disabled={neural && !cached}
 				onClick={() =>
-					testing
-						? stopSpeech()
-						: speak(sampleForVoice(selected), 'Проверка голоса')
+					testing ? stopSpeech() : speak(SAMPLE, 'Проверка голоса')
 				}
-				className='flex h-10 items-center gap-2 border border-border px-4 text-sm text-fg transition-colors hover:bg-white/[0.05]'
+				className='flex h-10 items-center gap-2 border border-border px-4 text-sm text-fg transition-colors hover:bg-white/[0.05] disabled:opacity-40'
 			>
 				{testing ? (
 					<Square
@@ -202,6 +344,65 @@ export function SpeechSettings() {
 				кнопка «Озвучить».
 			</p>
 		</div>
+	)
+}
+
+const QUALITY = [
+	{ steps: 0, label: 'Авто', hint: 'по силам устройства' },
+	{ steps: 4, label: 'Быстрее', hint: 'для слабого телефона' },
+	{ steps: 12, label: 'Лучше', hint: 'для компьютера' }
+]
+
+function EngineCard({
+	active,
+	icon,
+	title,
+	hint,
+	progress,
+	onClick
+}: {
+	active: boolean
+	icon: React.ReactNode
+	title: string
+	hint: string
+	progress?: number | null
+	onClick: () => void
+}) {
+	return (
+		<button
+			type='button'
+			onClick={onClick}
+			className={cn(
+				'relative flex items-start gap-3 overflow-hidden px-4 py-3 text-left transition-colors',
+				active ? 'bg-primary/10' : 'bg-surface hover:bg-white/[0.04]'
+			)}
+		>
+			<span
+				className={cn(
+					'mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full',
+					active ? 'bg-primary text-white' : 'bg-white/[0.05] text-subtle'
+				)}
+			>
+				{progress !== undefined && progress !== null ? (
+					<Loader2
+						size={14}
+						className='animate-spin'
+					/>
+				) : (
+					icon
+				)}
+			</span>
+			<span className='min-w-0'>
+				<span className='block text-sm font-medium text-fg'>{title}</span>
+				<span className='block text-xs text-subtle'>{hint}</span>
+			</span>
+			{progress !== undefined && progress !== null && (
+				<span
+					className='absolute bottom-0 left-0 h-0.5 bg-primary transition-[width]'
+					style={{ width: `${progress * 100}%` }}
+				/>
+			)}
+		</button>
 	)
 }
 

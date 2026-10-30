@@ -23,6 +23,11 @@ export interface IPreferences {
 	ttsVoice: string
 	ttsRate: number
 	ttsPitch: number
+	// Движок озвучки: нейросеть на устройстве или системный голос — никогда не вперемешку
+	ttsEngine: 'neural' | 'system'
+	// Голос нейросети (F1–F5, M1–M5) и качество: шагов генерации
+	ttsNeuralVoice: string
+	ttsSteps: number
 	// Голосовые подсказки в программах дыхания (по умолчанию выключены)
 	breathingVoice: boolean
 	// Расшифровка аудио нейросетью Whisper прямо в браузере
@@ -43,6 +48,9 @@ const DEFAULTS: IPreferences = {
 	ttsVoice: '',
 	ttsRate: 1,
 	ttsPitch: 1,
+	ttsEngine: 'system',
+	ttsNeuralVoice: 'F1',
+	ttsSteps: 0,
 	breathingVoice: false,
 	sttModel: 'off'
 }

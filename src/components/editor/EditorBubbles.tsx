@@ -85,7 +85,10 @@ function Button({
 	)
 }
 
-const Divider = () => <span className='mx-0.5 h-5 w-px shrink-0 bg-border' />
+// На телефоне панель выделения в два ряда — там разделители не нужны
+const Divider = () => (
+	<span className='mx-0.5 h-5 w-px shrink-0 bg-border max-sm:hidden' />
+)
 
 export function SelectionBubble({ editor }: { editor: Editor }) {
 	const [panel, setPanel] = useState<'line' | 'highlight' | null>(null)
@@ -115,7 +118,7 @@ export function SelectionBubble({ editor }: { editor: Editor }) {
 			}}
 		>
 			<div
-				className='relative flex max-w-[calc(100vw-1rem)] items-center overflow-visible border border-border bg-elevated p-0.5 shadow-pop'
+				className='relative flex max-w-[calc(100vw-1rem)] items-center overflow-visible border border-border bg-elevated p-0.5 shadow-pop max-sm:w-[14.75rem] max-sm:flex-wrap max-sm:justify-center'
 				onMouseDown={event => {
 					if (!(event.target as HTMLElement).closest('input'))
 						event.preventDefault()
