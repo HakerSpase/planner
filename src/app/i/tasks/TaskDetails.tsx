@@ -2,8 +2,8 @@
 
 import cn from 'clsx'
 import { Bell, Check, FileText, ListChecks, Plus, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type Control, useController } from 'react-hook-form'
 
@@ -18,7 +18,9 @@ const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
 	{
 		ssr: false,
-		loading: () => <div className='min-h-[240px] animate-pulse bg-white/[0.02]' />
+		loading: () => (
+			<div className='min-h-[240px] animate-pulse bg-white/[0.02]' />
+		)
 	}
 )
 
@@ -39,11 +41,15 @@ const newSubtaskId = () =>
 // Короткое превью заметки: только текст — без картинок, ссылок-адресов и разметки
 const notePreview = (markdown: string) =>
 	markdown
+		// голосовое — словом, а не пустотой
+		.replace(/<div data-planner-audio[^>]*><\/div>/gi, ' 🎙 Голосовое ')
 		.replace(/<img[^>]*>/gi, '')
 		.replace(/<[^>]+>/g, '')
 		.replace(/!\[[^\]]*]\([^)]*\)/g, '')
 		.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
 		.replace(/^[#>\-*\s]+|\[[ x]]\s?/gim, '')
+		// служебная метка выноски: [!note], [!rule]- …
+		.replace(/\[![\wа-яё-]+][+-]?\s*/gi, '')
 		.replace(/[*_~`]/g, '')
 		.replace(/\s+/g, ' ')
 		.trim()
@@ -53,12 +59,20 @@ const notePreview = (markdown: string) =>
  * подзадачи с прогрессом + заметка в редакторе. Всё пишется в форму задачи
  * и сохраняется тем же debounce, что и остальные поля.
  */
-export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails) {
+export function TaskDetails({
+	control,
+	taskName,
+	taskId,
+	compact
+}: ITaskDetails) {
 	const [isOpen, setIsOpen] = useState(false)
 	const { field: noteField } = useController({ control, name: 'note' })
 	const { field: subtasksField } = useController({ control, name: 'subtasks' })
 	const { field: dueAtField } = useController({ control, name: 'dueAt' })
-	const { field: remindersField } = useController({ control, name: 'reminders' })
+	const { field: remindersField } = useController({
+		control,
+		name: 'reminders'
+	})
 	const { field: dayField } = useController({ control, name: 'createdAt' })
 
 	// Задачу перенесли на другой день — время события едет вместе с ней
@@ -84,7 +98,8 @@ export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails
 		if (!taskId) return
 		const onPatched = (event: Event) => {
 			const { context, content } = (event as CustomEvent).detail
-			if (context.type === 'task' && context.id === taskId) onNoteChange(content)
+			if (context.type === 'task' && context.id === taskId)
+				onNoteChange(content)
 		}
 		window.addEventListener('planner:note-patched', onPatched)
 		return () => window.removeEventListener('planner:note-patched', onPatched)
@@ -156,7 +171,8 @@ export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails
 							reminders={remindersField.value}
 							onChange={patch => {
 								if (patch.dueAt !== undefined) dueAtField.onChange(patch.dueAt)
-								if (patch.reminders !== undefined) remindersField.onChange(patch.reminders)
+								if (patch.reminders !== undefined)
+									remindersField.onChange(patch.reminders)
 							}}
 						/>
 					}
@@ -367,7 +383,9 @@ function TaskDetailsPanel({
 						<RichEditor
 							value={note}
 							uploadContext={
-								taskId && !taskId.startsWith('draft-') ? { type: 'task', id: taskId } : undefined
+								taskId && !taskId.startsWith('draft-')
+									? { type: 'task', id: taskId }
+									: undefined
 							}
 							onChange={onNoteChange}
 							placeholder='Детали, ссылки, фото, следующий шаг…'

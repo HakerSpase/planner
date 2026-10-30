@@ -25,7 +25,7 @@ public class WidgetPlugin extends Plugin {
                 .getSharedPreferences(WidgetData.PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(WidgetData.KEY, snapshot)
-                .apply();
+                .commit();
         WidgetData.refreshAll(getContext());
         call.resolve();
     }

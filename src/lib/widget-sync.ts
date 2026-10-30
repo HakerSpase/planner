@@ -107,67 +107,113 @@ function taskSummary(tasks: ITaskResponse[], now: Date) {
 }
 
 /** Пока планер открыт в Android-приложении — держим виджеты в актуальном виде */
+/** Выполненные сегодня задачи по данным на телефоне — сервер мог ещё не записать отметку */
+function completedToday(tasks: ITaskResponse[], now: Date) {
+	const today = dayKey(now)
+	return tasks.filter(
+		task =>
+			task.isCompleted &&
+			// только что отмеченная: время выполнения ещё не пришло с сервера
+			(!task.completedAt || dayKey(new Date(task.completedAt)) === today)
+	).length
+}
+
+function buildSnapshot(
+	tasks: ITaskResponse[],
+	serverCounts: Record<string, number>,
+	cardsDue: number
+): IWidgetSnapshot {
+	const now = new Date()
+	const today = shiftDays(now, 0)
+	const key = dayKey(today)
+	// Сегодняшнюю активность дополняем тем, что видно на телефоне прямо сейчас
+	const counts = {
+		...serverCounts,
+		[key]: Math.max(serverCounts[key] || 0, completedToday(tasks, now))
+	}
+	const { streak, best } = streakFrom(counts, today)
+	return {
+		date: key,
+		streak,
+		best,
+		todayActive: Boolean(counts[key]),
+		week: Array.from({ length: 7 }, (_, i) =>
+			Boolean(counts[dayKey(shiftDays(today, i - 6))])
+		),
+		...taskSummary(tasks, now),
+		cardsDue,
+		updatedAt: Date.now()
+	}
+}
+
+/** Пока планер открыт в Android-приложении — держим виджеты в актуальном виде */
 export function useWidgetSync(tasks: ITaskResponse[] | undefined) {
 	const tasksRef = useRef(tasks)
 	tasksRef.current = tasks
 	const lastSent = useRef('')
-	const timer = useRef<ReturnType<typeof setTimeout>>()
+	// Серия с сервера и карточки — грузятся в фоне; виджет обновляется сразу, не дожидаясь их
+	const countsRef = useRef<Record<string, number> | null>(null)
+	const cardsRef = useRef(0)
+	const pushRef = useRef<() => void>(() => {})
+	const refreshRef = useRef<() => void>(() => {})
 
 	useEffect(() => {
 		const widget = nativePlugin('PlannerWidget')
 		if (!widget) return
 
-		const sync = async () => {
+		const push = () => {
 			const list = tasksRef.current
-			if (!list) return
-			const now = new Date()
-			const today = shiftDays(now, 0)
-			const [counts, deck] = await Promise.all([
-				loadActivity(today).catch(() => null),
-				flashcardsService.getDeck().catch(() => null)
-			])
-			if (!counts) return
-			const { streak, best } = streakFrom(counts, today)
-			const snapshot: IWidgetSnapshot = {
-				date: dayKey(today),
-				streak,
-				best,
-				todayActive: Boolean(counts[dayKey(today)]),
-				week: Array.from({ length: 7 }, (_, i) =>
-					Boolean(counts[dayKey(shiftDays(today, i - 6))])
-				),
-				...taskSummary(list, now),
-				cardsDue: (deck || []).filter(card => isDue(card)).length,
-				updatedAt: Date.now()
-			}
+			if (!list || !countsRef.current) return
+			const snapshot = buildSnapshot(list, countsRef.current, cardsRef.current)
 			const { updatedAt: _skip, ...comparable } = snapshot
 			const signature = JSON.stringify(comparable)
 			if (signature === lastSent.current) return
 			lastSent.current = signature
-			await widget.update({ snapshot: JSON.stringify(snapshot) }).catch(() => {
+			widget.update({ snapshot: JSON.stringify(snapshot) }).catch(() => {
 				lastSent.current = ''
 			})
 		}
+		pushRef.current = push
 
-		const schedule = () => {
-			clearTimeout(timer.current)
-			timer.current = setTimeout(() => void sync(), 1500)
+		let loading = false
+		const refresh = async () => {
+			if (loading) return
+			loading = true
+			try {
+				const [counts, deck] = await Promise.all([
+					loadActivity(shiftDays(new Date(), 0)).catch(() => null),
+					flashcardsService.getDeck().catch(() => null)
+				])
+				if (counts) countsRef.current = counts
+				if (deck) cardsRef.current = deck.filter(card => isDue(card)).length
+				push()
+			} finally {
+				loading = false
+			}
 		}
-		schedule()
-		const onVisible = () => document.visibilityState === 'visible' && schedule()
-		document.addEventListener('visibilitychange', onVisible)
-		const interval = setInterval(schedule, 10 * 60_000)
-		window.addEventListener('planner:widget-sync', schedule)
+
+		refreshRef.current = () => void refresh()
+		void refresh()
+		// Свернули приложение — отправить сразу: в фоне таймеры Android замирают
+		const onVisibility = () => {
+			if (document.visibilityState === 'hidden') push()
+			else void refresh()
+		}
+		document.addEventListener('visibilitychange', onVisibility)
+		window.addEventListener('pagehide', push)
+		const interval = setInterval(() => void refresh(), 10 * 60_000)
 		return () => {
-			clearTimeout(timer.current)
 			clearInterval(interval)
-			document.removeEventListener('visibilitychange', onVisible)
-			window.removeEventListener('planner:widget-sync', schedule)
+			document.removeEventListener('visibilitychange', onVisibility)
+			window.removeEventListener('pagehide', push)
 		}
 	}, [])
 
-	// Задачи поменялись — пересчитать
+	// Задачи поменялись — виджет обновляется сразу, а серия с сервера — чуть позже
 	useEffect(() => {
-		if (tasks) window.dispatchEvent(new Event('planner:widget-sync'))
+		if (!tasks) return
+		pushRef.current()
+		const later = setTimeout(() => refreshRef.current(), 4000)
+		return () => clearTimeout(later)
 	}, [tasks])
 }

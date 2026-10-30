@@ -9,6 +9,10 @@ import android.widget.RemoteViews;
 public class StreakWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        render(context, manager, ids);
+    }
+
+    static void render(Context context, AppWidgetManager manager, int[] ids) {
         WidgetData data = WidgetData.load(context);
         for (int id : ids) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_streak);

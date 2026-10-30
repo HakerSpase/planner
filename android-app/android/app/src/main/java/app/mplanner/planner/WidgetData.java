@@ -157,15 +157,13 @@ public class WidgetData {
         views.setTextColor(R.id.streak_label, !data.todayActive && data.streak > 0 ? 0xFFFFB37A : 0xFF9A98A8);
     }
 
+    /** Перерисовать все виджеты сразу — напрямую, без широковещательных сообщений */
     static void refreshAll(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        for (Class<?> provider : new Class<?>[]{StreakWidget.class, TodayWidget.class}) {
-            int[] ids = manager.getAppWidgetIds(new ComponentName(context, provider));
-            if (ids.length == 0) continue;
-            Intent intent = new Intent(context, provider);
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-            context.sendBroadcast(intent);
-        }
+        Context app = context.getApplicationContext();
+        AppWidgetManager manager = AppWidgetManager.getInstance(app);
+        int[] streak = manager.getAppWidgetIds(new ComponentName(app, StreakWidget.class));
+        if (streak.length > 0) StreakWidget.render(app, manager, streak);
+        int[] today = manager.getAppWidgetIds(new ComponentName(app, TodayWidget.class));
+        if (today.length > 0) TodayWidget.render(app, manager, today);
     }
 }
