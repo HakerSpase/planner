@@ -1,6 +1,5 @@
 'use client'
 
-import Link from '@tiptap/extension-link'
 import Table from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
@@ -61,8 +60,12 @@ import {
 	moveSelectedNode,
 	replaceImageSrc
 } from './extensions'
+import { CalloutMenu } from './CalloutMenu'
+import { LinkMenu } from './LinkMenu'
 import { WikiSuggest } from './WikiSuggest'
+import { type ILinkMenuRequest, LinkPreviews, PlannerLink } from './link-previews'
 import { MathRender, MathText } from './math'
+import { StudyMarkup } from './study'
 import { WikiLinks } from './wiki-links'
 import { InsertVisualMenu } from './visuals/InsertVisualMenu'
 import { VisualCodeBlock } from './visuals/VisualCodeBlock'
@@ -79,6 +82,8 @@ interface IRichEditor {
 	editable?: boolean
 	// чья это заметка — чтобы догрузить файл, даже если редактор уже закрыли
 	uploadContext?: TypeUploadContext
+	// Режим самопроверки: ответы, формулы и выделенное закрыты до нажатия
+	selfCheck?: boolean
 }
 
 const getMarkdown = (editor: Editor): string =>
@@ -98,7 +103,8 @@ export function RichEditor({
 	contentClassName,
 	onSubmitShortcut,
 	editable = true,
-	uploadContext
+	uploadContext,
+	selfCheck
 }: IRichEditor) {
 	const uploadContextRef = useRef(uploadContext)
 	uploadContextRef.current = uploadContext
@@ -197,6 +203,7 @@ export function RichEditor({
 
 	const editorRef = useRef<Editor | null>(null)
 	const wikiKeyRef = useRef<((event: KeyboardEvent) => boolean) | null>(null)
+	const [linkMenu, setLinkMenu] = useState<ILinkMenuRequest | null>(null)
 
 	const editor = useEditor({
 		immediatelyRender: false,
@@ -209,6 +216,7 @@ export function RichEditor({
 			MathRender,
 			...ANNOTATION_MARKS,
 			WikiLinks,
+			StudyMarkup,
 			Table.configure({ resizable: false }),
 			TableRow,
 			TableHeader,
@@ -218,7 +226,8 @@ export function RichEditor({
 			UploadTracker.configure({ onDelete: deleteUploads }),
 			TouchDrag,
 			Placeholder.configure({ placeholder }),
-			Link.configure({
+			LinkPreviews.configure({ onLinkMenu: request => setLinkMenu(request) }),
+			PlannerLink.configure({
 				openOnClick: !editable,
 				autolink: true,
 				HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' }
@@ -320,7 +329,20 @@ export function RichEditor({
 	}
 
 	return (
-		<div className={cn('flex min-h-0 flex-col', className)}>
+		<div
+			className={cn('flex min-h-0 flex-col', selfCheck && 'self-check', className)}
+			onClickCapture={event => {
+				// Нажатие по закрытому — открыть (или снова закрыть)
+				const target = (event.target as HTMLElement).closest(
+					'.annot-hidden, .flashcard, .math-display, .annot-highlight, .annot-color, strong'
+				)
+				if (!target) return
+				// Скрытый текст открывается и при обычном чтении, остальное — только в режиме проверки
+				const hiddenText = target.matches('.annot-hidden')
+				if (hiddenText ? editable && !selfCheck : !selfCheck) return
+				target.classList.toggle('is-revealed')
+			}}
+		>
 			{editor && editable && (
 				<div
 					role='toolbar'
@@ -468,6 +490,7 @@ export function RichEditor({
 						<Sigma size={15} />
 					</ToolButton>
 					<InsertVisualMenu editor={editor} />
+					<CalloutMenu editor={editor} />
 					<ToolButton
 						label='Таблица'
 						active={editor.isActive('table')}
@@ -569,6 +592,14 @@ export function RichEditor({
 				</BubbleMenu>
 			)}
 			</div>
+			{editor && linkMenu && (
+				<LinkMenu
+					editor={editor}
+					request={linkMenu}
+					onClose={() => setLinkMenu(null)}
+					onEdit={setLink}
+				/>
+			)}
 			{editor && editable && (
 				<WikiSuggest
 					editor={editor}

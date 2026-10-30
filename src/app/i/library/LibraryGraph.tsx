@@ -47,7 +47,9 @@ const LAYOUTS: [TypeLayout, string, string][] = [
 	['tree', 'Дерево', 'Разделы → темы → листы по кругу']
 ]
 
-const SECTION_COLORS = ['#8b7bff', '#38bdf8', '#f472b6', '#4ade80', '#fbbf24', '#fb7185', '#2dd4bf', '#c084fc']
+const SECTION_COLORS = ['#8b7bff', '#38bdf8', '#f472b6', '#4ade80', '#a3e635', '#fb7185', '#2dd4bf', '#c084fc']
+// Разделы — всегда свой, тёплый цвет: сразу видно, где «корни» архива
+const SECTION_NODE = '#f5b546'
 
 const radiusOf = (node: INode) =>
 	node.kind === 'section' ? 11 : node.kind === 'topic' ? 7.5 : 4 + Math.min(7, Math.sqrt(node.degree) * 1.8)
@@ -357,10 +359,26 @@ export function LibraryGraph({
 			if (node.kind === 'page') {
 				ctx.fillStyle = node === focus ? '#ffffff' : color
 				ctx.fill()
+			} else if (node.kind === 'section') {
+				// Мягкое свечение вокруг раздела
+				const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.6, node.x, node.y, radius * 2.6)
+				glow.addColorStop(0, 'rgba(245, 181, 70, 0.28)')
+				glow.addColorStop(1, 'rgba(245, 181, 70, 0)')
+				ctx.fillStyle = glow
+				ctx.beginPath()
+				ctx.arc(node.x, node.y, radius * 2.6, 0, Math.PI * 2)
+				ctx.fill()
+				ctx.beginPath()
+				ctx.arc(node.x, node.y, radius, 0, Math.PI * 2)
+				ctx.fillStyle = node === focus ? '#ffe2a8' : SECTION_NODE
+				ctx.fill()
+				ctx.lineWidth = 2.5
+				ctx.strokeStyle = color
+				ctx.stroke()
 			} else {
 				ctx.fillStyle = '#16161a'
 				ctx.fill()
-				ctx.lineWidth = node.kind === 'section' ? 3 : 2
+				ctx.lineWidth = 2
 				ctx.strokeStyle = color
 				ctx.stroke()
 			}
@@ -383,7 +401,13 @@ export function LibraryGraph({
 			ctx.lineWidth = 3 / scale
 			ctx.strokeStyle = 'rgba(9, 9, 11, 0.9)'
 			ctx.strokeText(label, node.x, y)
-			ctx.fillStyle = on ? (node.kind === 'page' ? 'rgba(236, 236, 240, 0.85)' : '#ececf0') : 'rgba(236,236,240,0.25)'
+			ctx.fillStyle = !on
+				? 'rgba(236,236,240,0.25)'
+				: node.kind === 'section'
+					? '#f7cd7e'
+					: node.kind === 'topic'
+						? '#ececf0'
+						: 'rgba(236, 236, 240, 0.85)'
 			ctx.fillText(label, node.x, y)
 		})
 	}
@@ -679,6 +703,21 @@ export function LibraryGraph({
 
 				<div className='pointer-events-none absolute bottom-2 left-2 right-2 flex flex-wrap items-end justify-between gap-2'>
 					<div className='flex max-w-full flex-wrap gap-x-3 gap-y-1 bg-bg/70 px-2 py-1 text-[11px] text-muted'>
+						<span className='flex items-center gap-1.5'>
+							<span
+								className='h-2.5 w-2.5 rounded-full'
+								style={{ background: SECTION_NODE, boxShadow: '0 0 6px rgba(245,181,70,0.6)' }}
+							/>
+							Раздел
+						</span>
+						<span className='flex items-center gap-1.5'>
+							<span className='h-2.5 w-2.5 rounded-full border-2 border-muted' />
+							Тема
+						</span>
+						<span className='flex items-center gap-1.5 border-r border-border pr-3'>
+							<span className='h-2 w-2 rounded-full bg-muted' />
+							Лист
+						</span>
 						{sections.map((section, index) => (
 							<span
 								key={section.id}

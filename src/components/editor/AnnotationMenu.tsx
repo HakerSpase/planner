@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import {
 	ANNOTATION_MARKS,
+	HIDDEN_TEXT,
 	HIGHLIGHTS,
 	type IAnnotation,
 	MORPHEMES,
@@ -144,6 +145,22 @@ export function AnnotationMenu({ editor }: { editor: Editor }) {
 					<p className='mb-2 text-xs leading-5 text-subtle'>
 						Выделите текст или поставьте курсор в слово.
 					</p>
+
+					<button
+						type='button'
+						aria-pressed={isApplied(editor, HIDDEN_TEXT)}
+						onClick={() => choose(HIDDEN_TEXT)}
+						className={cn(
+							'mb-3 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors',
+							isApplied(editor, HIDDEN_TEXT) ? 'bg-primary/15' : 'bg-white/[0.03] hover:bg-white/[0.07]'
+						)}
+					>
+						<span className='annot annot-hidden shrink-0 px-2 text-sm'>ответ</span>
+						<span>
+							<span className='block text-sm text-fg'>Скрыть до нажатия</span>
+							<span className='block text-xs text-subtle'>Для самопроверки: закрывает ответ, формулу, термин</span>
+						</span>
+					</button>
 
 					<Group title='Цвет текста'>
 						<div className='flex flex-wrap items-center gap-1.5'>

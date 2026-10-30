@@ -12,7 +12,7 @@ import { Mark, mergeAttributes } from '@tiptap/core'
  * Внутри можно всё остальное: **жирный**, $формулы$, другие пометки.
  */
 
-export type TypeAnnotationGroup = 'color' | 'highlight' | 'syntax' | 'pos' | 'morpheme'
+export type TypeAnnotationGroup = 'color' | 'highlight' | 'syntax' | 'pos' | 'morpheme' | 'hidden'
 
 export interface IAnnotation {
 	code: string
@@ -89,7 +89,10 @@ export const MORPHEMES: IAnnotation[] = [
 	{ code: 'осн', group: 'morpheme', label: 'Основа' }
 ]
 
-const ALL = [...TEXT_COLORS, ...HIGHLIGHTS, ...SYNTAX_ROLES, ...PARTS_OF_SPEECH, ...MORPHEMES]
+// Самопроверка: текст закрыт, пока не нажмёшь
+export const HIDDEN_TEXT: IAnnotation = { code: 'скрыть', group: 'hidden', label: 'Скрыть до нажатия' }
+
+const ALL = [HIDDEN_TEXT, ...TEXT_COLORS, ...HIGHLIGHTS, ...SYNTAX_ROLES, ...PARTS_OF_SPEECH, ...MORPHEMES]
 const BY_CODE = new Map(ALL.map(item => [item.code, item]))
 
 // Как нейросети и люди пишут то же самое по-другому
@@ -118,7 +121,12 @@ const ALIASES: Record<string, string> = {
 	ок: 'оконч',
 	окончание: 'оконч',
 	постфикс: 'постф',
-	основа: 'осн'
+	основа: 'осн',
+	hide: 'скрыть',
+	hidden: 'скрыть',
+	скрытый: 'скрыть',
+	спойлер: 'скрыть',
+	spoiler: 'скрыть'
 }
 
 const HEX = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i
@@ -275,7 +283,9 @@ export const SyntaxRole = createAnnotationMark('syntaxRole', ['syntax'], { inclu
 export const PartOfSpeech = createAnnotationMark('partOfSpeech', ['pos'], { inclusive: false })
 export const Morpheme = createAnnotationMark('morpheme', ['morpheme'], { inclusive: false })
 
-export const ANNOTATION_MARKS = [TextColor, TextHighlight, SyntaxRole, PartOfSpeech, Morpheme]
+export const HiddenText = createAnnotationMark('hiddenText', ['hidden'], { inclusive: false })
+
+export const ANNOTATION_MARKS = [TextColor, TextHighlight, SyntaxRole, PartOfSpeech, Morpheme, HiddenText]
 
 export const markNameFor = (group: TypeAnnotationGroup) =>
 	({
@@ -283,7 +293,8 @@ export const markNameFor = (group: TypeAnnotationGroup) =>
 		highlight: 'textHighlight',
 		syntax: 'syntaxRole',
 		pos: 'partOfSpeech',
-		morpheme: 'morpheme'
+		morpheme: 'morpheme',
+		hidden: 'hiddenText'
 	})[group]
 
 /** Убрать пометки из текста — для превью и поиска */

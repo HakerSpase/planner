@@ -19,7 +19,11 @@ import { WIKI_LINK } from './wiki-links'
 const MATH_REGEX =
 	/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)|\\\(([\s\S]+?)\\\)/g
 
-const RAW_REGEX = new RegExp(`${WIKI_LINK.source}|${MATH_REGEX.source}`, 'g')
+// …и метки выносок [!rule]: экранированная \[!rule\] читалась бы как формула
+const RAW_REGEX = new RegExp(
+	`${WIKI_LINK.source}|\\[![a-zA-Zа-яёА-ЯЁ]+\\][+-]?|${MATH_REGEX.source}`,
+	'g'
+)
 
 // Нейросети при копировании «в Markdown» удваивают слеши: \\( \frac … \\, \\)
 // Внутри такой формулы снимаем экранирование Markdown: \\, → \,
