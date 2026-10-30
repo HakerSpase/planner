@@ -1104,7 +1104,7 @@ function PageView({
 				</div>
 			</header>
 
-			<div className='grid w-full gap-10 pb-24 pt-10 sm:pt-14 xl:grid-cols-[minmax(0,1fr)_13rem]'>
+			<div className='grid w-full grid-cols-[minmax(0,1fr)] gap-10 pb-24 pt-10 sm:pt-14 xl:grid-cols-[minmax(0,1fr)_13rem]'>
 			<div className='min-w-0'>
 				{isEditing ? (
 					<textarea

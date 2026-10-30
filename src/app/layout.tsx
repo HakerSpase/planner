@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono, Unbounded } from 'next/font/google'
 import { Toaster } from 'sonner'
 
@@ -37,6 +37,16 @@ export const metadata: Metadata = {
 		icon: '/planner-icon.svg',
 		apple: '/planner-icon-192.png'
 	}
+}
+
+// Установленное приложение на телефоне — на весь экран: фон уходит под строку состояния
+// и жестовую панель, а отступы под них даёт env(safe-area-inset-*)
+export const viewport: Viewport = {
+	width: 'device-width',
+	initialScale: 1,
+	viewportFit: 'cover',
+	themeColor: '#09090b',
+	colorScheme: 'dark'
 }
 
 export default function RootLayout({

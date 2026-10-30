@@ -5,10 +5,14 @@ export default function manifest(): MetadataRoute.Manifest {
 		name: 'Planner',
 		short_name: 'Planner',
 		description: 'Задачи, тайм-блокинг, мысли и Pomodoro в одном планере.',
+		id: '/i',
 		start_url: '/i',
+		scope: '/',
 		display: 'standalone',
-		background_color: '#0e0f0f',
-		theme_color: '#0e0f0f',
+		orientation: 'portrait',
+		// Тот же цвет, что у фона приложения: строка состояния и панель жестов сливаются с ним
+		background_color: '#09090b',
+		theme_color: '#09090b',
 		icons: [
 			{
 				src: '/planner-icon-192.png',

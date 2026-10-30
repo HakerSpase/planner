@@ -593,8 +593,8 @@ body {
 	/* приставка ⌝ */
 	&[data-annot='прист']::after {
 		top: -0.3em;
-		left: 0;
-		right: 0;
+		left: 0.04em;
+		right: 0.06em;
 		height: 0.4em;
 		border-top: 1.5px solid;
 		border-right: 1.5px solid;
@@ -603,8 +603,8 @@ body {
 	/* постфикс ⌜ */
 	&[data-annot='постф']::after {
 		top: -0.3em;
-		left: 0;
-		right: 0;
+		left: 0.06em;
+		right: 0.04em;
 		height: 0.4em;
 		border-top: 1.5px solid;
 		border-left: 1.5px solid;
@@ -612,10 +612,10 @@ body {
 
 	/* корень ⌒ */
 	&[data-annot='корень']::after {
-		top: -0.42em;
-		left: 0;
-		right: 0;
-		height: 0.55em;
+		top: -0.38em;
+		left: 0.08em;
+		right: 0.08em;
+		height: 0.45em;
 		border-top: 1.5px solid;
 		border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 	}
@@ -623,8 +623,8 @@ body {
 	/* суффикс ^ */
 	&[data-annot='суф']::after {
 		top: -0.48em;
-		left: 0;
-		right: 0;
+		left: 0.12em;
+		right: 0.12em;
 		height: 0.42em;
 		background: rgb(var(--annot));
 		clip-path: polygon(0 100%, 50% 0, 100% 100%, calc(100% - 1.5px) 100%, 50% 4px, 1.5px 100%);

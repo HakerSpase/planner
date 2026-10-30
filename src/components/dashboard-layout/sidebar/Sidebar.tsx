@@ -132,7 +132,7 @@ export function Sidebar({
 			{/* Мобильный сайдбар (выдвижное меню Drawer) */}
 			<aside
 				className={cn(
-					'fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(84vw,18rem)] select-none flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-pop transition-transform duration-300 lg:hidden',
+					'fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(84vw,18rem)] select-none flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-pop transition-transform duration-300 lg:hidden',
 					isMobileOpen ? 'translate-x-0' : '-translate-x-full'
 				)}
 			>

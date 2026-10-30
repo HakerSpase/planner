@@ -236,7 +236,7 @@ function TaskDetailsPanel({
 				role='dialog'
 				aria-modal='true'
 				aria-label='Время, подзадачи и заметка'
-				className='slide flex h-[100dvh] w-full max-w-xl flex-col border-l border-border bg-surface shadow-pop'
+				className='slide flex h-[100dvh] w-full max-w-xl flex-col border-l border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-pop'
 			>
 				<header className='flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-5'>
 					<p className='eyebrow'>Задача</p>

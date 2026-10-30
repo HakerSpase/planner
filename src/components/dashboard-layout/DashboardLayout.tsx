@@ -85,8 +85,9 @@ export default function DashboardLayout({
 	// Переход по ссылке [[лист]] из любого редактора
 	useEffect(() => {
 		const onNavigate = (event: Event) => {
-			const { href, missing } = (event as CustomEvent).detail || {}
-			if (href) router.push(href)
+			const { href, missing, replace } = (event as CustomEvent).detail || {}
+			if (href && replace) router.replace(href)
+			else if (href) router.push(href)
 			else if (missing) toast.info(`Листа «${missing}» в архиве пока нет`)
 		}
 		window.addEventListener('planner:navigate', onNavigate)
@@ -148,7 +149,7 @@ export default function DashboardLayout({
 			/>
 
 			{/* Основная рабочая область */}
-			<main className='relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
+			<main className='relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6 sm:pb-6 lg:px-8 lg:pt-3 xl:px-10'>
 				<Header onToggleMobile={() => setIsMobileOpen(true)} />
 				{/* Плавный переход между разделами: новый раздел мягко проявляется */}
 				<div
