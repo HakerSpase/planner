@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
 /*
- * Настройки «ощущений» (переходы, вибрация, музыка) — хранятся в браузере,
- * на каждом устройстве свои. Меняются мгновенно во всех открытых местах.
+ * Настройки (переходы, вибрация, музыка, озвучка) — хранятся в браузере, чтобы
+ * меняться мгновенно, и синхронизируются между устройствами аккаунта (settings-sync).
  */
 
 export type TypeTransition = 'off' | 'soft' | 'smooth'
@@ -79,6 +79,12 @@ export function setPreferences(patch: Partial<IPreferences>) {
 	try {
 		localStorage.setItem(KEY, JSON.stringify(cache))
 	} catch {}
+	window.dispatchEvent(new Event(EVENT))
+}
+
+/** Настройки пришли с другого устройства — перечитать и обновить экраны */
+export function reloadPreferences() {
+	cache = null
 	window.dispatchEvent(new Event(EVENT))
 }
 

@@ -26,6 +26,7 @@ import {
 } from '@/lib/local-reminders'
 import { haptic, usePreferences } from '@/lib/preferences'
 import { registerServiceWorker } from '@/lib/push'
+import { startSettingsSync } from '@/lib/settings-sync'
 import { useWidgetSync } from '@/lib/widget-sync'
 import { taskService } from '@/services/task.service'
 
@@ -58,6 +59,8 @@ export default function DashboardLayout({
 	tasksRef.current = tasks?.data
 	// Android-приложение: сводка для виджетов «Серия» и «Сегодня»
 	useWidgetSync(tasks?.data)
+	// Настройки (звук, голос, фон, дыхание) — одни на всех устройствах аккаунта
+	useEffect(() => startSettingsSync(), [])
 	// Настольному приложению — расписание целиком: оно покажет напоминания даже из трея
 	useEffect(() => {
 		syncDesktopReminders(tasks?.data)

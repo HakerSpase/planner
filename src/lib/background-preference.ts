@@ -41,7 +41,7 @@ const subscribe = (callback: () => void) => {
 	}
 }
 
-/** Выбранный фон хранится в браузере (на каждом устройстве свой) */
+/** Выбранный фон: в браузере для мгновенной смены, копия — в профиле (settings-sync) */
 export function useBackground(
 	area: TypeBackgroundArea = 'app'
 ): [TypeBackground, (value: TypeBackground) => void] {
