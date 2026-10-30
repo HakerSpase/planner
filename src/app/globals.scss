@@ -1215,3 +1215,10 @@ body {
 		box-shadow: 0 0 0 2px transparent;
 	}
 }
+
+/* Подсказки клавиш (Ctrl K, Esc, Пробел) — только там, где есть клавиатура и мышь */
+@media (hover: none) and (pointer: coarse) {
+	.key-hint {
+		display: none !important;
+	}
+}

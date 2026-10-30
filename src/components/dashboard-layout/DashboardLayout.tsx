@@ -26,6 +26,7 @@ import {
 } from '@/lib/local-reminders'
 import { haptic, usePreferences } from '@/lib/preferences'
 import { registerServiceWorker } from '@/lib/push'
+import { useWidgetSync } from '@/lib/widget-sync'
 import { taskService } from '@/services/task.service'
 
 export default function DashboardLayout({
@@ -55,6 +56,8 @@ export default function DashboardLayout({
 	})
 	const tasksRef = useRef(tasks?.data)
 	tasksRef.current = tasks?.data
+	// Android-приложение: сводка для виджетов «Серия» и «Сегодня»
+	useWidgetSync(tasks?.data)
 	// Настольному приложению — расписание целиком: оно покажет напоминания даже из трея
 	useEffect(() => {
 		syncDesktopReminders(tasks?.data)

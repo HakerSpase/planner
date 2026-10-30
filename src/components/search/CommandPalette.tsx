@@ -307,7 +307,7 @@ export function CommandPalette() {
 						placeholder='Листы, задачи, разделы…'
 						className='h-14 min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-subtle'
 					/>
-					<kbd className='hidden border border-border px-1.5 py-0.5 font-mono text-2xs text-subtle sm:block'>
+					<kbd className='key-hint hidden border border-border px-1.5 py-0.5 font-mono text-2xs text-subtle sm:block'>
 						Esc
 					</kbd>
 				</div>
@@ -381,7 +381,7 @@ export function CommandPalette() {
 						})
 					)}
 				</div>
-				<footer className='hidden items-center gap-4 border-t border-border px-4 py-2 text-2xs text-subtle sm:flex'>
+				<footer className='key-hint hidden items-center gap-4 border-t border-border px-4 py-2 text-2xs text-subtle sm:flex'>
 					<span>↑ ↓ — выбрать</span>
 					<span>Enter — открыть</span>
 					<span className='ml-auto'>Ctrl + K — открыть из любого места</span>

@@ -4,4 +4,8 @@
     <string name="title_activity_main">Planner</string>
     <string name="package_name">app.mplanner.planner</string>
     <string name="custom_url_scheme">app.mplanner.planner</string>
+    <string name="widget_streak_name">Серия</string>
+    <string name="widget_streak_desc">Сколько дней подряд ты что-то делаешь в Planner</string>
+    <string name="widget_today_name">Сегодня</string>
+    <string name="widget_today_desc">Серия, задачи дня, ближайшее дело и карточки к повторению</string>
 </resources>

@@ -40,7 +40,9 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 						className='shrink-0'
 					/>
 					<span className='flex-1 truncate text-left max-sm:hidden'>Поиск</span>
-					<kbd className='font-mono text-2xs max-sm:hidden'>Ctrl K</kbd>
+					<kbd className='key-hint font-mono text-2xs max-sm:hidden'>
+						Ctrl K
+					</kbd>
 				</button>
 			</div>
 

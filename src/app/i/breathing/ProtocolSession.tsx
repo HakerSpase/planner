@@ -451,7 +451,7 @@ export function ProtocolSession({
 									: step.record
 										? 'Вдохнул раньше'
 										: 'Дальше'}
-								<kbd className='hidden font-mono text-2xs opacity-60 sm:inline'>
+								<kbd className='key-hint hidden font-mono text-2xs opacity-60 sm:inline'>
 									Пробел
 								</kbd>
 							</button>

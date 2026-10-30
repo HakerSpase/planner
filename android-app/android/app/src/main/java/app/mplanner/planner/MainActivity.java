@@ -19,9 +19,13 @@ import com.getcapacitor.BridgeActivity;
  */
 public class MainActivity extends BridgeActivity {
     private static final String SITE = "https://mplanner-dun.vercel.app";
+    /** Раздел, который открыть по нажатию на виджет */
+    static final String EXTRA_PATH = "planner_path";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Свой плагин регистрируем до старта моста
+        registerPlugin(WidgetPlugin.class);
         super.onCreate(savedInstanceState);
         handleIntent(getIntent());
     }
@@ -37,8 +41,14 @@ public class MainActivity extends BridgeActivity {
         if (intent == null) return;
         String target = null;
 
+        String path = intent.getStringExtra(EXTRA_PATH);
+        if (path != null && path.startsWith("/")) {
+            target = SITE + path;
+            intent.removeExtra(EXTRA_PATH);
+        }
+
         Uri data = intent.getData();
-        if (Intent.ACTION_VIEW.equals(intent.getAction()) && data != null
+        if (target == null && Intent.ACTION_VIEW.equals(intent.getAction()) && data != null
                 && "app.mplanner.planner".equals(data.getScheme())
                 && "auth".equals(data.getHost())) {
             String code = data.getQueryParameter("code");

@@ -25,11 +25,13 @@ const PRIORITY_LABEL: Record<EnumTaskPriority, string> = {
 	[EnumTaskPriority.low]: 'Низкий'
 }
 
-/** Одна строка — готовая задача: «реферат завтра в 18:00 !важно» */
+/** Задача из «Поделиться» на Android: «реферат завтра в 18:00 !важно» → день, время, приоритет */
 export function QuickAddTask() {
 	const queryClient = useQueryClient()
 	const [text, setText] = useState('')
 	const [saving, setSaving] = useState(false)
+	// Строка видна, только когда поделились текстом из другого приложения (Android)
+	const [visible, setVisible] = useState(false)
 	const parsed = useMemo(() => parseQuickTask(text), [text])
 	const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,6 +48,7 @@ export function QuickAddTask() {
 			'',
 			window.location.pathname + (rest ? `?${rest}` : '')
 		)
+		setVisible(true)
 		requestAnimationFrame(() => inputRef.current?.focus())
 	}, [])
 
@@ -74,6 +77,7 @@ export function QuickAddTask() {
 					.join(' · ')
 			})
 			setText('')
+			setVisible(false)
 		} catch {
 			toast.error('Не удалось добавить задачу')
 		} finally {
@@ -86,6 +90,8 @@ export function QuickAddTask() {
 		parsed.time && { icon: Clock, label: parsed.time },
 		parsed.priority && { icon: Flag, label: PRIORITY_LABEL[parsed.priority] }
 	].filter(Boolean) as { icon: typeof Clock; label: string }[]
+
+	if (!visible) return null
 
 	return (
 		<div className='mb-4'>
@@ -102,7 +108,10 @@ export function QuickAddTask() {
 						if (event.key === 'Enter') {
 							event.preventDefault()
 							void submit()
-						} else if (event.key === 'Escape') setText('')
+						} else if (event.key === 'Escape') {
+							setText('')
+							setVisible(false)
+						}
 					}}
 					placeholder='Быстро: «реферат завтра в 18:00 !важно»'
 					aria-label='Быстрое добавление задачи'

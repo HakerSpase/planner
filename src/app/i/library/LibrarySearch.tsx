@@ -290,8 +290,8 @@ export function LibrarySearch({
 				placeholder='Поиск по архиву'
 				className='h-10 w-full border-b border-border bg-transparent pl-9 pr-14 text-sm text-fg outline-none transition-colors placeholder:text-subtle focus:border-primary/70'
 			/>
-			<kbd className='pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 font-mono text-2xs text-subtle sm:block'>
-				Ctrl K
+			<kbd className='key-hint pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 font-mono text-2xs text-subtle sm:block'>
+				/
 			</kbd>
 
 			{isOpen && query.trim() && (
