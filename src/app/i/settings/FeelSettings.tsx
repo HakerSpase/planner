@@ -15,6 +15,8 @@ import {
 interface IDesktopBridge {
 	getSettings: () => Promise<{ tray: boolean; autostart: boolean }>
 	setSettings: (patch: Partial<{ tray: boolean; autostart: boolean }>) => Promise<void>
+	// Окно Windows «Разрешить уведомления?»; в старых версиях приложения метода нет
+	requestNotifications?: () => Promise<{ notifications: boolean | null }>
 }
 
 declare global {

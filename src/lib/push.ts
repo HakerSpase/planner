@@ -29,7 +29,26 @@ export async function registerServiceWorker() {
 	return navigator.serviceWorker.register('/sw.js', { scope: '/' })
 }
 
+/*
+ * В настольном приложении (WebView2) веб-пуша нет: уведомления показывает само приложение
+ * через Windows, пока оно запущено (в том числе свёрнутым в трей). Разрешение спрашивает
+ * окно Windows, а не браузер.
+ */
+export const desktopBridge = () => (typeof window !== 'undefined' ? window.plannerDesktop : undefined)
+
+function desktopState(): TypePushState {
+	if (typeof Notification === 'undefined') return 'unsupported'
+	if (Notification.permission === 'granted') return 'on'
+	return Notification.permission === 'denied' ? 'denied' : 'off'
+}
+
+/** Включён ли настоящий веб-пуш (его доставит сервер, даже когда планер закрыт) */
+export async function hasServerPush() {
+	return !desktopBridge() && (await getPushState()) === 'on'
+}
+
 export async function getPushState(): Promise<TypePushState> {
+	if (desktopBridge()) return desktopState()
 	if (!pushSupported()) return 'unsupported'
 	if (Notification.permission === 'denied') return 'denied'
 	const registration = await navigator.serviceWorker.getRegistration('/')
@@ -61,6 +80,17 @@ const deviceName = () => {
 }
 
 export async function enablePush() {
+	const desktop = desktopBridge()
+	if (desktop) {
+		if (desktop.requestNotifications) {
+			const { notifications } = await desktop.requestNotifications()
+			if (!notifications) throw new Error('denied')
+		}
+		// Разрешение уже выдано приложением; если страница ещё не узнала о нём — спросит сама
+		if (Notification.permission !== 'granted' && (await Notification.requestPermission()) !== 'granted')
+			throw new Error('reload')
+		return
+	}
 	if (!pushSupported()) throw new Error('unsupported')
 	const permission = await Notification.requestPermission()
 	if (permission !== 'granted') throw new Error(permission)
@@ -92,6 +122,13 @@ export async function disablePush() {
 
 /** Прислать проверочное уведомление на все устройства пользователя */
 export async function sendTestPush() {
+	if (desktopBridge()) {
+		new Notification('Planner', {
+			body: 'Уведомления работают — так будут приходить напоминания о задачах',
+			icon: '/planner-icon-192.png'
+		})
+		return 1
+	}
 	const { data, error } = await createClient().functions.invoke<{ delivered: number }>('send-reminders', {
 		body: { test: true }
 	})

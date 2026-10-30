@@ -1,6 +1,6 @@
 import { type ITaskResponse } from '@/types/task.types'
 
-import { getPushState } from './push'
+import { hasServerPush } from './push'
 
 /*
  * Запасной путь для напоминаний, пока планер открыт: в настольном приложении (WebView2)
@@ -34,7 +34,7 @@ export function watchLocalReminders(
 
 	const check = async () => {
 		if (stopped) return
-		if ((await getPushState().catch(() => 'unsupported')) === 'on') return
+		if (await hasServerPush().catch(() => false)) return
 		const now = Date.now()
 		const shown = readShown()
 		let changed = false
