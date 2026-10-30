@@ -1,6 +1,7 @@
 'use client'
 
 import { Node, mergeAttributes } from '@tiptap/core'
+import { NodeSelection } from '@tiptap/pm/state'
 import {
 	type NodeViewProps,
 	NodeViewWrapper,
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 import { Waveform, useWaveform } from './voice'
 import { getPreferences } from '@/lib/preferences'
@@ -116,6 +119,25 @@ function attachmentNode(name: string, dataAttr: string) {
 			]
 		},
 
+		// Backspace/Delete по выделенному вложению — сначала спросить
+		addKeyboardShortcuts() {
+			const guard = () => {
+				const { selection } = this.editor.state
+				if (
+					!(selection instanceof NodeSelection) ||
+					selection.node.type.name !== name
+				)
+					return false
+				window.dispatchEvent(
+					new CustomEvent('planner:confirm-remove', {
+						detail: { pos: selection.from }
+					})
+				)
+				return true
+			}
+			return { Backspace: guard, Delete: guard }
+		},
+
 		addStorage() {
 			return {
 				markdown: {
@@ -164,17 +186,46 @@ export const AudioAttachment = attachmentNode(
 	}
 })
 
+/** Убрать вложение — только после подтверждения (и по крестику, и по Backspace/Delete) */
 function RemoveButton({ props }: { props: NodeViewProps }) {
+	const [asking, setAsking] = useState(false)
+	const isAudio = props.node.type.name === 'audioAttachment'
+
+	useEffect(() => {
+		const onRequest = (event: Event) => {
+			const position =
+				typeof props.getPos === 'function' ? props.getPos() : undefined
+			if ((event as CustomEvent).detail?.pos === position) setAsking(true)
+		}
+		window.addEventListener('planner:confirm-remove', onRequest)
+		return () => window.removeEventListener('planner:confirm-remove', onRequest)
+	}, [props])
+
 	if (!props.editor.isEditable) return null
 	return (
-		<button
-			type='button'
-			aria-label='Убрать из заметки'
-			onClick={() => props.deleteNode()}
-			className='grid h-8 w-8 shrink-0 place-items-center text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100 [@media(hover:none)]:opacity-100'
-		>
-			<X size={14} />
-		</button>
+		<>
+			<button
+				type='button'
+				aria-label='Убрать из заметки'
+				onClick={() => setAsking(true)}
+				className='grid h-8 w-8 shrink-0 place-items-center rounded-full text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100 [@media(hover:none)]:opacity-100'
+			>
+				<X size={14} />
+			</button>
+			<ConfirmDialog
+				open={asking}
+				title={isAudio ? 'Удалить голосовое?' : 'Удалить файл?'}
+				description={`«${props.node.attrs.name || (isAudio ? 'Голосовое' : 'Файл')}» исчезнет из заметки.`}
+				onConfirm={() => {
+					setAsking(false)
+					props.deleteNode()
+				}}
+				onClose={() => {
+					setAsking(false)
+					props.editor.commands.focus()
+				}}
+			/>
+		</>
 	)
 }
 

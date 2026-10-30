@@ -1,16 +1,19 @@
 'use client'
 
 import cn from 'clsx'
-import { AudioLines, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AudioLines, Pause, Play, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+
+import { Waveform } from '@/components/editor/voice'
 
 import { setPreferences, usePreferences } from '@/lib/preferences'
 import {
+	getSpeechChunks,
 	isSpeechSupported,
 	pauseSpeech,
 	restartCurrent,
 	resumeSpeech,
-	seekSpeech,
+	seekSpeechTo,
 	selectedSpeechText,
 	speak,
 	stopSpeech,
@@ -41,93 +44,158 @@ export function SpeechPlayer() {
 
 	if (speech.status === 'idle') return <SpeakSelectionButton />
 
-	const progress = speech.total ? ((speech.index + 1) / speech.total) * 100 : 0
-	const playing = speech.status === 'playing'
+	return (
+		<ActivePlayer
+			title={speech.title}
+			index={speech.index}
+			total={speech.total}
+			current={speech.current}
+			playing={speech.status === 'playing'}
+			rate={preferences.ttsRate}
+		/>
+	)
+}
+
+// Псевдоволна по тексту: стабильная для одной и той же фразы, похожа на речь
+function textPeaks(chunks: string[], bars = 64) {
+	const lengths = chunks.map(chunk => Math.max(1, chunk.length))
+	const total = lengths.reduce((sum, value) => sum + value, 0)
+	const starts: number[] = []
+	lengths.reduce((sum, value, i) => ((starts[i] = sum), sum + value), 0)
+	return Array.from({ length: bars }, (_, j) => {
+		const position = ((j + 0.5) / bars) * total
+		let index = starts.findIndex((start, i) => position < start + lengths[i])
+		if (index < 0) index = chunks.length - 1
+		const offset = Math.floor(position - starts[index])
+		const code = chunks[index].charCodeAt(offset % chunks[index].length) || 0
+		const wave = Math.abs(Math.sin(j * 1.7 + code * 0.31)) * 0.6 + 0.35
+		// паузы между фразами — пониже
+		const edge = offset < 2 || lengths[index] - offset < 2 ? 0.45 : 1
+		return Math.min(1, wave * edge)
+	})
+}
+
+/** Плеер как голосовое в Telegram: круглая кнопка, волна с перемоткой, время, скорость */
+function ActivePlayer({
+	title,
+	index,
+	total,
+	current,
+	playing,
+	rate
+}: {
+	title: string
+	index: number
+	total: number
+	current: string
+	playing: boolean
+	rate: number
+}) {
+	const chunks = getSpeechChunks()
+	const lengths = chunks.map(chunk => Math.max(1, chunk.length))
+	const totalChars = lengths.reduce((sum, value) => sum + value, 0) || 1
+	const before = lengths.slice(0, index).reduce((sum, value) => sum + value, 0)
+	// ~14 символов в секунду при скорости 1× — чтобы шкала шла плавно внутри фразы
+	const charsPerSecond = 14 * rate
+	const [phraseStart, setPhraseStart] = useState(Date.now())
+	const [, setTick] = useState(0)
+	useEffect(() => setPhraseStart(Date.now()), [index, playing])
+	useEffect(() => {
+		if (!playing) return
+		const timer = setInterval(() => setTick(tick => tick + 1), 120)
+		return () => clearInterval(timer)
+	}, [playing])
+	const inside = playing
+		? Math.min(
+				lengths[index] ?? 0,
+				((Date.now() - phraseStart) / 1000) * charsPerSecond
+			)
+		: 0
+	const progress = Math.min(1, (before + inside) / totalChars)
+	const peaks = useMemo(() => textPeaks(chunks), [chunks])
+
+	const elapsed = (before + inside) / charsPerSecond
+	const length = totalChars / charsPerSecond
+	const clock = (seconds: number) =>
+		`${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
+
+	const seek = (fraction: number) => {
+		const target = fraction * totalChars
+		let sum = 0
+		for (let i = 0; i < lengths.length; i++) {
+			if (target < sum + lengths[i]) return seekSpeechTo(i)
+			sum += lengths[i]
+		}
+		seekSpeechTo(lengths.length - 1)
+	}
 
 	return (
 		<div className='pointer-events-none fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-[60] flex justify-center px-3 lg:bottom-6 print:hidden'>
 			<div
 				role='region'
 				aria-label='Озвучка'
-				className='pointer-events-auto relative w-full max-w-xl animate-pop-in overflow-hidden rounded-2xl border border-white/10 bg-elevated/95 shadow-pop backdrop-blur-xl'
+				className='pointer-events-auto flex w-full max-w-xl animate-pop-in items-center gap-3 rounded-2xl border border-white/10 bg-elevated/95 py-2.5 pl-2.5 pr-2 shadow-pop backdrop-blur-xl'
 			>
-				<div className='flex items-center gap-2 py-2 pl-3 pr-2'>
-					<span
-						className={cn(
-							'grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/15 text-primary',
-							playing && 'animate-pulse'
-						)}
+				<button
+					type='button'
+					aria-label={playing ? 'Пауза' : 'Продолжить'}
+					onClick={() => (playing ? pauseSpeech() : resumeSpeech())}
+					className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white transition-transform hover:scale-105 active:scale-95'
+				>
+					{playing ? (
+						<Pause
+							size={18}
+							fill='currentColor'
+						/>
+					) : (
+						<Play
+							size={18}
+							fill='currentColor'
+							className='translate-x-px'
+						/>
+					)}
+				</button>
+				<div className='min-w-0 flex-1'>
+					<p
+						className='truncate text-xs text-subtle'
+						title={current}
 					>
-						<AudioLines size={17} />
-					</span>
-					<div className='min-w-0 flex-1'>
-						<p className='truncate text-xs text-subtle'>
-							{speech.title || 'Озвучка'} · {speech.index + 1} из {speech.total}
-						</p>
-						<p className='truncate text-sm text-fg'>{speech.current}</p>
-					</div>
-					<button
-						type='button'
-						aria-label='Предыдущая фраза'
-						onClick={() => seekSpeech(-1)}
-						className='hidden h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-white/[0.06] hover:text-fg sm:grid'
-					>
-						<SkipBack size={16} />
-					</button>
-					<button
-						type='button'
-						aria-label={playing ? 'Пауза' : 'Продолжить'}
-						onClick={() => (playing ? pauseSpeech() : resumeSpeech())}
-						className='grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-white transition-colors hover:bg-primary-hover'
-					>
-						{playing ? (
-							<Pause
-								size={17}
-								fill='currentColor'
-							/>
-						) : (
-							<Play
-								size={17}
-								fill='currentColor'
-								className='translate-x-px'
-							/>
-						)}
-					</button>
-					<button
-						type='button'
-						aria-label='Следующая фраза'
-						onClick={() => seekSpeech(1)}
-						className='grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
-					>
-						<SkipForward size={16} />
-					</button>
-					<button
-						type='button'
-						title='Скорость'
-						onClick={() => {
-							const index = RATES.indexOf(preferences.ttsRate)
-							setPreferences({ ttsRate: RATES[(index + 1) % RATES.length] })
-							restartCurrent()
-						}}
-						className='h-8 w-12 shrink-0 rounded-full border border-border font-mono text-xs text-muted transition-colors hover:text-fg'
-					>
-						{preferences.ttsRate}×
-					</button>
-					<button
-						type='button'
-						aria-label='Остановить'
-						onClick={stopSpeech}
-						className='grid h-9 w-9 shrink-0 place-items-center rounded-full text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
-					>
-						<X size={16} />
-					</button>
-				</div>
-				<div className='absolute inset-x-0 bottom-0 h-0.5 bg-white/[0.06]'>
-					<div
-						className='h-full bg-primary transition-[width] duration-300'
-						style={{ width: `${progress}%` }}
+						{title || 'Озвучка'}
+					</p>
+					<Waveform
+						peaks={peaks}
+						progress={progress}
+						onSeek={seek}
 					/>
+					<p className='flex items-center gap-2 font-mono text-2xs tabular-nums text-subtle'>
+						<span>
+							{clock(elapsed)} / {clock(length)}
+						</span>
+						<span className='truncate font-sans'>
+							фраза {index + 1} из {total}
+						</span>
+					</p>
 				</div>
+				<button
+					type='button'
+					title='Скорость'
+					onClick={() => {
+						const position = RATES.indexOf(rate)
+						setPreferences({ ttsRate: RATES[(position + 1) % RATES.length] })
+						restartCurrent()
+					}}
+					className='h-7 shrink-0 rounded-full bg-white/[0.08] px-2.5 font-mono text-xs text-fg transition-colors hover:bg-white/[0.14]'
+				>
+					{rate}×
+				</button>
+				<button
+					type='button'
+					aria-label='Остановить'
+					onClick={stopSpeech}
+					className='grid h-9 w-9 shrink-0 place-items-center rounded-full text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+				>
+					<X size={16} />
+				</button>
 			</div>
 		</div>
 	)

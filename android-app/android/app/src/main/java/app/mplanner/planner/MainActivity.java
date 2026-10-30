@@ -28,6 +28,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(WidgetPlugin.class);
         super.onCreate(savedInstanceState);
         handleIntent(getIntent());
+        // Фоновое обновление виджетов и напоминаний (если токен уже выдан)
+        SyncWorker.schedule(this);
     }
 
     @Override

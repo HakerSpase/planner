@@ -70,21 +70,9 @@ function createEdgeVoice(
 }
 
 export const EDGE_VOICES: SpeechSynthesisVoice[] = [
-	createEdgeVoice(
-		'ru-RU-SvetlanaNeural',
-		'Светлана · Edge Neural',
-		'ru-RU'
-	),
-	createEdgeVoice(
-		'ru-RU-DmitryNeural',
-		'Дмитрий · Edge Neural',
-		'ru-RU'
-	),
-	createEdgeVoice(
-		'ru-RU-DariyaNeural',
-		'Дария · Edge Neural',
-		'ru-RU'
-	),
+	createEdgeVoice('ru-RU-SvetlanaNeural', 'Светлана · Edge Neural', 'ru-RU'),
+	createEdgeVoice('ru-RU-DmitryNeural', 'Дмитрий · Edge Neural', 'ru-RU'),
+	createEdgeVoice('ru-RU-DariyaNeural', 'Дария · Edge Neural', 'ru-RU'),
 	createEdgeVoice(
 		'en-US-AvaMultilingualNeural',
 		'Ava Multilingual · Edge Neural',
@@ -514,6 +502,15 @@ export function resumeSpeech() {
 		return
 	}
 	speakChunk(state.index)
+}
+
+/** Фразы текущего чтения — для шкалы плеера */
+export const getSpeechChunks = () => chunks
+
+/** Перейти к фразе по номеру (перемотка по шкале) */
+export function seekSpeechTo(index: number) {
+	if (state.status === 'idle' || !chunks.length) return
+	speakChunk(Math.max(0, Math.min(chunks.length - 1, index)))
 }
 
 export function seekSpeech(delta: number) {

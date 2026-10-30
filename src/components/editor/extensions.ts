@@ -14,6 +14,23 @@ const escapeAttr = (value: string) =>
  * сохраняем HTML-тегом <img width>, а без ширины — обычным ![](url).
  */
 export const PlannerImage = Image.extend({
+	// Backspace/Delete по выделенной картинке — сначала спросить (диалог рисует RichEditor)
+	addKeyboardShortcuts() {
+		const guard = () => {
+			const { selection } = this.editor.state
+			if (
+				!(selection instanceof NodeSelection) ||
+				selection.node.type.name !== this.name
+			)
+				return false
+			this.editor.view.dom.dispatchEvent(
+				new CustomEvent('planner:confirm-remove-image', { bubbles: true })
+			)
+			return true
+		}
+		return { Backspace: guard, Delete: guard }
+	},
+
 	parseHTML() {
 		return [
 			...(this.parent?.() || []),
@@ -48,7 +65,9 @@ export const PlannerImage = Image.extend({
 					// локальный предпросмотр, пока фото грузится, — не сохраняем
 					if (typeof src === 'string' && src.startsWith('blob:')) {
 						// файл ещё грузится — оставляем отметку, менеджер загрузок заменит её на картинку
-						state.write(`<div data-planner-pending="${escapeAttr(src)}" data-kind="image"></div>`)
+						state.write(
+							`<div data-planner-pending="${escapeAttr(src)}" data-kind="image"></div>`
+						)
 						state.closeBlock(node)
 						return
 					}
@@ -115,7 +134,11 @@ export function moveSelectedNode(editor: Editor, direction: -1 | 1) {
  * Подменить адрес картинки (локальный предпросмотр → ImageKit) или удалить её (src = null).
  * Удалённую картинку сперва подгружаем в кэш браузера, чтобы не было пустого мигания.
  */
-export async function replaceImageSrc(editor: Editor, from: string, to: string | null) {
+export async function replaceImageSrc(
+	editor: Editor,
+	from: string,
+	to: string | null
+) {
 	if (to && to.includes('?tr=')) {
 		await new Promise<void>(resolve => {
 			const image = new window.Image()
@@ -127,7 +150,8 @@ export async function replaceImageSrc(editor: Editor, from: string, to: string |
 	const { state, view } = editor
 	const tr = state.tr
 	state.doc.descendants((node, pos) => {
-		if (!UPLOAD_NODES.includes(node.type.name) || node.attrs.src !== from) return
+		if (!UPLOAD_NODES.includes(node.type.name) || node.attrs.src !== from)
+			return
 		if (to) tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: to })
 		else tr.delete(pos, pos + node.nodeSize)
 	})
@@ -141,7 +165,10 @@ const UPLOAD_NODES = ['image', 'fileAttachment', 'audioAttachment']
 const collectUploads = (doc: import('@tiptap/pm/model').Node) => {
 	const urls = new Set<string>()
 	doc.descendants(node => {
-		if (UPLOAD_NODES.includes(node.type.name) && typeof node.attrs.src === 'string')
+		if (
+			UPLOAD_NODES.includes(node.type.name) &&
+			typeof node.attrs.src === 'string'
+		)
 			urls.add(node.attrs.src)
 	})
 	return urls
@@ -152,7 +179,9 @@ const collectUploads = (doc: import('@tiptap/pm/model').Node) => {
  * когда редактор закрывается — если к тому моменту их не вернули (Ctrl+Z, вставка).
  * Программная смена текста (другой день в «Мыслях») не считается удалением.
  */
-export const UploadTracker = Extension.create<{ onDelete: (urls: string[]) => void }>({
+export const UploadTracker = Extension.create<{
+	onDelete: (urls: string[]) => void
+}>({
 	name: 'uploadTracker',
 
 	addOptions() {
@@ -214,7 +243,8 @@ export const TouchDrag = Extension.create({
 
 					const topLevelStart = (index: number) => {
 						let pos = 0
-						for (let i = 0; i < index; i++) pos += view.state.doc.child(i).nodeSize
+						for (let i = 0; i < index; i++)
+							pos += view.state.doc.child(i).nodeSize
 						return pos
 					}
 
@@ -230,7 +260,9 @@ export const TouchDrag = Extension.create({
 
 					const onStart = (event: TouchEvent) => {
 						if (!view.editable || event.touches.length !== 1) return
-						const element = (event.target as HTMLElement).closest('img, [data-drag-block]')
+						const element = (event.target as HTMLElement).closest(
+							'img, [data-drag-block]'
+						)
 						if (!element) return
 						const touch = event.touches[0]
 						startX = touch.clientX
@@ -245,7 +277,9 @@ export const TouchDrag = Extension.create({
 							navigator.vibrate?.(12)
 							document.body.style.userSelect = 'none'
 							view.dispatch(
-								view.state.tr.setSelection(NodeSelection.create(view.state.doc, fromPos))
+								view.state.tr.setSelection(
+									NodeSelection.create(view.state.doc, fromPos)
+								)
 							)
 							indicator = document.createElement('div')
 							indicator.style.cssText =
@@ -258,14 +292,18 @@ export const TouchDrag = Extension.create({
 					const onMove = (event: TouchEvent) => {
 						if (dragging) return
 						const touch = event.touches[0]
-						if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 8) clearTimeout(timer)
+						if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > 8)
+							clearTimeout(timer)
 					}
 
 					const onDragMove = (event: TouchEvent) => {
 						const touch = event.touches[0]
 						if (!dragging) return
 						event.preventDefault()
-						const found = view.posAtCoords({ left: touch.clientX, top: touch.clientY })
+						const found = view.posAtCoords({
+							left: touch.clientX,
+							top: touch.clientY
+						})
 						if (!found || !indicator) return
 						const index = view.state.doc.resolve(found.pos).index(0)
 						const blockStart = topLevelStart(index)
@@ -285,9 +323,17 @@ export const TouchDrag = Extension.create({
 					const onEnd = () => {
 						if (dragging && fromPos >= 0 && target >= 0) {
 							const node = view.state.doc.nodeAt(fromPos)
-							if (node && target !== fromPos && target !== fromPos + node.nodeSize) {
-								const tr = view.state.tr.delete(fromPos, fromPos + node.nodeSize)
-								const insertAt = target > fromPos ? target - node.nodeSize : target
+							if (
+								node &&
+								target !== fromPos &&
+								target !== fromPos + node.nodeSize
+							) {
+								const tr = view.state.tr.delete(
+									fromPos,
+									fromPos + node.nodeSize
+								)
+								const insertAt =
+									target > fromPos ? target - node.nodeSize : target
 								tr.insert(insertAt, node)
 								tr.setSelection(NodeSelection.create(tr.doc, insertAt))
 								view.dispatch(tr.scrollIntoView())
@@ -302,7 +348,10 @@ export const TouchDrag = Extension.create({
 					const syncBlocking = () => {
 						if (view.editable === blocking) return
 						blocking = view.editable
-						if (blocking) view.dom.addEventListener('touchmove', onDragMove, { passive: false })
+						if (blocking)
+							view.dom.addEventListener('touchmove', onDragMove, {
+								passive: false
+							})
 						else view.dom.removeEventListener('touchmove', onDragMove)
 					}
 					syncBlocking()

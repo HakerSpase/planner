@@ -11,6 +11,8 @@ public class TodayWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         render(context, manager, ids);
+        // Система просит обновить (раз в 30 мин или виджет только поставили) — подтянуть свежее
+        SyncWorker.syncNow(context);
     }
 
     static void render(Context context, AppWidgetManager manager, int[] ids) {

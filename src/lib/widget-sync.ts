@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { type ITaskResponse } from '@/types/task.types'
 
 import { nativePlugin } from './native'
+import { SUPABASE_KEY, SUPABASE_URL, createClient } from './supabase/client'
 import { flashcardsService, isDue } from '@/services/flashcards.service'
 
 /*
@@ -187,6 +188,8 @@ export function useWidgetSync(tasks: ITaskResponse[] | undefined) {
 				if (counts) countsRef.current = counts
 				if (deck) cardsRef.current = deck.filter(card => isDue(card)).length
 				push()
+				// Напоминания на телефоне ставит фоновая часть — пусть заберёт свежие задачи
+				widget.sync?.().catch(() => {})
 			} finally {
 				loading = false
 			}
@@ -194,6 +197,21 @@ export function useWidgetSync(tasks: ITaskResponse[] | undefined) {
 
 		refreshRef.current = () => void refresh()
 		void refresh()
+
+		// Фоновое обновление: телефону нужен свой токен на чтение сводки — выдаём один раз
+		widget
+			.status()
+			.then(async ({ hasToken }: { hasToken: boolean }) => {
+				if (hasToken) return
+				const { data, error } = await createClient().rpc('widget_issue_token')
+				if (error || !data) return
+				await widget.setAuth({
+					token: data,
+					url: SUPABASE_URL,
+					key: SUPABASE_KEY
+				})
+			})
+			.catch(() => {})
 		// Свернули приложение — отправить сразу: в фоне таймеры Android замирают
 		const onVisibility = () => {
 			if (document.visibilityState === 'hidden') push()

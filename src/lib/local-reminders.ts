@@ -72,6 +72,24 @@ let nativeSignature = ''
 async function syncNativeReminders(tasks: ITaskResponse[]) {
 	const plugin = nativePlugin('LocalNotifications')
 	if (!plugin) return
+	// Новое приложение ставит напоминания само, в фоне — свои снимаем, чтобы не было двойных
+	if (nativePlugin('PlannerWidget')?.sync) {
+		if (nativeSignature !== 'native') {
+			nativeSignature = 'native'
+			const { notifications } = await plugin
+				.getPending()
+				.catch(() => ({ notifications: [] }))
+			if (notifications?.length)
+				await plugin
+					.cancel({
+						notifications: notifications.map((item: { id: number }) => ({
+							id: item.id
+						}))
+					})
+					.catch(() => {})
+		}
+		return
+	}
 	const items = upcomingReminders(tasks)
 		.filter(item => item.at > Date.now() + 5_000)
 		.slice(0, 60)

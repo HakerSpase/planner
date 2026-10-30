@@ -39,6 +39,11 @@
 
         </activity>
 
+        <!-- Напоминания, поставленные фоновым обновлением -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false" />
+
         <!-- Виджеты на рабочем столе -->
         <receiver
             android:name=".StreakWidget"

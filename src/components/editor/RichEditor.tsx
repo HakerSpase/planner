@@ -47,6 +47,8 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Markdown } from 'tiptap-markdown'
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+
 import { AnnotationMenu } from './AnnotationMenu'
 import { CalloutMenu } from './CalloutMenu'
 import { SelectionBubble, TableBubble } from './EditorBubbles'
@@ -227,6 +229,8 @@ export function RichEditor({
 	const [dragOver, setDragOver] = useState(false)
 	const wikiKeyRef = useRef<((event: KeyboardEvent) => boolean) | null>(null)
 	const [linkMenu, setLinkMenu] = useState<ILinkMenuRequest | null>(null)
+	// Удаление картинки клавишей — с подтверждением
+	const [confirmImage, setConfirmImage] = useState(false)
 
 	const editor = useEditor({
 		immediatelyRender: false,
@@ -358,6 +362,14 @@ export function RichEditor({
 	})
 
 	editorRef.current = editor
+
+	useEffect(() => {
+		const dom = editor?.view.dom
+		if (!dom) return
+		const ask = () => setConfirmImage(true)
+		dom.addEventListener('planner:confirm-remove-image', ask)
+		return () => dom.removeEventListener('planner:confirm-remove-image', ask)
+	}, [editor])
 
 	// Менеджер загрузок должен знать открытые редакторы, чтобы подставить готовый файл
 	useEffect(() => {
@@ -709,7 +721,7 @@ export function RichEditor({
 							<Divider />
 							<ToolButton
 								label='Удалить фото'
-								onClick={() => editor.chain().focus().deleteSelection().run()}
+								onClick={() => setConfirmImage(true)}
 							>
 								<Trash2 size={14} />
 							</ToolButton>
@@ -719,6 +731,19 @@ export function RichEditor({
 				{editor && <SelectionBubble editor={editor} />}
 				{editor && <TableBubble editor={editor} />}
 			</div>
+			<ConfirmDialog
+				open={confirmImage}
+				title='Удалить фото?'
+				description='Картинка исчезнет из заметки.'
+				onConfirm={() => {
+					setConfirmImage(false)
+					editor?.chain().focus().deleteSelection().run()
+				}}
+				onClose={() => {
+					setConfirmImage(false)
+					editor?.commands.focus()
+				}}
+			/>
 			{editor && linkMenu && (
 				<LinkMenu
 					editor={editor}
