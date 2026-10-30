@@ -2,17 +2,31 @@
 
 import { Node, mergeAttributes } from '@tiptap/core'
 import {
-	NodeViewWrapper,
 	type NodeViewProps,
+	NodeViewWrapper,
 	ReactNodeViewRenderer
 } from '@tiptap/react'
 import cn from 'clsx'
-import { Download, FileText, Loader2, Pause, Play, ScrollText, X } from 'lucide-react'
+import {
+	ArrowRight,
+	Download,
+	FileText,
+	Loader2,
+	Pause,
+	Play,
+	RotateCcw,
+	X
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { Waveform, useWaveform } from './voice'
 import { getPreferences } from '@/lib/preferences'
-import { type ITranscribeProgress, transcribeAudio } from '@/lib/transcribe'
+import {
+	type ITranscribeProgress,
+	isModelCached,
+	transcribeAudio
+} from '@/lib/transcribe'
 
 const escapeAttr = (value: string) =>
 	String(value ?? '')
@@ -46,12 +60,23 @@ function attachmentNode(name: string, dataAttr: string) {
 		addAttributes() {
 			return {
 				src: { default: null, parseHTML: el => el.getAttribute('data-src') },
-				name: { default: '', parseHTML: el => el.getAttribute('data-name') || '' },
+				name: {
+					default: '',
+					parseHTML: el => el.getAttribute('data-name') || ''
+				},
 				size: {
 					default: 0,
 					parseHTML: el => Number(el.getAttribute('data-size')) || 0
 				},
-				mime: { default: '', parseHTML: el => el.getAttribute('data-mime') || '' }
+				mime: {
+					default: '',
+					parseHTML: el => el.getAttribute('data-mime') || ''
+				},
+				// Расшифровка голосового — хранится вместе с ним, показывается по кнопке «→A»
+				transcript: {
+					default: '',
+					parseHTML: el => el.getAttribute('data-transcript') || ''
+				}
 			}
 		},
 
@@ -83,7 +108,10 @@ function attachmentNode(name: string, dataAttr: string) {
 					'data-src': HTMLAttributes.src,
 					'data-name': HTMLAttributes.name,
 					'data-size': HTMLAttributes.size,
-					'data-mime': HTMLAttributes.mime
+					'data-mime': HTMLAttributes.mime,
+					...(HTMLAttributes.transcript && {
+						'data-transcript': HTMLAttributes.transcript
+					})
 				})
 			]
 		},
@@ -92,7 +120,10 @@ function attachmentNode(name: string, dataAttr: string) {
 			return {
 				markdown: {
 					serialize(state: any, node: any) {
-						const { src, name, size, mime } = node.attrs
+						const { src, name, size, mime, transcript } = node.attrs
+						const extra = transcript
+							? ` data-transcript="${escapeAttr(String(transcript).replace(/\s*\n\s*/g, ' '))}"`
+							: ''
 						// пока файл грузится (blob:), в текст не пишем
 						if (!src) return
 						if (String(src).startsWith('blob:')) {
@@ -104,7 +135,7 @@ function attachmentNode(name: string, dataAttr: string) {
 							return
 						}
 						state.write(
-							`<div ${dataAttr} data-src="${escapeAttr(src)}" data-name="${escapeAttr(name)}" data-size="${size || 0}" data-mime="${escapeAttr(mime)}"></div>`
+							`<div ${dataAttr} data-src="${escapeAttr(src)}" data-name="${escapeAttr(name)}" data-size="${size || 0}" data-mime="${escapeAttr(mime)}"${extra}></div>`
 						)
 						state.closeBlock(node)
 					},
@@ -115,13 +146,19 @@ function attachmentNode(name: string, dataAttr: string) {
 	})
 }
 
-export const FileAttachment = attachmentNode('fileAttachment', 'data-planner-file').extend({
+export const FileAttachment = attachmentNode(
+	'fileAttachment',
+	'data-planner-file'
+).extend({
 	addNodeView() {
 		return ReactNodeViewRenderer(FileView)
 	}
 })
 
-export const AudioAttachment = attachmentNode('audioAttachment', 'data-planner-audio').extend({
+export const AudioAttachment = attachmentNode(
+	'audioAttachment',
+	'data-planner-audio'
+).extend({
 	addNodeView() {
 		return ReactNodeViewRenderer(AudioView)
 	}
@@ -185,51 +222,88 @@ function FileView(props: NodeViewProps) {
 
 const SPEEDS = [1, 1.5, 2]
 
+// Расшифровки, сделанные в этом браузере, — на случай, если лист открыт только для чтения
+const TRANSCRIPT_KEY = 'planner:transcript:'
+const readTranscript = (src: string) => {
+	try {
+		return localStorage.getItem(TRANSCRIPT_KEY + src) || ''
+	} catch {
+		return ''
+	}
+}
+
+/** Голосовое как в Telegram: круглая кнопка, волна, время и размер, «→A» — расшифровка */
 function AudioView(props: NodeViewProps) {
-	const { src, name } = props.node.attrs
+	const { src, name, size, transcript: savedTranscript } = props.node.attrs
 	const audioRef = useRef<HTMLAudioElement>(null)
 	const [isPlaying, setIsPlaying] = useState(false)
 	const [current, setCurrent] = useState(0)
 	const [duration, setDuration] = useState(0)
 	const [speed, setSpeed] = useState(1)
 	const isUploading = String(src || '').startsWith('blob:')
-	const [transcribing, setTranscribing] = useState<ITranscribeProgress | null>(null)
+	const peaks = useWaveform(src)
+	const [transcribing, setTranscribing] = useState<ITranscribeProgress | null>(
+		null
+	)
+	const [modelCached, setModelCached] = useState(false)
+	// Текст скрыт, пока не нажмёшь «→A»; открыл заметку заново — снова скрыт
+	const [showText, setShowText] = useState(false)
+	const [localTranscript, setLocalTranscript] = useState('')
+	const transcript: string = savedTranscript || localTranscript
+
+	useEffect(() => {
+		if (!savedTranscript && src) setLocalTranscript(readTranscript(src))
+	}, [savedTranscript, src])
 
 	useEffect(() => {
 		if (audioRef.current) audioRef.current.playbackRate = speed
 	}, [speed])
 
-	// Расшифровка локальной нейросетью — текст встаёт выноской сразу под аудио
-	const transcribe = async () => {
+	const recognize = async () => {
 		if (transcribing) return
-		if (getPreferences().sttModel === 'off') {
+		const model = getPreferences().sttModel
+		if (model === 'off') {
 			toast('Расшифровка выключена', {
-				description: 'Выберите модель в настройках — она скачается один раз и будет работать без интернета.',
-				action: { label: 'Настройки', onClick: () => (window.location.href = '/i/settings#transcription') }
+				description:
+					'Выберите модель в настройках — она скачается один раз и будет работать без интернета.',
+				action: {
+					label: 'Настройки',
+					onClick: () => (window.location.href = '/i/settings#transcription')
+				}
 			})
 			return
 		}
+		setShowText(true)
+		setModelCached(await isModelCached(model))
 		setTranscribing({ stage: 'prepare' })
 		try {
-			const text = await transcribeAudio(src, setTranscribing)
+			const text = (await transcribeAudio(src, setTranscribing))
+				.replace(/\s*\n\s*/g, ' ')
+				.trim()
 			if (!text) {
 				toast('Речь не распознана')
 				return
 			}
-			const position = typeof props.getPos === 'function' ? props.getPos() : undefined
-			if (position === undefined) return
-			const quoted = text.replace(/\s*\n\s*/g, ' ')
-			props.editor
-				.chain()
-				.insertContentAt(position + props.node.nodeSize, `> [!note] Расшифровка: ${name || 'аудио'}\n> ${quoted}\n\n`)
-				.run()
+			setLocalTranscript(text)
+			try {
+				localStorage.setItem(TRANSCRIPT_KEY + src, text)
+			} catch {}
+			// Сохраняем в саму заметку — на другом устройстве распознавать заново не придётся
+			if (props.editor.isEditable) props.updateAttributes({ transcript: text })
 		} catch (error) {
 			toast.error('Не получилось расшифровать', {
-				description: error instanceof Error ? error.message.slice(0, 160) : undefined
+				description:
+					error instanceof Error ? error.message.slice(0, 160) : undefined
 			})
 		} finally {
 			setTranscribing(null)
 		}
+	}
+
+	const onTranscriptButton = () => {
+		if (transcribing) return
+		if (transcript) setShowText(value => !value)
+		else void recognize()
 	}
 
 	const toggle = () => {
@@ -239,148 +313,189 @@ function AudioView(props: NodeViewProps) {
 		else audio.pause()
 	}
 
-	const seek = (clientX: number, element: HTMLElement) => {
-		const audio = audioRef.current
-		if (!audio || !duration) return
-		const rect = element.getBoundingClientRect()
-		audio.currentTime = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * duration
-	}
-
-	const progress = duration ? (current / duration) * 100 : 0
+	const progress = duration ? current / duration : 0
+	const started = isPlaying || current > 0
 
 	return (
 		<NodeViewWrapper
-			className={cn(
-				'group my-3 flex flex-wrap items-center gap-x-3 border border-border bg-white/[0.02] p-2 pr-1',
-				props.selected && 'border-primary'
-			)}
+			className='group my-3'
 			data-drag-block
 		>
-			<audio
-				ref={audioRef}
-				src={src}
-				preload='metadata'
-				onPlay={() => setIsPlaying(true)}
-				onPause={() => setIsPlaying(false)}
-				onEnded={() => setIsPlaying(false)}
-				onTimeUpdate={event => setCurrent(event.currentTarget.currentTime)}
-				onLoadedMetadata={event => {
-					const value = event.currentTarget.duration
-					// у записей из MediaRecorder длительность часто Infinity до первой перемотки
-					if (Number.isFinite(value)) setDuration(value)
-					else {
-						event.currentTarget.currentTime = 1e9
-						event.currentTarget.ontimeupdate = function () {
-							const audio = this as HTMLAudioElement
-							audio.ontimeupdate = null
-							setDuration(audio.duration)
-							audio.currentTime = 0
-						}
-					}
-				}}
-			/>
-			<button
-				type='button'
-				onClick={toggle}
-				disabled={isUploading}
-				aria-label={isPlaying ? 'Пауза' : 'Слушать'}
-				contentEditable={false}
-				className='grid h-10 w-10 shrink-0 place-items-center bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-40'
-			>
-				{isPlaying ? (
-					<Pause size={16} />
-				) : (
-					<Play
-						size={16}
-						fill='currentColor'
-					/>
-				)}
-			</button>
 			<div
-				className='min-w-0 flex-1'
 				contentEditable={false}
+				className={cn(
+					'flex max-w-md items-center gap-3 rounded-2xl border bg-white/[0.04] py-2 pl-2 pr-1.5 transition-colors',
+					props.selected ? 'border-primary' : 'border-transparent'
+				)}
 			>
-				<div className='flex items-baseline justify-between gap-3'>
-					<span className='truncate text-sm text-fg'>
-						{name || 'Голосовое'}
-					</span>
-					<span className='shrink-0 font-mono text-2xs tabular-nums text-subtle'>
-						{isUploading
-							? 'Загружается…'
-							: `${formatTime(current)} / ${formatTime(duration)}`}
-					</span>
-				</div>
-				<div
-					role='slider'
-					aria-label='Перемотка'
-					aria-valuemin={0}
-					aria-valuemax={Math.round(duration)}
-					aria-valuenow={Math.round(current)}
-					onPointerDown={event => seek(event.clientX, event.currentTarget)}
-					className='mt-2 h-4 cursor-pointer py-1.5'
-				>
-					<div className='h-1 bg-white/10'>
-						<div
-							className='h-full bg-primary'
-							style={{ width: `${progress}%` }}
-						/>
-					</div>
-				</div>
-			</div>
-			<button
-				type='button'
-				contentEditable={false}
-				onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}
-				aria-label='Скорость воспроизведения'
-				className='h-8 w-10 shrink-0 font-mono text-xs text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
-			>
-				{speed}×
-			</button>
-			{!isUploading && (
+				<audio
+					ref={audioRef}
+					src={src}
+					preload='metadata'
+					onPlay={() => setIsPlaying(true)}
+					onPause={() => setIsPlaying(false)}
+					onEnded={() => {
+						setIsPlaying(false)
+						setCurrent(0)
+					}}
+					onTimeUpdate={event => setCurrent(event.currentTarget.currentTime)}
+					onLoadedMetadata={event => {
+						const value = event.currentTarget.duration
+						// у записей из MediaRecorder длительность часто Infinity до первой перемотки
+						if (Number.isFinite(value)) setDuration(value)
+						else {
+							event.currentTarget.currentTime = 1e9
+							event.currentTarget.ontimeupdate = function () {
+								const audio = this as HTMLAudioElement
+								audio.ontimeupdate = null
+								setDuration(audio.duration)
+								audio.currentTime = 0
+							}
+						}
+					}}
+				/>
 				<button
 					type='button'
-					contentEditable={false}
-					onClick={transcribe}
-					disabled={Boolean(transcribing)}
-					title='Расшифровать в текст'
-					aria-label='Расшифровать в текст'
-					className='grid h-8 w-8 shrink-0 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg disabled:text-primary'
+					onClick={toggle}
+					disabled={isUploading}
+					aria-label={isPlaying ? 'Пауза' : 'Слушать'}
+					title={name || undefined}
+					className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white transition-transform hover:scale-105 active:scale-95 disabled:opacity-40'
 				>
-					{transcribing ? (
+					{isUploading ? (
 						<Loader2
-							size={15}
+							size={18}
 							className='animate-spin'
 						/>
+					) : isPlaying ? (
+						<Pause
+							size={18}
+							fill='currentColor'
+						/>
 					) : (
-						<ScrollText size={15} />
+						<Play
+							size={18}
+							fill='currentColor'
+							className='translate-x-[1px]'
+						/>
 					)}
 				</button>
-			)}
-			<RemoveButton props={props} />
-			{transcribing && (
-				<div
-					contentEditable={false}
-					className='mt-2 flex basis-full items-center gap-3 border-t border-border pt-2 text-xs text-muted'
-				>
-					<span className='shrink-0'>
-						{transcribing.stage === 'download'
-							? 'Скачиваю модель (один раз)…'
-							: transcribing.stage === 'prepare'
-								? 'Готовлю звук…'
-								: 'Распознаю речь…'}
-					</span>
-					<span className='relative h-1 flex-1 overflow-hidden bg-white/10'>
-						{transcribing.stage === 'download' ? (
-							<span
-								className='absolute inset-y-0 left-0 bg-primary transition-[width]'
-								style={{ width: `${Math.round((transcribing.progress ?? 0) * 100)}%` }}
+
+				<div className='min-w-0 flex-1'>
+					<Waveform
+						peaks={peaks}
+						progress={progress}
+						onSeek={fraction => {
+							const audio = audioRef.current
+							if (audio && duration) audio.currentTime = fraction * duration
+						}}
+					/>
+					<div className='mt-0.5 flex items-center gap-2 font-mono text-2xs tabular-nums text-subtle'>
+						<span>
+							{isUploading
+								? 'Загружается…'
+								: formatTime(started ? current : duration)}
+						</span>
+						{!isUploading && size > 0 && <span>{formatBytes(size)}</span>}
+						{(isPlaying || speed !== 1) && (
+							<button
+								type='button'
+								onClick={() =>
+									setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])
+								}
+								aria-label='Скорость воспроизведения'
+								className='rounded-full bg-white/[0.08] px-1.5 text-fg transition-colors hover:bg-white/[0.14]'
+							>
+								{speed}×
+							</button>
+						)}
+					</div>
+				</div>
+
+				{!isUploading && (
+					<button
+						type='button'
+						onClick={onTranscriptButton}
+						title={
+							transcript
+								? showText
+									? 'Скрыть текст'
+									: 'Показать текст'
+								: 'Расшифровать в текст'
+						}
+						aria-label='Расшифровка в текст'
+						aria-pressed={showText}
+						className={cn(
+							'flex h-7 shrink-0 items-center gap-px self-start rounded-lg px-1.5 text-xs font-semibold transition-colors',
+							showText
+								? 'bg-primary text-white'
+								: 'bg-primary/15 text-primary hover:bg-primary/25'
+						)}
+					>
+						{transcribing ? (
+							<Loader2
+								size={13}
+								className='mx-1 animate-spin'
 							/>
 						) : (
-							<span className='absolute inset-y-0 w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] bg-primary' />
+							<>
+								<ArrowRight
+									size={12}
+									strokeWidth={2.5}
+								/>
+								A
+							</>
 						)}
-					</span>
-					{transcribing.stage === 'download' && (
-						<span className='shrink-0 font-mono tabular-nums'>{Math.round((transcribing.progress ?? 0) * 100)}%</span>
+					</button>
+				)}
+				<RemoveButton props={props} />
+			</div>
+
+			{showText && (
+				<div
+					contentEditable={false}
+					className='mt-1.5 max-w-md animate-fade-in rounded-2xl bg-white/[0.03] px-4 py-3'
+				>
+					{transcribing ? (
+						<div className='flex items-center gap-3 text-xs text-muted'>
+							<span className='shrink-0'>
+								{transcribing.stage === 'download'
+									? modelCached
+										? 'Загружаю модель…'
+										: 'Скачиваю модель (один раз)…'
+									: transcribing.stage === 'prepare'
+										? 'Готовлю звук…'
+										: 'Распознаю речь…'}
+							</span>
+							<span className='relative h-1 flex-1 overflow-hidden rounded-full bg-white/10'>
+								{transcribing.stage === 'download' && !modelCached ? (
+									<span
+										className='absolute inset-y-0 left-0 bg-primary transition-[width]'
+										style={{
+											width: `${Math.round((transcribing.progress ?? 0) * 100)}%`
+										}}
+									/>
+								) : (
+									<span className='absolute inset-y-0 w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] bg-primary' />
+								)}
+							</span>
+						</div>
+					) : transcript ? (
+						<>
+							<p className='select-text text-sm leading-6 text-fg/90'>
+								{transcript}
+							</p>
+							<button
+								type='button'
+								onClick={() => void recognize()}
+								className='mt-2 flex items-center gap-1.5 text-2xs text-subtle transition-colors hover:text-fg'
+							>
+								<RotateCcw size={11} />
+								Перераспознать
+							</button>
+						</>
+					) : (
+						<p className='text-xs text-subtle'>Текста пока нет</p>
 					)}
 				</div>
 			)}

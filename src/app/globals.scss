@@ -859,8 +859,11 @@ body {
 		}
 	}
 
+	/* Служебная метка [!note] остаётся в тексте, но не видна: тип и так подписан над выноской */
 	.callout-marker {
-		@apply font-mono text-xs font-normal opacity-50;
+		font-size: 0;
+		letter-spacing: 0;
+		opacity: 0;
 	}
 }
 

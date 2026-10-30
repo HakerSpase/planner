@@ -72,6 +72,7 @@ import { MathRender, MathText } from './math'
 import { StudyMarkup } from './study'
 import { InsertVisualMenu } from './visuals/InsertVisualMenu'
 import { VisualCodeBlock } from './visuals/VisualCodeBlock'
+import { RecorderBar } from './voice'
 import { WikiLinks } from './wiki-links'
 import { deleteUploads } from '@/lib/imagekit-upload'
 import {
@@ -167,13 +168,10 @@ export function RichEditor({
 	const chunksRef = useRef<Blob[]>([])
 	const cancelRef = useRef(false)
 	const [recordingSince, setRecordingSince] = useState<number | null>(null)
-	const [, forceTick] = useState(0)
-
-	useEffect(() => {
-		if (!recordingSince) return
-		const timer = setInterval(() => forceTick(tick => tick + 1), 500)
-		return () => clearInterval(timer)
-	}, [recordingSince])
+	// Поток микрофона — для живой волны на панели записи
+	const [recordingStream, setRecordingStream] = useState<MediaStream | null>(
+		null
+	)
 
 	const startRecording = async () => {
 		try {
@@ -194,6 +192,7 @@ export function RichEditor({
 			recorder.onstop = () => {
 				stream.getTracks().forEach(track => track.stop())
 				setRecordingSince(null)
+				setRecordingStream(null)
 				if (cancelRef.current || !editorRef.current) return
 				const type = (recorder.mimeType || 'audio/webm').split(';')[0]
 				const blob = new Blob(chunksRef.current, { type })
@@ -210,6 +209,7 @@ export function RichEditor({
 			}
 			recorder.start()
 			recorderRef.current = recorder
+			setRecordingStream(stream)
 			setRecordingSince(Date.now())
 		} catch {
 			toast.error('Нет доступа к микрофону')
@@ -644,36 +644,13 @@ export function RichEditor({
 				</div>
 			)}
 
-			{recordingSince && (
-				<div className='mb-3 flex items-center gap-3 border border-danger/40 bg-danger/5 px-3 py-2'>
-					<span className='h-2 w-2 animate-pulse rounded-full bg-danger' />
-					<span className='font-mono text-sm tabular-nums text-fg'>
-						{(() => {
-							const seconds = Math.floor((Date.now() - recordingSince) / 1000)
-							return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
-						})()}
-					</span>
-					<span className='text-sm text-muted'>Запись…</span>
-					<button
-						type='button'
-						onClick={() => stopRecording(true)}
-						aria-label='Отменить запись'
-						className='ml-auto grid h-8 w-8 place-items-center text-subtle transition-colors hover:text-fg'
-					>
-						<X size={15} />
-					</button>
-					<button
-						type='button'
-						onClick={() => stopRecording()}
-						className='flex h-8 items-center gap-2 bg-danger px-3 text-sm font-medium text-white'
-					>
-						<Square
-							size={12}
-							fill='currentColor'
-						/>
-						Готово
-					</button>
-				</div>
+			{recordingSince && recordingStream && (
+				<RecorderBar
+					stream={recordingStream}
+					since={recordingSince}
+					onCancel={() => stopRecording(true)}
+					onDone={() => stopRecording()}
+				/>
 			)}
 			{dragOver && (
 				<div className='pointer-events-none absolute inset-0 z-20 grid place-items-center border-2 border-dashed border-primary/70 bg-primary/[0.06]'>
