@@ -1,3 +1,4 @@
+import { stripAnnotations } from '@/components/editor/annotations'
 import { createClient } from '@/lib/supabase/client'
 
 /*
@@ -49,13 +50,18 @@ const unescapeMarkdown = (value: string) => value.replace(/\\([!-\/:-@\[-`{-~])/
 // превью рисует их KaTeX'ом (MathExcerpt)
 export const toExcerpt = (markdown: string, length = 220) => {
 	const formulas: string[] = []
-	const text = markdown
-		.replace(FORMULA, (_match, ...groups: (string | undefined)[]) => {
+	const withoutFormulas = markdown.replace(
+		FORMULA,
+		(_match, ...groups: (string | undefined)[]) => {
 			const index = groups.findIndex(group => group !== undefined)
 			const body = index === 1 || index === 2 ? unescapeMarkdown(groups[index]!) : groups[index]!
 			formulas.push(body.replace(/\s+/g, ' ').trim())
 			return ` \u0000${formulas.length - 1}\u0000 `
-		})
+		}
+	)
+	// Пометки {код|текст} в превью не нужны — только сам текст
+	const text = stripAnnotations(withoutFormulas)
+		.replace(/^```[\s\S]*?^```/gm, ' ')
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
 		.replace(/\[([^\]]*)]\([^)]*\)/g, '$1')

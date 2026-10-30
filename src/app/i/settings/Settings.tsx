@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/buttons/Button'
 
 import { TypeUserForm } from '@/types/auth.types'
 
+import { AiPrompt } from './AiPrompt'
 import { DesktopSettings, FeelSettings } from './FeelSettings'
 import { useInitialData } from './useInitialData'
 import { useUpdateSettings } from './useUpdateSettings'
@@ -423,6 +424,13 @@ export function Settings() {
 					description='Переходы, фоновая музыка и вибрация. Применяются сразу, на этом устройстве.'
 				>
 					<FeelSettings />
+				</Section>
+
+				<Section
+					title='Конспекты из нейросети'
+					description='Промпт, с которым ChatGPT и другие ИИ сразу оформляют ответ под Planner: формулы, цвет, разбор предложения и слова, графики и диаграммы.'
+				>
+					<AiPrompt />
 				</Section>
 
 				{isDesktop && (

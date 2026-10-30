@@ -48,6 +48,8 @@ import {
 	startUpload
 } from '@/lib/upload-manager'
 
+import { AnnotationMenu } from './AnnotationMenu'
+import { ANNOTATION_MARKS } from './annotations'
 import { AudioAttachment, FileAttachment } from './attachments'
 
 import {
@@ -60,6 +62,8 @@ import {
 	replaceImageSrc
 } from './extensions'
 import { MathRender, MathText } from './math'
+import { InsertVisualMenu } from './visuals/InsertVisualMenu'
+import { VisualCodeBlock } from './visuals/VisualCodeBlock'
 
 interface IRichEditor {
 	value: string
@@ -196,9 +200,11 @@ export function RichEditor({
 		editable,
 		autofocus: autoFocus ? 'end' : false,
 		extensions: [
-			StarterKit.configure({ heading: { levels: [1, 2, 3] }, text: false }),
+			StarterKit.configure({ heading: { levels: [1, 2, 3] }, text: false, codeBlock: false }),
+			VisualCodeBlock,
 			MathText,
 			MathRender,
+			...ANNOTATION_MARKS,
 			Table.configure({ resizable: false }),
 			TableRow,
 			TableHeader,
@@ -237,6 +243,13 @@ export function RichEditor({
 					return Boolean(onSubmitRef.current)
 				}
 				return false
+			},
+			// Скопировали страницу чата целиком — убираем подписи кнопок ChatGPT и других ИИ
+			transformPastedText(text) {
+				return text.replace(
+					/^[ \t]*(Оставить отзыв|Create image|Создать изображение|Drag point \S+|Перетащите точку \S+|Copy code|Копировать код|Copy|Edit|Share|Поделиться)[ \t]*\r?\n/gim,
+					''
+				)
 			},
 			handlePaste(_view, event) {
 				const files = Array.from(event.clipboardData?.files || [])
@@ -352,6 +365,7 @@ export function RichEditor({
 					>
 						<Link2 size={15} />
 					</ToolButton>
+					<AnnotationMenu editor={editor} />
 					<Divider />
 					<ToolButton
 						label='Список'
@@ -448,6 +462,7 @@ export function RichEditor({
 					>
 						<Sigma size={15} />
 					</ToolButton>
+					<InsertVisualMenu editor={editor} />
 					<ToolButton
 						label='Таблица'
 						active={editor.isActive('table')}

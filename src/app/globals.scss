@@ -494,3 +494,194 @@ body {
 	content-visibility: auto;
 	contain-intrinsic-size: auto 2rem;
 }
+
+/* ---------- Пометки в тексте: цвет, члены предложения, части речи, морфемы ---------- */
+:root {
+	--annot: 165 180 252;
+}
+
+.annot-highlight {
+	padding: 0.05em 0.15em;
+	border-radius: 2px;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+
+/* Члены предложения — как на уроке: подлежащее одной чертой, сказуемое двумя,
+   определение волной, дополнение пунктиром, обстоятельство точка-тире */
+.annot-syntax {
+	text-decoration-color: rgb(var(--annot));
+	text-decoration-thickness: 1.5px;
+	text-underline-offset: 0.28em;
+	text-decoration-skip-ink: none;
+
+	&[data-annot='подл'] {
+		text-decoration-line: underline;
+	}
+
+	&[data-annot='сказ'] {
+		text-decoration-line: underline;
+		text-decoration-style: double;
+		text-decoration-thickness: 1.5px;
+	}
+
+	&[data-annot='опр'] {
+		text-decoration-line: underline;
+		text-decoration-style: wavy;
+		text-decoration-thickness: 1.2px;
+	}
+
+	&[data-annot='доп'] {
+		text-decoration-line: underline;
+		text-decoration-style: dashed;
+	}
+
+	&[data-annot='обст'] {
+		padding-bottom: 0.32em;
+		background-image: repeating-linear-gradient(
+			90deg,
+			rgb(var(--annot)) 0 7px,
+			transparent 7px 10px,
+			rgb(var(--annot)) 10px 12px,
+			transparent 12px 15px
+		);
+		background-position: 0 100%;
+		background-size: 100% 1.5px;
+		background-repeat: no-repeat;
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+	}
+}
+
+/* Части речи — маленькая подпись над словом */
+.annot-pos {
+	position: relative;
+	display: inline-block;
+	padding-top: 0.85em;
+	line-height: 1.25;
+	text-indent: 0;
+
+	&::before {
+		content: attr(data-label);
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		font-family: var(--font-mono), monospace;
+		font-size: 0.58em;
+		line-height: 1;
+		letter-spacing: 0.04em;
+		white-space: nowrap;
+		color: rgb(var(--annot));
+		pointer-events: none;
+	}
+}
+
+/* Морфемы — значки разбора слова по составу */
+.annot-morpheme {
+	position: relative;
+	display: inline-block;
+	line-height: 1.2;
+
+	&::after {
+		content: '';
+		position: absolute;
+		pointer-events: none;
+		border-color: rgb(var(--annot));
+	}
+
+	/* приставка ⌝ */
+	&[data-annot='прист']::after {
+		top: -0.3em;
+		left: 0;
+		right: 0;
+		height: 0.4em;
+		border-top: 1.5px solid;
+		border-right: 1.5px solid;
+	}
+
+	/* постфикс ⌜ */
+	&[data-annot='постф']::after {
+		top: -0.3em;
+		left: 0;
+		right: 0;
+		height: 0.4em;
+		border-top: 1.5px solid;
+		border-left: 1.5px solid;
+	}
+
+	/* корень ⌒ */
+	&[data-annot='корень']::after {
+		top: -0.42em;
+		left: 0;
+		right: 0;
+		height: 0.55em;
+		border-top: 1.5px solid;
+		border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+	}
+
+	/* суффикс ^ */
+	&[data-annot='суф']::after {
+		top: -0.48em;
+		left: 0;
+		right: 0;
+		height: 0.42em;
+		background: rgb(var(--annot));
+		clip-path: polygon(0 100%, 50% 0, 100% 100%, calc(100% - 1.5px) 100%, 50% 4px, 1.5px 100%);
+	}
+
+	/* окончание □ */
+	&[data-annot='оконч'] {
+		padding: 0 1px;
+		box-shadow: inset 0 0 0 1.5px rgb(var(--annot));
+	}
+
+	/* основа ⌊⌋ — снизу */
+	&[data-annot='осн']::after {
+		bottom: -0.3em;
+		left: 0;
+		right: 0;
+		height: 0.35em;
+		border-bottom: 1.5px solid;
+		border-left: 1.5px solid;
+		border-right: 1.5px solid;
+	}
+}
+
+/* Строки с разбором чуть свободнее, чтобы значки не налезали на соседние строки */
+.rich-editor-content :is(p, li, td, th):has(.annot-morpheme, .annot-pos) {
+	line-height: 2.2;
+}
+
+/* ---------- Наглядные блоки: графики, окружность, диаграммы ---------- */
+.visual-node {
+	margin: 1.25rem 0;
+}
+
+.visual-block {
+	@apply overflow-hidden border border-border bg-surface;
+	margin: 0;
+
+	.visual-title {
+		@apply border-b border-border px-3 py-2 text-sm font-medium text-fg;
+	}
+
+	.visual-tick {
+		font-family: var(--font-mono), monospace;
+		font-size: 10.5px;
+		fill: rgb(var(--subtle));
+	}
+
+	.visual-label {
+		font-family: var(--font-sans), sans-serif;
+		font-size: 12px;
+		fill: rgb(var(--fg));
+		paint-order: stroke;
+		stroke: rgb(var(--bg) / 0.85);
+		stroke-width: 3px;
+	}
+}
+
+.rich-editor-content .visual-source {
+	@apply m-0 border-x border-b border-border;
+}
