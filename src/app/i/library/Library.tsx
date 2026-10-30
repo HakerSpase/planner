@@ -297,7 +297,7 @@ export function Library() {
 					onOpenTopic={topic => navigate({ topic })}
 				/>
 			) : (
-				<div className='grid gap-x-12 lg:grid-cols-[15rem_minmax(0,1fr)]'>
+				<div className='grid gap-x-12 lg:grid-cols-[17rem_minmax(0,1fr)]'>
 					{/* Дерево: на телефоне показывается, пока не выбрана тема */}
 					<aside className={cn('min-w-0', topicId || sectionId ? 'hidden lg:block' : 'block')}>
 						<LibraryTree
@@ -463,7 +463,7 @@ function LibraryTree({
 												event.stopPropagation()
 												setCollapsed(state => ({ ...state, [section.id]: !isCollapsed }))
 											}}
-											className='-m-1 grid h-6 w-6 place-items-center'
+											className='-m-1 grid h-6 w-6 shrink-0 place-items-center'
 										>
 											<ChevronRight
 												size={14}
@@ -613,7 +613,7 @@ function Row({
 	return (
 		<div
 			className={cn(
-				'group relative flex h-9 items-center gap-2 pl-2 pr-1 transition-colors',
+				'group relative flex min-h-9 items-center gap-2 py-1 pl-2 pr-1 transition-colors',
 				active
 					? 'bg-white/[0.06] before:absolute before:inset-y-0 before:-left-px before:w-0.5 before:bg-primary'
 					: 'hover:bg-white/[0.03]'
@@ -622,12 +622,14 @@ function Row({
 			<button
 				type='button'
 				onClick={onClick}
+				title={title}
 				className='flex min-w-0 flex-1 items-center gap-2 text-left'
 			>
 				{leading}
+				{/* Длинное название — в две строки, а не обрезка на полуслове */}
 				<span
 					className={cn(
-						'truncate text-sm',
+						'line-clamp-2 min-w-0 break-words text-sm leading-5',
 						active ? 'text-fg' : 'text-muted',
 						titleClassName
 					)}
@@ -635,7 +637,8 @@ function Row({
 					{title}
 				</span>
 			</button>
-			<span className='flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
+			{/* На компьютере кнопки всплывают поверх строки и не отнимают место у названия */}
+			<span className='flex shrink-0 items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:absolute [@media(hover:hover)]:inset-y-0 [@media(hover:hover)]:right-0 [@media(hover:hover)]:bg-gradient-to-l [@media(hover:hover)]:from-bg [@media(hover:hover)]:from-70% [@media(hover:hover)]:to-transparent [@media(hover:hover)]:pl-6 [@media(hover:hover)]:pr-1 [@media(hover:none)]:opacity-100'>
 				{actions}
 			</span>
 		</div>

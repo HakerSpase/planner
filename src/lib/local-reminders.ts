@@ -1,6 +1,6 @@
 import { type ITaskResponse } from '@/types/task.types'
 
-import { hasServerPush } from './push'
+import { desktopBridge, hasServerPush } from './push'
 
 /*
  * Запасной путь для напоминаний, пока планер открыт: в настольном приложении (WebView2)
@@ -26,6 +26,35 @@ const describe = (offset: number, dueAt: Date) => {
 	return `Через ${Math.floor(offset / 60)} ч${offset % 60 ? ` ${offset % 60} мин` : ''} · в ${time}`
 }
 
+/** Ближайшие напоминания из задач — для настольного приложения, которое показывает их само */
+export function upcomingReminders(tasks: ITaskResponse[] | undefined) {
+	const now = Date.now()
+	const items: { key: string; title: string; body: string; at: number }[] = []
+	for (const task of tasks || []) {
+		if (task.isCompleted || !task.dueAt || !task.reminders?.length) continue
+		const dueAt = new Date(task.dueAt)
+		for (const offset of task.reminders) {
+			const at = dueAt.getTime() - offset * 60_000
+			if (at < now - 30 * 60_000 || at > now + 8 * 86_400_000) continue
+			items.push({
+				key: `${task.id}:${task.dueAt}:${offset}`,
+				title: task.name || 'Задача',
+				body: describe(offset, dueAt),
+				at
+			})
+		}
+	}
+	return items.sort((a, b) => a.at - b.at).slice(0, 200)
+}
+
+/** Передать расписание настольному приложению (если оно это умеет) */
+export function syncDesktopReminders(tasks: ITaskResponse[] | undefined) {
+	const bridge = desktopBridge()
+	if (!bridge?.setReminders || !tasks) return false
+	bridge.setReminders(upcomingReminders(tasks)).catch(() => {})
+	return true
+}
+
 export function watchLocalReminders(
 	getTasks: () => ITaskResponse[] | undefined,
 	onInAppReminder: (title: string, body: string) => void
@@ -35,6 +64,8 @@ export function watchLocalReminders(
 	const check = async () => {
 		if (stopped) return
 		if (await hasServerPush().catch(() => false)) return
+		// Новое настольное приложение показывает напоминания само — не дублируем
+		if (desktopBridge()?.setReminders) return
 		const now = Date.now()
 		const shown = readShown()
 		let changed = false

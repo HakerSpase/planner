@@ -39,7 +39,7 @@
 		}
 
 		.card {
-			@apply relative mb-2 min-w-0 bg-surface px-3.5 py-3 transition-colors hover:bg-surface-2;
+			@apply relative mb-2 min-w-0 bg-surface py-3 pl-6 pr-3.5 transition-colors hover:bg-surface-2;
 			word-break: break-word;
 
 
@@ -83,8 +83,9 @@
 				}
 			}
 
+			// Ручка — внутри карточки, в своём отступе слева: не обрезается краем колонки
 			.dragHandle {
-				@apply absolute -left-0.5 top-2.5 opacity-0 transition-opacity;
+				@apply absolute left-1 top-2.5 opacity-0 transition-opacity;
 			}
 
 			&:hover .dragHandle {

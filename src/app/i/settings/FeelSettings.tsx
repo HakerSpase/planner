@@ -17,6 +17,8 @@ interface IDesktopBridge {
 	setSettings: (patch: Partial<{ tray: boolean; autostart: boolean }>) => Promise<void>
 	// Окно Windows «Разрешить уведомления?»; в старых версиях приложения метода нет
 	requestNotifications?: () => Promise<{ notifications: boolean | null }>
+	// Расписание напоминаний — приложение показывает их само, даже из трея
+	setReminders?: (items: { key: string; title: string; body: string; at: number }[]) => Promise<unknown>
 }
 
 declare global {

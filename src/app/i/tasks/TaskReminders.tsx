@@ -122,8 +122,8 @@ export function TaskReminders({
 							if (!value) return onChange({ dueAt: null, reminders: null })
 							onChange({
 								dueAt: combineDateTime(day, value),
-								// Первое время — сразу с напоминанием за 15 минут, как в календаре
-								...(!time && !list.length && { reminders: [15] })
+								// Первое время — сразу «в момент» и «за 15 минут»
+								...(!time && !list.length && { reminders: [15, 0] })
 							})
 						}}
 						className='bg-transparent font-mono text-base text-fg outline-none [color-scheme:dark]'
@@ -277,6 +277,19 @@ export function TaskReminders({
 							</button>
 						</div>
 					)}
+
+					{(() => {
+						// Напоминания, время которых уже прошло, не придут — честно говорим об этом
+						const passed = dueDate && !isPast
+							? list.filter(minutes => minutes > 0 && dueDate.getTime() - minutes * 60_000 < Date.now())
+							: []
+						return passed.length ? (
+							<p className='mt-3 text-xs leading-5 text-muted'>
+								{passed.map(formatOffset).join(', ')} — уже прошло, это напоминание не придёт.
+								{!list.includes(0) && ' Добавьте «В момент», чтобы получить уведомление ко времени.'}
+							</p>
+						) : null
+					})()}
 
 					{list.length > 0 && push && push !== 'on' && (
 						<p className='mt-3 text-xs leading-5 text-warning'>

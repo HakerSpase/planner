@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 
 import { useBackground } from '@/lib/background-preference'
 import { watchKeyboard } from '@/lib/keyboard-state'
-import { watchLocalReminders } from '@/lib/local-reminders'
+import { syncDesktopReminders, watchLocalReminders } from '@/lib/local-reminders'
 import { registerServiceWorker } from '@/lib/push'
 
 import { taskService } from '@/services/task.service'
@@ -43,10 +43,16 @@ export default function DashboardLayout({
 	const { data: tasks } = useQuery({
 		queryKey: ['tasks'],
 		queryFn: () => taskService.getTasks(),
-		staleTime: 60_000
+		staleTime: 60_000,
+		// Задачи могли поменять на телефоне — подтягиваем, чтобы напоминания не устаревали
+		refetchInterval: 5 * 60_000
 	})
 	const tasksRef = useRef(tasks?.data)
 	tasksRef.current = tasks?.data
+	// Настольному приложению — расписание целиком: оно покажет напоминания даже из трея
+	useEffect(() => {
+		syncDesktopReminders(tasks?.data)
+	}, [tasks?.data])
 	useEffect(
 		() =>
 			watchLocalReminders(
