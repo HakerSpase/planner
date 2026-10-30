@@ -375,7 +375,7 @@ function AudioView(props: NodeViewProps) {
 			<div
 				contentEditable={false}
 				className={cn(
-					'flex max-w-md items-center gap-3 rounded-2xl border bg-white/[0.04] py-2 pl-2 pr-1.5 transition-colors',
+					'flex max-w-md items-center gap-3 rounded-[18px] border bg-white/[0.04] py-2 pl-2 pr-1.5 transition-colors',
 					props.selected ? 'border-primary' : 'border-transparent'
 				)}
 			>
@@ -477,7 +477,7 @@ function AudioView(props: NodeViewProps) {
 						aria-label='Расшифровка в текст'
 						aria-pressed={showText}
 						className={cn(
-							'flex h-7 shrink-0 items-center gap-px self-start rounded-lg px-1.5 text-xs font-semibold transition-colors',
+							'flex h-7 shrink-0 items-center gap-px self-start rounded-[8px] px-1.5 text-xs font-semibold transition-colors',
 							showText
 								? 'bg-primary text-white'
 								: 'bg-primary/15 text-primary hover:bg-primary/25'
@@ -505,7 +505,7 @@ function AudioView(props: NodeViewProps) {
 			{showText && (
 				<div
 					contentEditable={false}
-					className='mt-1.5 max-w-md animate-fade-in rounded-2xl bg-white/[0.03] px-4 py-3'
+					className='mt-1.5 max-w-md animate-fade-in rounded-[18px] bg-white/[0.03] px-4 py-3'
 				>
 					{transcribing ? (
 						<div className='flex items-center gap-3 text-xs text-muted'>

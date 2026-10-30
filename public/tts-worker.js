@@ -219,8 +219,10 @@ async function synthesize({ text, lang, voice, speed, steps }) {
 
 /* ---------- Сообщения ---------- */
 
-// Фразы синтезируем строго по очереди — так меньше памяти и нет гонок на WebGPU
+// Фразы синтезируем строго по очереди — так меньше памяти и нет гонок на WebGPU.
+// «Стоп» или новое чтение сбрасывает очередь: старые фразы не задерживают новые
 let queue = Promise.resolve()
+let epoch = 0
 
 self.onmessage = event => {
 	const { type, id } = event.data
@@ -230,9 +232,14 @@ self.onmessage = event => {
 			.catch(error => self.postMessage({ type: 'error', id, message: String(error?.message || error) }))
 		return
 	}
+	if (type === 'cancel') {
+		epoch++
+		return
+	}
 	if (type === 'synthesize') {
+		const mine = epoch
 		queue = queue.then(() =>
-			synthesize(event.data)
+			(mine !== epoch ? Promise.reject(new Error('cancelled')) : synthesize(event.data))
 				.then(({ wav, sampleRate }) =>
 					self.postMessage({ type: 'audio', id, wav, sampleRate }, [wav.buffer])
 				)

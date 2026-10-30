@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 import { nativePlugin } from './native'
-import { isNeuralVoice, synthesizeNeural } from './neural-tts'
+import { cancelNeural, isNeuralVoice, synthesizeNeural } from './neural-tts'
 import { getPreferences } from './preferences'
 
 /*
@@ -18,6 +18,8 @@ export interface ISpeechState {
 	total: number
 	title: string
 	current: string
+	/** Нейросеть ещё готовит звук фразы — шкала стоит */
+	buffering: boolean
 }
 
 const IDLE: ISpeechState = {
@@ -25,7 +27,8 @@ const IDLE: ISpeechState = {
 	index: 0,
 	total: 0,
 	title: '',
-	current: ''
+	current: '',
+	buffering: false
 }
 
 let state: ISpeechState = IDLE
@@ -357,7 +360,7 @@ function speakChunk(index: number) {
 		return
 	}
 	const text = chunks[index]
-	emit({ status: 'playing', index, current: text })
+	emit({ status: 'playing', index, current: text, buffering: useNeural() })
 
 	if (!useNeural()) {
 		speakFallbackChunk(index, my)
@@ -372,6 +375,10 @@ function speakChunk(index: number) {
 			if (my !== generation || state.status !== 'playing') return
 			const audio = new Audio(url)
 			currentAudio = audio
+			// Шкала пойдёт, когда звук действительно заиграет
+			audio.onplaying = () => {
+				if (my === generation) emit({ buffering: false })
+			}
 			audio.onended = () => {
 				if (my === generation && state.status === 'playing') {
 					speakChunk(index + 1)
@@ -391,6 +398,8 @@ function speakChunk(index: number) {
 
 export function speak(text: string, title = '') {
 	if (!isSpeechSupported()) return false
+	// Новое чтение — фразы прошлого больше не синтезируем
+	cancelNeural()
 	chunks = splitIntoChunks(text)
 	if (!chunks.length) return false
 	emit({ title, total: chunks.length })
@@ -425,7 +434,7 @@ export function resumeSpeech() {
 		pausedAudio = null
 		pausedIndex = -1
 		currentAudio = audio
-		emit({ status: 'playing' })
+		emit({ status: 'playing', buffering: false })
 		prefetchChunk(index + 1)
 		audio.onended = () => {
 			if (my === generation && state.status === 'playing') {
@@ -444,6 +453,9 @@ export function resumeSpeech() {
 	}
 	speakChunk(state.index)
 }
+
+/** Звук текущей фразы нейроголоса — шкала плеера идёт по нему */
+export const getCurrentAudio = () => currentAudio
 
 /** Фразы текущего чтения — для шкалы плеера */
 export const getSpeechChunks = () => chunks
@@ -466,6 +478,7 @@ export function restartCurrent() {
 
 export function stopSpeech() {
 	generation++
+	cancelNeural()
 	if (isSpeechSupported()) cancelSynth()
 	chunks = []
 	emit(IDLE)

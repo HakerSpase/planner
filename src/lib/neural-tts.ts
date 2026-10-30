@@ -109,6 +109,17 @@ export async function removeNeural() {
 	await caches.delete(CACHE).catch(() => false)
 }
 
+/** Сбросить очередь фраз: старые запросы больше не нужны (стоп или новое чтение) */
+export function cancelNeural() {
+	if (!worker) return
+	worker.postMessage({ type: 'cancel' })
+	pending.forEach((request, id) => {
+		if (request.onProgress) return // загрузку модели не трогаем
+		request.reject(new Error('cancelled'))
+		pending.delete(id)
+	})
+}
+
 /** Озвучить фразу: вернёт ссылку на WAV для <audio> */
 export async function synthesizeNeural(
 	text: string,

@@ -217,7 +217,7 @@ export function RecorderBar({
 	]
 
 	return (
-		<div className='mb-3 flex items-center gap-3 rounded-2xl border border-border bg-white/[0.04] py-2 pl-4 pr-2'>
+		<div className='mb-3 flex items-center gap-3 rounded-[18px] border border-border bg-white/[0.04] py-2 pl-4 pr-2'>
 			<span className='relative flex h-2.5 w-2.5 shrink-0'>
 				<span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-60' />
 				<span className='relative inline-flex h-2.5 w-2.5 rounded-full bg-danger' />

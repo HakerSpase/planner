@@ -9,6 +9,7 @@ import { Waveform } from '@/components/editor/voice'
 
 import { setPreferences, usePreferences } from '@/lib/preferences'
 import {
+	getCurrentAudio,
 	getSpeechChunks,
 	isSpeechSupported,
 	pauseSpeech,
@@ -67,6 +68,7 @@ export function SpeechPlayer() {
 			total={speech.total}
 			current={speech.current}
 			playing={speech.status === 'playing'}
+			buffering={speech.buffering}
 			rate={preferences.ttsRate}
 		/>
 	)
@@ -98,6 +100,7 @@ function ActivePlayer({
 	total,
 	current,
 	playing,
+	buffering,
 	rate
 }: {
 	title: string
@@ -105,6 +108,7 @@ function ActivePlayer({
 	total: number
 	current: string
 	playing: boolean
+	buffering: boolean
 	rate: number
 }) {
 	const chunks = getSpeechChunks()
@@ -115,18 +119,29 @@ function ActivePlayer({
 	const charsPerSecond = 14 * rate
 	const [phraseStart, setPhraseStart] = useState(Date.now())
 	const [, setTick] = useState(0)
-	useEffect(() => setPhraseStart(Date.now()), [index, playing])
+	// Отсчёт фразы — с момента, когда звук реально пошёл (нейросеть сначала его готовит)
+	useEffect(() => setPhraseStart(Date.now()), [index, playing, buffering])
 	useEffect(() => {
 		if (!playing) return
 		const timer = setInterval(() => setTick(tick => tick + 1), 120)
 		return () => clearInterval(timer)
 	}, [playing])
-	const inside = playing
-		? Math.min(
-				lengths[index] ?? 0,
-				((Date.now() - phraseStart) / 1000) * charsPerSecond
-			)
-		: 0
+	// Нейроголос: позиция по самому звуку; системный голос — по оценке скорости речи
+	const audio = getCurrentAudio()
+	const audioFraction =
+		audio && audio.duration > 0 && Number.isFinite(audio.duration)
+			? audio.currentTime / audio.duration
+			: null
+	const inside =
+		buffering || (!playing && audioFraction === null)
+			? 0
+			: (lengths[index] ?? 0) *
+				(audioFraction ??
+					Math.min(
+						1,
+						((Date.now() - phraseStart) / 1000) *
+							(charsPerSecond / (lengths[index] || 1))
+					))
 	const progress = Math.min(1, (before + inside) / totalChars)
 	const peaks = useMemo(() => textPeaks(chunks), [chunks])
 
@@ -150,7 +165,7 @@ function ActivePlayer({
 			<div
 				role='region'
 				aria-label='Озвучка'
-				className='pointer-events-auto flex w-full max-w-xl animate-pop-in items-center gap-3 rounded-2xl border border-white/10 bg-elevated/95 py-2.5 pl-2.5 pr-2 shadow-pop backdrop-blur-xl'
+				className='pointer-events-auto flex w-full max-w-xl animate-pop-in items-center gap-3 rounded-[18px] border border-white/10 bg-elevated/95 py-2.5 pl-2.5 pr-2 shadow-pop backdrop-blur-xl'
 			>
 				<button
 					type='button'
@@ -176,7 +191,7 @@ function ActivePlayer({
 						className='truncate text-xs text-subtle'
 						title={current}
 					>
-						{title || 'Озвучка'}
+						{buffering ? 'Готовлю голос…' : title || 'Озвучка'}
 					</p>
 					<Waveform
 						peaks={peaks}
