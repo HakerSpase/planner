@@ -79,7 +79,8 @@ export function CommandPalette() {
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
-			if (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) {
+			// По физической клавише, а не по букве: на русской раскладке key — «л»
+			if (event.code === 'KeyK' && (event.ctrlKey || event.metaKey) && !event.altKey) {
 				event.preventDefault()
 				setOpen(value => !value)
 			}
