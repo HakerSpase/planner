@@ -26,7 +26,15 @@ export interface IPreferences {
 	music: boolean
 	musicStyle: TypeMusicStyle
 	musicVolume: number
+	// Озвучка текста: голос (voiceURI, пусто — лучший русский), скорость и высота
+	ttsVoice: string
+	ttsRate: number
+	ttsPitch: number
+	// Расшифровка аудио нейросетью Whisper прямо в браузере
+	sttModel: TypeSttModel
 }
+
+export type TypeSttModel = 'off' | 'tiny' | 'base' | 'small'
 
 const DEFAULTS: IPreferences = {
 	transition: 'smooth',
@@ -36,7 +44,11 @@ const DEFAULTS: IPreferences = {
 	hapticChecks: true,
 	music: false,
 	musicStyle: 'lofi',
-	musicVolume: 35
+	musicVolume: 35,
+	ttsVoice: '',
+	ttsRate: 1,
+	ttsPitch: 1,
+	sttModel: 'off'
 }
 
 const KEY = 'planner-preferences'

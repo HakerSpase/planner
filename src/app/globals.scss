@@ -1037,3 +1037,155 @@ body {
 		display: none;
 	}
 }
+
+/* ---------- Схема-разветвление ```tree ---------- */
+.tree-view {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	overflow-x: auto;
+	padding: 1.25rem 1rem;
+	font-size: 0.875rem;
+	line-height: 1.45;
+	--tree-gap: 1.75rem;
+
+	.tree-branch {
+		display: flex;
+		align-items: center;
+	}
+
+	.tree-node,
+	.tree-card {
+		flex: none;
+		max-width: 22rem;
+		border: 1px solid color-mix(in srgb, var(--tree) 45%, transparent);
+		background: color-mix(in srgb, var(--tree) 8%, transparent);
+		border-radius: 0.6rem;
+		color: rgb(var(--fg));
+	}
+
+	.tree-node {
+		padding: 0.45rem 0.8rem;
+		font-weight: 500;
+	}
+
+	.tree-root {
+		max-width: 14rem;
+		padding: 0.65rem 0.9rem;
+		font-weight: 600;
+		text-align: center;
+		border-width: 1.5px;
+		background: color-mix(in srgb, var(--tree) 14%, transparent);
+	}
+
+	.tree-card {
+		padding: 0.55rem 0.85rem 0.6rem;
+
+		.tree-card-title {
+			font-weight: 600;
+			color: var(--tree);
+			margin-bottom: 0.3rem;
+		}
+
+		ul {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		li {
+			position: relative;
+			padding-left: 0.95rem;
+			color: rgb(var(--muted));
+
+			&::before {
+				content: '';
+				position: absolute;
+				left: 0.15rem;
+				top: 0.6em;
+				width: 0.32rem;
+				height: 0.32rem;
+				border-radius: 999px;
+				background: var(--tree);
+			}
+		}
+	}
+
+	.tree-children {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding-left: var(--tree-gap);
+		position: relative;
+
+		/* Линия от родителя */
+		&::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 50%;
+			width: calc(var(--tree-gap) / 2);
+			border-top: 1.5px solid color-mix(in srgb, var(--tree) 60%, transparent);
+		}
+	}
+
+	.tree-child {
+		position: relative;
+		display: flex;
+		align-items: center;
+
+		/* Горизонтальная ветка к узлу */
+		&::before {
+			content: '';
+			position: absolute;
+			left: calc(var(--tree-gap) / -2);
+			top: 50%;
+			width: calc(var(--tree-gap) / 2);
+			border-top: 1.5px solid color-mix(in srgb, var(--tree) 60%, transparent);
+		}
+
+		/* Вертикальная шина между братьями */
+		&::after {
+			content: '';
+			position: absolute;
+			left: calc(var(--tree-gap) / -2);
+			top: -0.3rem;
+			bottom: -0.3rem;
+			border-left: 1.5px solid color-mix(in srgb, var(--tree) 60%, transparent);
+		}
+
+		&:first-child::after {
+			top: 50%;
+		}
+
+		&:last-child::after {
+			bottom: 50%;
+		}
+
+		&:only-child::after {
+			display: none;
+		}
+	}
+}
+
+@media (max-width: 640px) {
+	.tree-view {
+		--tree-gap: 1.1rem;
+		font-size: 0.8125rem;
+
+		.tree-node,
+		.tree-card {
+			max-width: 15rem;
+		}
+	}
+}
+
+/* Полоса «идёт работа» без процентов */
+@keyframes indeterminate {
+	0% {
+		left: -35%;
+	}
+	100% {
+		left: 100%;
+	}
+}

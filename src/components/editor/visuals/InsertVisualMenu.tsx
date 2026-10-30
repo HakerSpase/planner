@@ -2,7 +2,7 @@
 
 import type { Editor } from '@tiptap/react'
 import cn from 'clsx'
-import { BarChart3, LineChart, Orbit } from 'lucide-react'
+import { BarChart3, GitFork, LineChart, Orbit } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 const TEMPLATES = [
@@ -26,6 +26,13 @@ const TEMPLATES = [
 		hint: 'Столбцы, линии или круговая',
 		language: 'chart',
 		code: 'type: bar\ntitle: Результаты\nПн: 3\nВт: 5\nСр: 4'
+	},
+	{
+		icon: GitFork,
+		title: 'Схема-разветвление',
+		hint: 'Понятие и его ветви, вложенность отступом',
+		language: 'tree',
+		code: 'Главное понятие\n  Ветвь 1 #purple\n    Признак\n    Пример\n  Ветвь 2 #green\n    Признак\n    Пример'
 	}
 ]
 

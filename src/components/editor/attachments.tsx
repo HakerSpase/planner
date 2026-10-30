@@ -7,8 +7,12 @@ import {
 	ReactNodeViewRenderer
 } from '@tiptap/react'
 import cn from 'clsx'
-import { Download, FileText, Pause, Play, X } from 'lucide-react'
+import { Download, FileText, Loader2, Pause, Play, ScrollText, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+
+import { getPreferences } from '@/lib/preferences'
+import { type ITranscribeProgress, transcribeAudio } from '@/lib/transcribe'
 
 const escapeAttr = (value: string) =>
 	String(value ?? '')
@@ -189,10 +193,44 @@ function AudioView(props: NodeViewProps) {
 	const [duration, setDuration] = useState(0)
 	const [speed, setSpeed] = useState(1)
 	const isUploading = String(src || '').startsWith('blob:')
+	const [transcribing, setTranscribing] = useState<ITranscribeProgress | null>(null)
 
 	useEffect(() => {
 		if (audioRef.current) audioRef.current.playbackRate = speed
 	}, [speed])
+
+	// Расшифровка локальной нейросетью — текст встаёт выноской сразу под аудио
+	const transcribe = async () => {
+		if (transcribing) return
+		if (getPreferences().sttModel === 'off') {
+			toast('Расшифровка выключена', {
+				description: 'Выберите модель в настройках — она скачается один раз и будет работать без интернета.',
+				action: { label: 'Настройки', onClick: () => (window.location.href = '/i/settings#transcription') }
+			})
+			return
+		}
+		setTranscribing({ stage: 'prepare' })
+		try {
+			const text = await transcribeAudio(src, setTranscribing)
+			if (!text) {
+				toast('Речь не распознана')
+				return
+			}
+			const position = typeof props.getPos === 'function' ? props.getPos() : undefined
+			if (position === undefined) return
+			const quoted = text.replace(/\s*\n\s*/g, ' ')
+			props.editor
+				.chain()
+				.insertContentAt(position + props.node.nodeSize, `> [!note] Расшифровка: ${name || 'аудио'}\n> ${quoted}\n\n`)
+				.run()
+		} catch (error) {
+			toast.error('Не получилось расшифровать', {
+				description: error instanceof Error ? error.message.slice(0, 160) : undefined
+			})
+		} finally {
+			setTranscribing(null)
+		}
+	}
 
 	const toggle = () => {
 		const audio = audioRef.current
@@ -213,7 +251,7 @@ function AudioView(props: NodeViewProps) {
 	return (
 		<NodeViewWrapper
 			className={cn(
-				'group my-3 flex items-center gap-3 border border-border bg-white/[0.02] p-2 pr-1',
+				'group my-3 flex flex-wrap items-center gap-x-3 border border-border bg-white/[0.02] p-2 pr-1',
 				props.selected && 'border-primary'
 			)}
 			data-drag-block
@@ -298,7 +336,54 @@ function AudioView(props: NodeViewProps) {
 			>
 				{speed}×
 			</button>
+			{!isUploading && (
+				<button
+					type='button'
+					contentEditable={false}
+					onClick={transcribe}
+					disabled={Boolean(transcribing)}
+					title='Расшифровать в текст'
+					aria-label='Расшифровать в текст'
+					className='grid h-8 w-8 shrink-0 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg disabled:text-primary'
+				>
+					{transcribing ? (
+						<Loader2
+							size={15}
+							className='animate-spin'
+						/>
+					) : (
+						<ScrollText size={15} />
+					)}
+				</button>
+			)}
 			<RemoveButton props={props} />
+			{transcribing && (
+				<div
+					contentEditable={false}
+					className='mt-2 flex basis-full items-center gap-3 border-t border-border pt-2 text-xs text-muted'
+				>
+					<span className='shrink-0'>
+						{transcribing.stage === 'download'
+							? 'Скачиваю модель (один раз)…'
+							: transcribing.stage === 'prepare'
+								? 'Готовлю звук…'
+								: 'Распознаю речь…'}
+					</span>
+					<span className='relative h-1 flex-1 overflow-hidden bg-white/10'>
+						{transcribing.stage === 'download' ? (
+							<span
+								className='absolute inset-y-0 left-0 bg-primary transition-[width]'
+								style={{ width: `${Math.round((transcribing.progress ?? 0) * 100)}%` }}
+							/>
+						) : (
+							<span className='absolute inset-y-0 w-1/3 animate-[indeterminate_1.2s_ease-in-out_infinite] bg-primary' />
+						)}
+					</span>
+					{transcribing.stage === 'download' && (
+						<span className='shrink-0 font-mono tabular-nums'>{Math.round((transcribing.progress ?? 0) * 100)}%</span>
+					)}
+				</div>
+			)}
 		</NodeViewWrapper>
 	)
 }

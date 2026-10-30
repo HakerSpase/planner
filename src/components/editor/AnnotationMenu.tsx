@@ -36,11 +36,11 @@ function selectionOrWord(editor: Editor) {
 	return { from: base + start, to: base + end }
 }
 
-function isApplied(editor: Editor, annotation: IAnnotation) {
+export function isApplied(editor: Editor, annotation: IAnnotation) {
 	return editor.isActive(markNameFor(annotation.group), { code: annotation.code })
 }
 
-function apply(editor: Editor, annotation: IAnnotation) {
+export function apply(editor: Editor, annotation: IAnnotation) {
 	const range = selectionOrWord(editor)
 	const name = markNameFor(annotation.group)
 	const active = isApplied(editor, annotation)
@@ -80,7 +80,7 @@ function clearAll(editor: Editor) {
 		.run()
 }
 
-export function AnnotationMenu({ editor }: { editor: Editor }) {
+export function AnnotationMenu({ editor, panelClassName }: { editor: Editor; panelClassName?: string }) {
 	const [open, setOpen] = useState(false)
 	const rootRef = useRef<HTMLDivElement>(null)
 
@@ -147,7 +147,10 @@ export function AnnotationMenu({ editor }: { editor: Editor }) {
 						// не теряем выделение в тексте, но даём работать полю выбора цвета
 						if (!(event.target as HTMLElement).closest('input')) event.preventDefault()
 					}}
-					className='absolute inset-x-1 top-full z-30 mt-1 max-h-[min(70vh,34rem)] animate-pop-in overflow-y-auto overscroll-contain border border-border bg-elevated p-3 shadow-pop sm:left-auto sm:w-[25rem]'
+					className={cn(
+						'absolute z-30 mt-1 max-h-[min(70vh,34rem)] animate-pop-in overflow-y-auto overscroll-contain border border-border bg-elevated p-3 shadow-pop',
+						panelClassName ?? 'inset-x-1 top-full sm:left-auto sm:w-[25rem]'
+					)}
 				>
 					<p className='mb-2 text-xs leading-5 text-subtle'>
 						Выделите текст или поставьте курсор в слово.

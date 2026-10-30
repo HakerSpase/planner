@@ -61,6 +61,7 @@ import {
 	replaceImageSrc
 } from './extensions'
 import { CalloutMenu } from './CalloutMenu'
+import { SelectionBubble, TableBubble } from './EditorBubbles'
 import { LinkMenu } from './LinkMenu'
 import { WikiSuggest } from './WikiSuggest'
 import { type ILinkMenuRequest, LinkPreviews, PlannerLink } from './link-previews'
@@ -202,6 +203,8 @@ export function RichEditor({
 	}
 
 	const editorRef = useRef<Editor | null>(null)
+	// Файл тащат над полем — показываем, куда он упадёт
+	const [dragOver, setDragOver] = useState(false)
 	const wikiKeyRef = useRef<((event: KeyboardEvent) => boolean) | null>(null)
 	const [linkMenu, setLinkMenu] = useState<ILinkMenuRequest | null>(null)
 
@@ -268,9 +271,11 @@ export function RichEditor({
 				)
 			},
 			handlePaste(view, event) {
-				const files = Array.from(event.clipboardData?.files || [])
 				const text = event.clipboardData?.getData('text/plain') || ''
 				const html = event.clipboardData?.getData('text/html') || ''
+				// Word и OneNote кладут рядом с текстом его картинку — тогда вставляем текст, а не картинку
+				const htmlText = html.replace(/<img\b[^>]*>|<[^>]+>|&nbsp;|\s/gi, '')
+				const files = text.trim() && htmlText ? [] : Array.from(event.clipboardData?.files || [])
 				const hasPlannerSyntax =
 					/\{[^\s|{}]{1,24}\\?\||\$\$|\$[^$\n]+\$|^```|^> \[!| :: |\[\[[^\]]+\]\]|^#{1,3} |\*\*[^*\n]+\*\*/m.test(
 						text
@@ -307,6 +312,7 @@ export function RichEditor({
 				return true
 			},
 			handleDrop(view, event, _slice, moved) {
+				setDragOver(false)
 				const files = Array.from(event.dataTransfer?.files || [])
 				if (moved || !files.length || !editor) return false
 				event.preventDefault()
@@ -371,7 +377,24 @@ export function RichEditor({
 	return (
 		<div
 			spellCheck={false}
-			className={cn('flex min-h-0 flex-col', selfCheck && 'self-check', className)}
+			className={cn('relative flex min-h-0 flex-col', selfCheck && 'self-check', className)}
+			onDragOver={event => {
+				if (!editable || !Array.from(event.dataTransfer.types).includes('Files')) return
+				event.preventDefault()
+				if (!dragOver) setDragOver(true)
+			}}
+			onDragLeave={event => {
+				if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOver(false)
+			}}
+			onDrop={event => {
+				setDragOver(false)
+				// Бросили мимо текста (на панель, поля) — всё равно вставляем в конец
+				if (!editor || !editable || event.defaultPrevented) return
+				const files = Array.from(event.dataTransfer.files || [])
+				if (!files.length) return
+				event.preventDefault()
+				insertFiles(editor, files, editor.state.doc.content.size)
+			}}
 			onClickCapture={event => {
 				// Нажатие по закрытому — открыть (или снова закрыть)
 				const target = (event.target as HTMLElement).closest(
@@ -581,6 +604,11 @@ export function RichEditor({
 					</button>
 				</div>
 			)}
+			{dragOver && (
+				<div className='pointer-events-none absolute inset-0 z-20 grid place-items-center border-2 border-dashed border-primary/70 bg-primary/[0.06]'>
+					<span className='bg-elevated px-4 py-2 text-sm text-fg shadow-pop'>Отпустите, чтобы вставить файл</span>
+				</div>
+			)}
 			{/* BubbleMenu уносит свой элемент в body — держим его в постоянной обёртке,
 			    иначе React падает, вставляя панель/плашку записи «перед» ним */}
 			<div className='contents'>
@@ -632,6 +660,8 @@ export function RichEditor({
 					</div>
 				</BubbleMenu>
 			)}
+			{editor && <SelectionBubble editor={editor} />}
+			{editor && <TableBubble editor={editor} />}
 			</div>
 			{editor && linkMenu && (
 				<LinkMenu

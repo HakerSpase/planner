@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/buttons/Button'
 import { TypeUserForm } from '@/types/auth.types'
 
 import { AiPrompt } from './AiPrompt'
+import { SpeechSettings, TranscriptionSettings } from './SpeechSettings'
 import { NotificationSettings } from './NotificationSettings'
 import { DesktopSettings, FeelSettings } from './FeelSettings'
 import { useInitialData } from './useInitialData'
@@ -425,6 +426,20 @@ export function Settings() {
 					description='Переходы, фоновая музыка и вибрация. Применяются сразу, на этом устройстве.'
 				>
 					<FeelSettings />
+				</Section>
+
+				<Section
+					title='Озвучка'
+					description='Чтение конспектов вслух голосом системы — бесплатно, на телефоне и компьютере. Формулы и код пропускаются.'
+				>
+					<SpeechSettings />
+				</Section>
+
+				<Section
+					title='Расшифровка аудио'
+					description='Голосовые и аудио превращаются в текст нейросетью Whisper — локально и бесплатно.'
+				>
+					<TranscriptionSettings />
 				</Section>
 
 				<Section

@@ -19,6 +19,7 @@ import { useBackClose } from '@/hooks/useBackClose'
 import { AppBackground } from './AppBackground'
 import { MobileNav } from './MobileNav'
 import { MusicController } from './MusicController'
+import { SpeechPlayer } from '@/components/speech/SpeechPlayer'
 import { UploadProgress } from './UploadProgress'
 import { Header } from './header/Header'
 import { Sidebar } from './sidebar/Sidebar'
@@ -167,6 +168,7 @@ export default function DashboardLayout({
 			<MobileNav onOpenMore={() => setIsMobileOpen(true)} />
 			<UploadProgress />
 			<MusicController />
+			<SpeechPlayer />
 		</div>
 	)
 }

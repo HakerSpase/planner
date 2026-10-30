@@ -2,9 +2,9 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import cn from 'clsx'
-import { ArrowLeft, Brain, Check, FileText, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowLeft, Brain, Check, ChevronDown, ChevronRight, FileText, Folder, Layers, RotateCcw, Sparkles, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
@@ -63,14 +63,14 @@ export function LibraryCards({
 		queryFn: flashcardsService.getDeck,
 		staleTime: 30_000
 	})
-	const [sectionId, setSectionId] = useState<string>('all')
+	// Что повторяем: всё, раздел (s:), подраздел (t:) или один лист (p:)
+	const [scope, setScope] = useState<string>('all')
 	const [session, setSession] = useState<IDeckCard[] | null>(null)
 
 	const sectionOfTopic = useMemo(() => new Map(topics.map(topic => [topic.id, topic.section_id])), [topics])
 	const filtered = useMemo(
-		() =>
-			(deck || []).filter(card => sectionId === 'all' || sectionOfTopic.get(card.topicId) === sectionId),
-		[deck, sectionId, sectionOfTopic]
+		() => (deck || []).filter(card => matchesScope(scope, card, sectionOfTopic)),
+		[deck, scope, sectionOfTopic]
 	)
 	const due = filtered.filter(card => isDue(card))
 	const fresh = due.filter(card => !card.state).length
@@ -115,27 +115,22 @@ export function LibraryCards({
 				/>
 			</div>
 
-			<div className='flex flex-wrap items-center gap-2 border-y border-border p-3'>
-				<select
-					value={sectionId}
-					onChange={event => setSectionId(event.target.value)}
-					className='h-10 min-w-0 flex-1 border border-border bg-surface-2 px-3 text-sm text-fg outline-none [color-scheme:dark] sm:flex-none'
-				>
-					<option value='all'>Все разделы</option>
-					{sections.map(section => (
-						<option
-							key={section.id}
-							value={section.id}
-						>
-							{section.title}
-						</option>
-					))}
-				</select>
+			<div className='grid grid-cols-2 gap-2 border-y border-border p-3 sm:flex sm:items-center'>
+				<ScopePicker
+					scope={scope}
+					onChange={setScope}
+					deck={deck || []}
+					sections={sections}
+					topics={topics}
+				/>
 				<button
 					type='button'
 					disabled={!due.length}
 					onClick={() => start(due)}
-					className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-40'
+					className={cn(
+						'flex h-10 items-center justify-center gap-2 whitespace-nowrap bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-40',
+						!filtered.length && 'col-span-2'
+					)}
 				>
 					<Brain size={16} />
 					{due.length ? `Повторить (${due.length})` : 'На сегодня всё'}
@@ -144,7 +139,7 @@ export function LibraryCards({
 					<button
 						type='button'
 						onClick={() => start(filtered)}
-						className='h-10 border border-border px-4 text-sm text-muted transition-colors hover:text-fg'
+						className='h-10 whitespace-nowrap border border-border px-4 text-sm text-muted transition-colors hover:text-fg'
 					>
 						Пройти все
 					</button>
@@ -210,6 +205,233 @@ export function LibraryCards({
 						кнопкой «Выноска → Карточка» в редакторе.
 					</p>
 				</div>
+			)}
+		</div>
+	)
+}
+
+function matchesScope(scope: string, card: IDeckCard, sectionOfTopic: Map<string, string>) {
+	if (scope === 'all') return true
+	const id = scope.slice(2)
+	if (scope.startsWith('s:')) return sectionOfTopic.get(card.topicId) === id
+	if (scope.startsWith('t:')) return card.topicId === id
+	return card.pageId === id
+}
+
+interface ICounts {
+	total: number
+	due: number
+}
+
+const countCards = (cards: IDeckCard[]): ICounts => ({
+	total: cards.length,
+	due: cards.filter(card => isDue(card)).length
+})
+
+/** Выбор, что повторять: раздел → подраздел → лист, со счётчиками карточек */
+function ScopePicker({
+	scope,
+	onChange,
+	deck,
+	sections,
+	topics
+}: {
+	scope: string
+	onChange: (scope: string) => void
+	deck: IDeckCard[]
+	sections: ILibrarySection[]
+	topics: ILibraryTopic[]
+}) {
+	const [open, setOpen] = useState(false)
+	const [expanded, setExpanded] = useState<Set<string>>(new Set())
+	const rootRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		if (!open) return
+		const close = (event: PointerEvent) => {
+			if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+		}
+		const escape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setOpen(false)
+		}
+		document.addEventListener('pointerdown', close)
+		document.addEventListener('keydown', escape)
+		return () => {
+			document.removeEventListener('pointerdown', close)
+			document.removeEventListener('keydown', escape)
+		}
+	}, [open])
+
+	// Счётчики: всего и к повторению — для каждого раздела, подраздела и листа
+	const tree = useMemo(
+		() =>
+			sections
+				.map(section => {
+					const sectionTopics = topics
+						.filter(topic => topic.section_id === section.id)
+						.map(topic => {
+							const cards = deck.filter(card => card.topicId === topic.id)
+							const pages = Array.from(new Map(cards.map(card => [card.pageId, card.pageTitle]))).map(
+								([id, title]) => ({ id, title, ...countCards(cards.filter(card => card.pageId === id)) })
+							)
+							return { ...topic, pages, ...countCards(cards) }
+						})
+						.filter(topic => topic.total)
+					const cards = deck.filter(card => sectionTopics.some(topic => topic.id === card.topicId))
+					return { ...section, topics: sectionTopics, ...countCards(cards) }
+				})
+				.filter(section => section.total),
+		[deck, sections, topics]
+	)
+
+	const label = useMemo(() => {
+		const id = scope.slice(2)
+		for (const section of tree) {
+			if (section.id === id) return section.title
+			for (const topic of section.topics) {
+				if (topic.id === id) return `${section.title} · ${topic.title}`
+				const page = topic.pages.find(item => item.id === id)
+				if (page) return page.title
+			}
+		}
+		return 'Все карточки'
+	}, [scope, tree])
+
+	const toggle = (id: string) =>
+		setExpanded(value => {
+			const next = new Set(value)
+			if (next.has(id)) next.delete(id)
+			else next.add(id)
+			return next
+		})
+
+	const pick = (value: string) => {
+		onChange(value)
+		setOpen(false)
+	}
+
+	const row = (value: string, title: string, counts: ICounts, depth: number, icon: React.ReactNode, expandId?: string) => (
+		<div
+			key={value}
+			className={cn(
+				'flex items-center transition-colors',
+				scope === value ? 'bg-primary/10 text-fg' : 'text-muted hover:bg-white/[0.04] hover:text-fg'
+			)}
+			style={{ paddingLeft: `${depth * 1.1 + 0.25}rem` }}
+		>
+			{expandId ? (
+				<button
+					type='button'
+					aria-label={expanded.has(expandId) ? 'Свернуть' : 'Развернуть'}
+					onClick={() => toggle(expandId)}
+					className='grid h-10 w-8 shrink-0 place-items-center text-subtle hover:text-fg'
+				>
+					<ChevronRight
+						size={15}
+						className={cn('transition-transform', expanded.has(expandId) && 'rotate-90')}
+					/>
+				</button>
+			) : (
+				<span className='w-8 shrink-0' />
+			)}
+			<button
+				type='button'
+				onClick={() => pick(value)}
+				className='flex min-w-0 flex-1 items-center gap-2 py-2.5 pr-3 text-left text-sm'
+			>
+				<span className='shrink-0 text-subtle'>{icon}</span>
+				<span className='min-w-0 flex-1 truncate'>{title}</span>
+				{counts.due > 0 && (
+					<span
+						className='shrink-0 rounded-full bg-primary/15 px-1.5 font-mono text-2xs text-primary'
+						title='К повторению'
+					>
+						{counts.due}
+					</span>
+				)}
+				<span
+					className='w-6 shrink-0 text-right font-mono text-2xs text-subtle'
+					title='Всего карточек'
+				>
+					{counts.total}
+				</span>
+				<Check
+					size={14}
+					className={cn('shrink-0 text-primary', scope !== value && 'invisible')}
+				/>
+			</button>
+		</div>
+	)
+
+	return (
+		<div
+			ref={rootRef}
+			className='relative col-span-2 min-w-0 sm:w-72 sm:flex-none'
+		>
+			<button
+				type='button'
+				onClick={() => setOpen(value => !value)}
+				aria-expanded={open}
+				className={cn(
+					'flex h-10 w-full items-center gap-2 border bg-surface-2 px-3 text-left text-sm text-fg transition-colors',
+					open ? 'border-primary/60' : 'border-border hover:border-white/20'
+				)}
+			>
+				<Layers
+					size={15}
+					className='shrink-0 text-primary'
+				/>
+				<span className='min-w-0 flex-1 truncate'>{label}</span>
+				<ChevronDown
+					size={15}
+					className={cn('shrink-0 text-subtle transition-transform', open && 'rotate-180')}
+				/>
+			</button>
+
+			{open && (
+				<>
+					{/* На телефоне — шторка снизу, на компьютере — выпадающий список */}
+					<div
+						className='fixed inset-0 z-40 bg-black/50 sm:hidden'
+						onClick={() => setOpen(false)}
+					/>
+					<div className='fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto border-t border-border bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-1 sm:max-h-[60vh] sm:w-[24rem] sm:border sm:pb-1'>
+						<div className='sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3 sm:hidden'>
+							<span className='text-sm font-medium text-fg'>Что повторять</span>
+							<button
+								type='button'
+								aria-label='Закрыть'
+								onClick={() => setOpen(false)}
+								className='text-subtle hover:text-fg'
+							>
+								<X size={18} />
+							</button>
+						</div>
+						<div className='py-1'>
+							{row('all', 'Все карточки', countCards(deck), 0, <Layers size={14} />)}
+							{tree.map(section => (
+								<div key={section.id}>
+									{row(`s:${section.id}`, section.title, section, 0, <Folder size={14} />, section.id)}
+									{expanded.has(section.id) &&
+										section.topics.map(topic => (
+											<div key={topic.id}>
+												{row(
+													`t:${topic.id}`,
+													topic.title,
+													topic,
+													1,
+													<Folder size={13} />,
+													topic.pages.length > 1 ? topic.id : undefined
+												)}
+												{expanded.has(topic.id) &&
+													topic.pages.map(page => row(`p:${page.id}`, page.title, page, 2, <FileText size={13} />))}
+											</div>
+										))}
+								</div>
+							))}
+						</div>
+					</div>
+				</>
 			)}
 		</div>
 	)

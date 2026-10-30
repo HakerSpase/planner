@@ -27,6 +27,8 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
+import { isSpeechSupported, speak, speechFromNode } from '@/lib/speech'
+
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -1149,6 +1151,16 @@ function PageView({
 							headings.length > 1 ? () => setShowOutline(value => !value) : undefined
 						}
 						onShare={() => setShareOpen(true)}
+						onSpeak={
+							isSpeechSupported()
+								? () => {
+										const content = document.querySelector('.library-page .rich-editor-content')
+										const text = content ? speechFromNode(content) : ''
+										if (!speak(`${title}.
+${text}`, title || 'Лист')) toast.error('На листе нечего читать')
+									}
+								: undefined
+						}
 						onDelete={() => onDelete({ table: 'library_page', id: page.id, title })}
 					/>
 					<button
@@ -1239,19 +1251,9 @@ function PageView({
 						'library-page [&_[role=toolbar]]:top-12',
 						isEditing ? 'bg-bg' : 'bg-transparent'
 					)}
-					contentClassName={cn('min-h-[50vh]', !isEditing && 'library-reading')}
+					contentClassName={cn(isEditing && 'min-h-[50vh]', !isEditing && 'library-reading')}
 					selfCheck={selfCheck && !isEditing}
 				/>
-
-				{!isEditing && !content.trim() && (
-					<button
-						type='button'
-						onClick={() => setIsEditing(true)}
-						className='mt-2 text-sm text-primary hover:underline'
-					>
-						Начать писать
-					</button>
-				)}
 
 				{!isEditing && (
 					<div className='print:hidden'>

@@ -3,11 +3,12 @@
 import CodeBlock from '@tiptap/extension-code-block'
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react'
 import cn from 'clsx'
-import { BarChart3, ChevronDown, Code2, LineChart, Orbit } from 'lucide-react'
+import { BarChart3, ChevronDown, Code2, GitFork, LineChart, Orbit } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { ChartView } from './ChartView'
 import { PlotView } from './PlotView'
+import { TreeView } from './TreeView'
 import { UnitCircleView } from './UnitCircleView'
 
 /*
@@ -15,10 +16,11 @@ import { UnitCircleView } from './UnitCircleView'
  *   ```plot   — графики функций
  *   ```circle — тригонометрическая окружность
  *   ```chart  — диаграммы по данным
+ *   ```tree   — схема-разветвление
  * Остальные языки — обычный код. В Markdown всё хранится как обычный ```блок.
  */
 
-export const VISUAL_LANGUAGES: Record<string, 'plot' | 'circle' | 'chart'> = {
+export const VISUAL_LANGUAGES: Record<string, 'plot' | 'circle' | 'chart' | 'tree'> = {
 	plot: 'plot',
 	graph: 'plot',
 	график: 'plot',
@@ -27,13 +29,18 @@ export const VISUAL_LANGUAGES: Record<string, 'plot' | 'circle' | 'chart'> = {
 	'unit-circle': 'circle',
 	окружность: 'circle',
 	chart: 'chart',
-	диаграмма: 'chart'
+	диаграмма: 'chart',
+	tree: 'tree',
+	схема: 'tree',
+	mindmap: 'tree',
+	дерево: 'tree'
 }
 
 const META = {
 	plot: { icon: LineChart, title: 'График' },
 	circle: { icon: Orbit, title: 'Окружность' },
-	chart: { icon: BarChart3, title: 'Диаграмма' }
+	chart: { icon: BarChart3, title: 'Диаграмма' },
+	tree: { icon: GitFork, title: 'Схема' }
 }
 
 /*
@@ -83,6 +90,7 @@ function CodeBlockView({ node, editor }: NodeViewProps) {
 			{kind === 'plot' && <PlotView source={source} />}
 			{kind === 'circle' && <UnitCircleView source={source} />}
 			{kind === 'chart' && <ChartView source={source} />}
+			{kind === 'tree' && <TreeView source={source} />}
 
 			{editable && (
 				<div

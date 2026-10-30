@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
-import { Check, Copy, Eye, Link2, ListTree, MoreHorizontal, Printer, Trash2, Unlink, X } from 'lucide-react'
+import { AudioLines, Check, Copy, Eye, Link2, ListTree, MoreHorizontal, Printer, Trash2, Unlink, X } from 'lucide-react'
 import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
@@ -206,6 +206,7 @@ export function PageMenu({
 	showOutline,
 	onToggleOutline,
 	onShare,
+	onSpeak,
 	onDelete
 }: {
 	selfCheck: boolean
@@ -214,6 +215,7 @@ export function PageMenu({
 	showOutline?: boolean
 	onToggleOutline?: () => void
 	onShare: () => void
+	onSpeak?: () => void
 	onDelete: () => void
 }) {
 	const [open, setOpen] = useState(false)
@@ -260,6 +262,7 @@ export function PageMenu({
 					}
 				]
 			: []),
+		...(onSpeak ? [{ icon: AudioLines, label: 'Озвучить лист', hint: 'Прочитать вслух, без формул', action: onSpeak }] : []),
 		{ icon: Printer, label: 'Печать или PDF', hint: 'Сохранить как PDF в окне печати', action: () => window.print() },
 		{ icon: Link2, label: 'Поделиться ссылкой', hint: 'Только для чтения', action: onShare },
 		{ icon: Trash2, label: 'Удалить лист', hint: '', action: onDelete, danger: true }

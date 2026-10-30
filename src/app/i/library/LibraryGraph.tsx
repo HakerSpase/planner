@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
-import { Maximize2, Minus, Plus, Search } from 'lucide-react'
+import { Expand, Maximize2, Minus, Plus, Search, Shrink } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { extractWikiLinks, normalizeTitle } from '@/components/editor/wiki-links'
@@ -48,11 +48,26 @@ const LAYOUTS: [TypeLayout, string, string][] = [
 ]
 
 const SECTION_COLORS = ['#8b7bff', '#38bdf8', '#f472b6', '#4ade80', '#a3e635', '#fb7185', '#2dd4bf', '#c084fc']
-// Разделы — всегда свой, тёплый цвет: сразу видно, где «корни» архива
-const SECTION_NODE = '#f5b546'
 
 const radiusOf = (node: INode) =>
-	node.kind === 'section' ? 11 : node.kind === 'topic' ? 7.5 : 4 + Math.min(7, Math.sqrt(node.degree) * 1.8)
+	node.kind === 'section' ? 15 : node.kind === 'topic' ? 9 : 4 + Math.min(7, Math.sqrt(node.degree) * 1.8)
+
+const rgba = (hex: string, alpha: number) => {
+	const value = parseInt(hex.slice(1), 16)
+	return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`
+}
+
+/** Плашка с подписью раздела или темы — скруглённый прямоугольник цвета раздела */
+function pill(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+	const r = height / 2
+	ctx.beginPath()
+	ctx.moveTo(x + r, y)
+	ctx.arcTo(x + width, y, x + width, y + height, r)
+	ctx.arcTo(x + width, y + height, x, y + height, r)
+	ctx.arcTo(x, y + height, x, y, r)
+	ctx.arcTo(x, y, x + width, y, r)
+	ctx.closePath()
+}
 
 export function LibraryGraph({
 	sections,
@@ -75,6 +90,21 @@ export function LibraryGraph({
 	const [query, setQuery] = useState('')
 	const [showLabels, setShowLabels] = useState(true)
 	const [showOrphans, setShowOrphans] = useState(true)
+	// Во весь экран — граф поверх всего окна
+	const [fullscreen, setFullscreen] = useState(false)
+	useEffect(() => {
+		if (!fullscreen) return
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') setFullscreen(false)
+		}
+		document.addEventListener('keydown', onKey)
+		const overflow = document.body.style.overflow
+		document.body.style.overflow = 'hidden'
+		return () => {
+			document.removeEventListener('keydown', onKey)
+			document.body.style.overflow = overflow
+		}
+	}, [fullscreen])
 
 	/* ---------- Узлы и рёбра ---------- */
 
@@ -360,27 +390,45 @@ export function LibraryGraph({
 				ctx.fillStyle = node === focus ? '#ffffff' : color
 				ctx.fill()
 			} else if (node.kind === 'section') {
-				// Мягкое свечение вокруг раздела
-				const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.6, node.x, node.y, radius * 2.6)
-				glow.addColorStop(0, 'rgba(245, 181, 70, 0.28)')
-				glow.addColorStop(1, 'rgba(245, 181, 70, 0)')
+				// Раздел: свечение, внешнее кольцо и объёмный шар цвета раздела
+				const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.8, node.x, node.y, radius * 3)
+				glow.addColorStop(0, rgba(color, 0.32))
+				glow.addColorStop(1, rgba(color, 0))
 				ctx.fillStyle = glow
 				ctx.beginPath()
-				ctx.arc(node.x, node.y, radius * 2.6, 0, Math.PI * 2)
+				ctx.arc(node.x, node.y, radius * 3, 0, Math.PI * 2)
 				ctx.fill()
 				ctx.beginPath()
+				ctx.arc(node.x, node.y, radius + 5, 0, Math.PI * 2)
+				ctx.lineWidth = 1.5
+				ctx.strokeStyle = rgba(color, node === focus ? 0.9 : 0.45)
+				ctx.stroke()
+				const ball = ctx.createRadialGradient(
+					node.x - radius * 0.35,
+					node.y - radius * 0.35,
+					radius * 0.1,
+					node.x,
+					node.y,
+					radius
+				)
+				ball.addColorStop(0, node === focus ? '#ffffff' : rgba('#ffffff', 0.85))
+				ball.addColorStop(0.35, color)
+				ball.addColorStop(1, rgba(color, 0.75))
+				ctx.beginPath()
 				ctx.arc(node.x, node.y, radius, 0, Math.PI * 2)
-				ctx.fillStyle = node === focus ? '#ffe2a8' : SECTION_NODE
+				ctx.fillStyle = ball
+				ctx.fill()
+			} else {
+				// Тема: тёмный диск, кольцо и точка в центре
+				ctx.fillStyle = '#121216'
 				ctx.fill()
 				ctx.lineWidth = 2.5
-				ctx.strokeStyle = color
+				ctx.strokeStyle = node === focus ? '#ffffff' : color
 				ctx.stroke()
-			} else {
-				ctx.fillStyle = '#16161a'
+				ctx.beginPath()
+				ctx.arc(node.x, node.y, radius * 0.38, 0, Math.PI * 2)
+				ctx.fillStyle = color
 				ctx.fill()
-				ctx.lineWidth = 2
-				ctx.strokeStyle = color
-				ctx.stroke()
 			}
 			ctx.globalAlpha = 1
 		})
@@ -394,20 +442,35 @@ export function LibraryGraph({
 			if (!on && !important) return
 			if (!important && (!showLabels || scale < 0.5)) return
 			// Размер подписи — в пикселях экрана, независимо от масштаба
-			const size = (node.kind === 'section' ? 13 : node.kind === 'topic' ? 12 : 11) / Math.min(scale, 1.4)
+			const zoom = Math.min(scale, 1.4)
+			const size = (node.kind === 'section' ? 13 : node.kind === 'topic' ? 12 : 11) / zoom
 			ctx.font = `${node.kind === 'page' ? 400 : 600} ${size}px Inter, system-ui, sans-serif`
 			const label = node.title.length > 32 ? `${node.title.slice(0, 30)}…` : node.title
-			const y = node.y + radiusOf(node) + 4
+			const y = node.y + radiusOf(node) + (node.kind === 'section' ? 9 : 5) / zoom
+			if (node.kind !== 'page') {
+				// Разделы и темы — подпись на плашке цвета раздела
+				const color = SECTION_COLORS[node.sectionIndex % SECTION_COLORS.length]
+				const padX = (node.kind === 'section' ? 9 : 7) / zoom
+				const height = size + (node.kind === 'section' ? 9 : 7) / zoom
+				const width = ctx.measureText(label).width + padX * 2
+				ctx.globalAlpha = on ? 1 : 0.3
+				pill(ctx, node.x - width / 2, y, width, height)
+				ctx.fillStyle = node.kind === 'section' ? rgba(color, 0.9) : 'rgba(18, 18, 22, 0.92)'
+				ctx.fill()
+				ctx.lineWidth = 1 / zoom
+				ctx.strokeStyle = rgba(color, node.kind === 'section' ? 1 : 0.7)
+				ctx.stroke()
+				ctx.textBaseline = 'middle'
+				ctx.fillStyle = node.kind === 'section' ? '#0b0b0f' : '#ececf0'
+				ctx.fillText(label, node.x, y + height / 2 + 0.5 / zoom)
+				ctx.textBaseline = 'top'
+				ctx.globalAlpha = 1
+				return
+			}
 			ctx.lineWidth = 3 / scale
 			ctx.strokeStyle = 'rgba(9, 9, 11, 0.9)'
 			ctx.strokeText(label, node.x, y)
-			ctx.fillStyle = !on
-				? 'rgba(236,236,240,0.25)'
-				: node.kind === 'section'
-					? '#f7cd7e'
-					: node.kind === 'topic'
-						? '#ececf0'
-						: 'rgba(236, 236, 240, 0.85)'
+			ctx.fillStyle = on ? 'rgba(236, 236, 240, 0.85)' : 'rgba(236,236,240,0.25)'
 			ctx.fillText(label, node.x, y)
 		})
 	}
@@ -529,7 +592,12 @@ export function LibraryGraph({
 	const pageCount = graph.nodes.filter(node => node.kind === 'page').length
 
 	return (
-		<div className='border border-border bg-surface'>
+		<div
+			className={cn(
+				'flex flex-col border border-border bg-surface',
+				fullscreen && 'fixed inset-0 z-[70] border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+			)}
+		>
 			<div className='flex flex-wrap items-center gap-2 border-b border-border p-2'>
 				<div
 					role='radiogroup'
@@ -581,7 +649,7 @@ export function LibraryGraph({
 
 			<div
 				ref={wrapRef}
-				className='relative h-[min(70vh,44rem)] min-h-[22rem]'
+				className={cn('relative', fullscreen ? 'min-h-0 flex-1' : 'h-[min(70vh,44rem)] min-h-[22rem]')}
 			>
 				<canvas
 					ref={canvasRef}
@@ -699,19 +767,31 @@ export function LibraryGraph({
 					>
 						<Maximize2 size={13} />
 					</GraphButton>
+					<GraphButton
+						label={fullscreen ? 'Свернуть (Esc)' : 'Во весь экран'}
+						onClick={() => {
+							setFullscreen(value => !value)
+							autoFit.current = true
+							requestAnimationFrame(() => requestAnimationFrame(fit))
+						}}
+					>
+						{fullscreen ? <Shrink size={13} /> : <Expand size={13} />}
+					</GraphButton>
 				</div>
 
 				<div className='pointer-events-none absolute bottom-2 left-2 right-2 flex flex-wrap items-end justify-between gap-2'>
 					<div className='flex max-w-full flex-wrap gap-x-3 gap-y-1 bg-bg/70 px-2 py-1 text-[11px] text-muted'>
 						<span className='flex items-center gap-1.5'>
 							<span
-								className='h-2.5 w-2.5 rounded-full'
-								style={{ background: SECTION_NODE, boxShadow: '0 0 6px rgba(245,181,70,0.6)' }}
+								className='h-2.5 w-2.5 rounded-full bg-muted'
+								style={{ boxShadow: '0 0 0 2px rgba(161,161,170,0.35), 0 0 8px rgba(161,161,170,0.6)' }}
 							/>
 							Раздел
 						</span>
 						<span className='flex items-center gap-1.5'>
-							<span className='h-2.5 w-2.5 rounded-full border-2 border-muted' />
+							<span className='grid h-2.5 w-2.5 place-items-center rounded-full border-2 border-muted'>
+								<span className='h-0.5 w-0.5 rounded-full bg-muted' />
+							</span>
 							Тема
 						</span>
 						<span className='flex items-center gap-1.5 border-r border-border pr-3'>
@@ -748,7 +828,7 @@ export function LibraryGraph({
 				)}
 			</div>
 
-			<p className='border-t border-border px-3 py-2 text-xs leading-5 text-subtle'>
+			<p className={cn('border-t border-border px-3 py-2 text-xs leading-5 text-subtle', fullscreen && 'hidden')}>
 				Связи появляются из ссылок <span className='font-mono text-muted'>[[Название листа]]</span> в тексте — начните
 				печатать <span className='font-mono text-muted'>[[</span> в редакторе, и появится подсказка. Узлы можно
 				перетаскивать, колёсико или два пальца — масштаб.
