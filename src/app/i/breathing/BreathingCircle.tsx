@@ -15,6 +15,8 @@ export interface BreathingCircleProps {
 	isPaused: boolean
 	cycleCount: number
 	isZen?: boolean
+	/** Свой текст в центре (программы: счёт вдохов, таймер задержки) */
+	center?: { label: string; value: string; caption: string }
 }
 
 const VIEW = 400
@@ -24,9 +26,14 @@ const R_MAX = 158
 const POINTS = 14
 
 // Плавная S-кривая: вдох и выдох ускоряются в середине и замедляются у краёв
-const ease = (t: number) => 0.5 - Math.cos(Math.max(0, Math.min(1, t)) * Math.PI) / 2
+const ease = (t: number) =>
+	0.5 - Math.cos(Math.max(0, Math.min(1, t)) * Math.PI) / 2
 
-function targetExpansion(phase: IBreathingPhase, progress: number, isActive: boolean) {
+function targetExpansion(
+	phase: IBreathingPhase,
+	progress: number,
+	isActive: boolean
+) {
 	if (!isActive) return 0.3
 	switch (phase.type) {
 		case 'inhale':
@@ -81,7 +88,8 @@ export function BreathingCircle({
 	isActive,
 	isPaused,
 	cycleCount,
-	isZen = false
+	isZen = false,
+	center
 }: BreathingCircleProps) {
 	const id = useId().replace(/:/g, '')
 	const accent = currentPhase.color || technique.accentColor || '#7c5cff'
@@ -99,7 +107,9 @@ export function BreathingCircle({
 		let last = performance.now()
 		let expansion = targetRef.current
 		let time = 0
-		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		const reduceMotion = window.matchMedia(
+			'(prefers-reduced-motion: reduce)'
+		).matches
 
 		const tick = (now: number) => {
 			const dt = Math.min(0.05, (now - last) / 1000)
@@ -119,7 +129,12 @@ export function BreathingCircle({
 	// На задержке колыхание чуть заметнее — форма «держит» воздух
 	const amplitude = currentPhase.type === 'holdIn' && isActive ? 0.03 : 0.018
 	const body = blobPath(radius, time, amplitude)
-	const aura = blobPath(radius, time * 0.8 + 2, amplitude * 1.6, 1.08 + expansion * 0.05)
+	const aura = blobPath(
+		radius,
+		time * 0.8 + 2,
+		amplitude * 1.6,
+		1.08 + expansion * 0.05
+	)
 
 	return (
 		<div className='relative flex w-full select-none flex-col items-center justify-center'>
@@ -228,7 +243,7 @@ export function BreathingCircle({
 									isZen ? 'text-sm' : 'text-xs'
 								)}
 							>
-								{isPaused ? 'Пауза' : currentPhase.name}
+								{isPaused ? 'Пауза' : (center?.label ?? currentPhase.name)}
 							</span>
 							<span
 								className={cn(
@@ -236,10 +251,10 @@ export function BreathingCircle({
 									isZen ? 'text-8xl sm:text-9xl' : 'text-6xl'
 								)}
 							>
-								{Math.ceil(phaseRemainingSeconds)}
+								{center?.value ?? Math.ceil(phaseRemainingSeconds)}
 							</span>
 							<span className='mt-3 font-mono text-xs font-medium uppercase tracking-wider text-fg/75'>
-								Цикл {cycleCount + 1}
+								{center?.caption ?? `Цикл ${cycleCount + 1}`}
 							</span>
 						</>
 					) : (

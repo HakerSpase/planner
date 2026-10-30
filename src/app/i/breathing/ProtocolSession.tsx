@@ -25,6 +25,7 @@ import {
 } from 'react'
 import { toast } from 'sonner'
 
+import { BreathingCircle } from './BreathingCircle'
 import { breathingAudio } from './breathing-audio'
 import {
 	type IProtocol,
@@ -32,6 +33,11 @@ import {
 	type ProtocolStep,
 	estimateSeconds
 } from './breathing-protocols'
+import type {
+	BreathingPhaseType,
+	IBreathingPhase,
+	IBreathingTechnique
+} from './breathing.types'
 import { usePreferences } from '@/lib/preferences'
 import { sayCue } from '@/lib/speech'
 import {
@@ -744,8 +750,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 	)
 }
 
-/* ---------- Форма, кольцо прогресса и раунды ---------- */
+/* ---------- Дышащая форма (та же, что в циклах) и раунды ---------- */
 
+/** Шаг программы → фаза для формы: растёт на вдохе, замирает на задержке, сжимается на выдохе */
 function Orb({
 	step,
 	elapsed,
@@ -761,112 +768,71 @@ function Orb({
 	accent: string
 	large: boolean
 }) {
-	let scale = 0.75
-	let transition = 600
-	let big = ''
+	let type: BreathingPhaseType = 'inhale'
+	let progress = 0
+	let label = ''
+	let value = ''
 	let caption = ''
-	let progress: number | null = null
 
 	if (step.kind === 'breaths') {
 		const cycle = step.inhale + step.exhale
-		const breath = Math.min(step.count, Math.floor(elapsed / cycle) + 1)
-		const inhaling = elapsed % cycle < step.inhale
-		scale = inhaling ? 1 : step.style === 'pump' ? 0.8 : 0.58
-		transition = (inhaling ? step.inhale : step.exhale) * 1000
-		big = String(breath)
-		caption = `из ${step.count} · ${inhaling ? (step.style === 'pump' ? 'вдох сам' : 'вдох') : 'выдох'}`
-		progress = elapsed / (step.count * cycle)
+		const inside = elapsed % cycle
+		const inhaling = inside < step.inhale
+		type = inhaling ? 'inhale' : 'exhale'
+		progress = inhaling
+			? inside / step.inhale
+			: (inside - step.inhale) / step.exhale
+		label = inhaling ? (step.style === 'pump' ? 'Вдох сам' : 'Вдох') : 'Выдох'
+		value = String(Math.min(step.count, Math.floor(elapsed / cycle) + 1))
+		caption = `из ${step.count}`
 	} else if (step.kind === 'hold') {
-		scale = step.lungs === 'in' ? 1 : 0.55
-		big =
+		type = step.lungs === 'in' ? 'holdIn' : 'holdOut'
+		label = step.lungs === 'in' ? 'На вдохе' : 'На выдохе'
+		value =
 			length !== undefined
 				? String(Math.ceil(length - elapsed))
 				: formatClock(elapsed)
-		caption = step.lungs === 'in' ? 'на вдохе' : 'на выдохе'
-		progress = length !== undefined ? elapsed / length : null
+		caption = length !== undefined ? 'секунд' : 'держи'
 	} else {
-		scale = step.lungs === 'in' ? 1 : step.lungs === 'out' ? 0.55 : 0.75
-		big = String(Math.ceil(step.seconds - elapsed))
+		if (step.lungs) type = step.lungs === 'in' ? 'holdIn' : 'holdOut'
+		else {
+			// Свободный отдых: форма спокойно дышит сама, 4 секунды вдох и 4 выдох
+			const inside = elapsed % 8
+			type = inside < 4 ? 'inhale' : 'exhale'
+			progress = (inside % 4) / 4
+		}
+		label = 'Отдых'
+		value = String(Math.ceil(step.seconds - elapsed))
 		caption = 'секунд'
-		progress = elapsed / step.seconds
 	}
 
-	const size = large ? 360 : 280
-	const radius = size / 2 - 6
-	const circumference = 2 * Math.PI * radius
-	const breathingFree = step.kind === 'rest' && !step.lungs
+	const phase: IBreathingPhase = {
+		type,
+		name: label,
+		hint: '',
+		seconds: 0,
+		color: accent
+	}
+	const technique = {
+		accentColor: accent,
+		shortName: '',
+		name: '',
+		totalCycleSeconds: 0
+	} as unknown as IBreathingTechnique
 
 	return (
-		<div
-			className='relative my-4 grid shrink-0 place-items-center'
-			style={{ width: size, height: size }}
-		>
-			<div
-				aria-hidden
-				className='pointer-events-none absolute -z-10 h-[220%] w-[220%] rounded-full'
-				style={{
-					background: `radial-gradient(circle, ${accent}40 0%, ${accent}14 30%, transparent 60%)`,
-					opacity: 0.4 + scale * 0.5
-				}}
+		<div className='my-2'>
+			<BreathingCircle
+				technique={technique}
+				currentPhase={phase}
+				phaseRemainingSeconds={0}
+				phaseProgress={Math.max(0, Math.min(1, progress))}
+				isActive
+				isPaused={paused}
+				cycleCount={0}
+				isZen={large}
+				center={{ label, value, caption }}
 			/>
-			<svg
-				className='absolute inset-0 -rotate-90'
-				width={size}
-				height={size}
-				aria-hidden
-			>
-				<circle
-					cx={size / 2}
-					cy={size / 2}
-					r={radius}
-					fill='none'
-					stroke='currentColor'
-					strokeWidth={2}
-					className='text-white/[0.06]'
-				/>
-				{progress !== null && (
-					<circle
-						cx={size / 2}
-						cy={size / 2}
-						r={radius}
-						fill='none'
-						stroke={accent}
-						strokeWidth={3}
-						strokeLinecap='round'
-						strokeDasharray={circumference}
-						strokeDashoffset={circumference * (1 - Math.min(1, progress))}
-						style={{ transition: 'stroke-dashoffset 120ms linear' }}
-					/>
-				)}
-			</svg>
-			<div
-				className={cn(
-					'absolute rounded-full',
-					breathingFree &&
-						!paused &&
-						'animate-[orb-free_8s_ease-in-out_infinite]'
-				)}
-				style={{
-					inset: size * 0.12,
-					transform: breathingFree ? undefined : `scale(${scale})`,
-					transition: `transform ${transition}ms cubic-bezier(0.45, 0, 0.55, 1)`,
-					background: `radial-gradient(circle at 38% 32%, ${accent}66, ${accent}22 55%, ${accent}0d)`,
-					boxShadow: `0 0 0 1px ${accent}55 inset, 0 0 60px ${accent}33`
-				}}
-			/>
-			<div className='relative flex flex-col items-center text-center'>
-				<span
-					className={cn(
-						'font-light tabular-nums leading-none tracking-tight text-fg',
-						large ? 'text-8xl' : 'text-6xl'
-					)}
-				>
-					{paused ? '‖' : big}
-				</span>
-				<span className='mt-2 font-mono text-2xs uppercase tracking-[0.2em] text-fg/70'>
-					{caption}
-				</span>
-			</div>
 		</div>
 	)
 }
