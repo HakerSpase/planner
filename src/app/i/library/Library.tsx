@@ -19,8 +19,7 @@ import {
 	Pencil,
 	Plus,
 	Trash2,
-	Waypoints,
-	X
+	Waypoints
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -1268,19 +1267,8 @@ function PageView({
 			{/* Оглавление сбоку — на широком экране, скрывается по желанию */}
 			{headings.length > 1 && showOutline && (
 				<aside className='hidden print:hidden xl:block'>
-					<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto'>
-						<div className='mb-3 flex items-center justify-between gap-2'>
-							<p className='eyebrow'>Содержание</p>
-							<button
-								type='button'
-								onClick={() => setShowOutline(false)}
-								title='Скрыть содержание'
-								aria-label='Скрыть содержание'
-								className='grid h-6 w-6 place-items-center text-subtle transition-colors hover:text-fg'
-							>
-								<X size={14} />
-							</button>
-						</div>
+					<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+						<p className='eyebrow mb-3'>Содержание</p>
 						<PageOutline headings={headings} />
 					</div>
 				</aside>
