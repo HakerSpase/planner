@@ -1,0 +1,74 @@
+# Сборка Android-приложения Planner (Capacitor) в облаке.
+# Готовый APK появляется в Releases → «Planner для Android» — его можно скачать прямо на телефон.
+# Ключ подписи хранится в секретах репозитория: ANDROID_KEYSTORE_BASE64 и ANDROID_KEYSTORE_PASSWORD.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Зависимости и синхронизация Capacitor
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Ключ подписи
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Нет секрета ANDROID_KEYSTORE_BASE64 — без постоянного ключа обновления не встанут поверх"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/planner.p12"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/planner.p12" >> "$GITHUB_ENV"
+
+      - name: Сборка APK
+        working-directory: android-app/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Planner.apk"
+
+      - name: Выложить в Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Сборка ${{ github.run_number }} от $(date -u +'%d.%m.%Y %H:%M') UTC. Скачайте Planner.apk на телефоне и установите (разрешите установку из браузера). Новые версии ставятся поверх — вход и настройки сохраняются."
+          if gh release view android --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload android "$RUNNER_TEMP/Planner.apk" --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit android --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create android "$RUNNER_TEMP/Planner.apk" --title "Planner для Android" --notes "$NOTES" --latest=false --repo "$GITHUB_REPOSITORY"
+          fi

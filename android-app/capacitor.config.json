@@ -1,0 +1,28 @@
+{
+  "appId": "app.mplanner.planner",
+  "appName": "Planner",
+  "webDir": "www",
+  "server": {
+    "url": "https://mplanner-dun.vercel.app/i",
+    "androidScheme": "https",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "backgroundColor": "#0a0a0c"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#0a0a0c",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a0a0c",
+      "overlaysWebView": false
+    },
+    "LocalNotifications": {
+      "iconColor": "#7c5cff"
+    }
+  }
+}

@@ -6,10 +6,15 @@ import Script from 'next/script'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { nativePlugin } from '@/lib/native'
+
 declare global {
 	interface Window {
 		turnstile?: {
-			render: (container: HTMLElement, options: Record<string, unknown>) => string
+			render: (
+				container: HTMLElement,
+				options: Record<string, unknown>
+			) => string
 			reset: (widgetId?: string) => void
 		}
 	}
@@ -113,13 +118,19 @@ export function Auth() {
 		const error = params.get('error')
 		if (error) {
 			if (error === 'captcha_required') {
-				toast.error('Сессия проверки безопасности истекла. Пожалуйста, подтвердите проверку и попробуйте снова.')
+				toast.error(
+					'Сессия проверки безопасности истекла. Пожалуйста, подтвердите проверку и попробуйте снова.'
+				)
 			} else if (error === 'oauth_failed') {
-				toast.error('Не удалось завершить вход через Google. Пожалуйста, попробуйте ещё раз.')
+				toast.error(
+					'Не удалось завершить вход через Google. Пожалуйста, попробуйте ещё раз.'
+				)
 			} else if (error === 'access_denied') {
 				toast.error('Вход через Google был отменён.')
 			} else if (error === 'no_code') {
-				toast.error('Код авторизации не был получен от сервиса входа. Попробуйте снова.')
+				toast.error(
+					'Код авторизации не был получен от сервиса входа. Попробуйте снова.'
+				)
 			} else {
 				toast.error(`Ошибка авторизации: ${error}`)
 			}
@@ -155,26 +166,38 @@ export function Auth() {
 
 	const renderTurnstile = useCallback(() => {
 		if (!siteKey) {
-			setCaptchaError('Проверка безопасности не настроена. Вход временно недоступен.')
+			setCaptchaError(
+				'Проверка безопасности не настроена. Вход временно недоступен.'
+			)
 			return
 		}
-		if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return
+		if (
+			!window.turnstile ||
+			!turnstileContainerRef.current ||
+			turnstileWidgetIdRef.current
+		)
+			return
 		try {
-			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-				sitekey: siteKey,
-				theme: 'dark',
-				action: 'planner_login',
-				size: 'flexible',
-				callback: (token: string) => {
-					setCaptchaError('')
-					setTurnstileToken(token)
-				},
-				'expired-callback': () => setTurnstileToken(null),
-				'error-callback': () => {
-					setTurnstileToken(null)
-					setCaptchaError('Не удалось загрузить проверку. Обновите страницу и попробуйте снова.')
+			turnstileWidgetIdRef.current = window.turnstile.render(
+				turnstileContainerRef.current,
+				{
+					sitekey: siteKey,
+					theme: 'dark',
+					action: 'planner_login',
+					size: 'flexible',
+					callback: (token: string) => {
+						setCaptchaError('')
+						setTurnstileToken(token)
+					},
+					'expired-callback': () => setTurnstileToken(null),
+					'error-callback': () => {
+						setTurnstileToken(null)
+						setCaptchaError(
+							'Не удалось загрузить проверку. Обновите страницу и попробуйте снова.'
+						)
+					}
 				}
-			})
+			)
 		} catch {
 			setCaptchaError('Не удалось загрузить проверку безопасности.')
 		}
@@ -196,15 +219,26 @@ export function Auth() {
 			if (!response.ok || !result.url) {
 				throw new Error(result.error || 'Не удалось начать вход через Google.')
 			}
+			// В Android-приложении Google не пускает в WebView — входим во вкладке Chrome,
+			// код вернётся в приложение по ссылке (см. /auth/callback/native)
+			const browser = nativePlugin('Browser')
+			if (browser) {
+				await browser.open({
+					url: `${window.location.origin}/auth/callback/native?u=${encodeURIComponent(result.url)}`
+				})
+				setIsLoading(false)
+				return
+			}
 			window.location.assign(result.url)
 		} catch (error: any) {
-			toast.error(error?.message || 'Не удалось подключиться к сервису авторизации')
+			toast.error(
+				error?.message || 'Не удалось подключиться к сервису авторизации'
+			)
 			setTurnstileToken(null)
 			window.turnstile?.reset(turnstileWidgetIdRef.current)
 			setIsLoading(false)
 		}
 	}
-
 
 	const doneCount = tasks.filter(t => t.isCompleted).length
 
@@ -214,7 +248,9 @@ export function Auth() {
 				src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 				strategy='afterInteractive'
 				onReady={renderTurnstile}
-				onError={() => setCaptchaError('Не удалось загрузить проверку безопасности.')}
+				onError={() =>
+					setCaptchaError('Не удалось загрузить проверку безопасности.')
+				}
 			/>
 
 			{/* body глобально без прокрутки — у лендинга свой скролл-контейнер */}
@@ -252,8 +288,8 @@ export function Auth() {
 								<span className='text-subtle'>Больше дела.</span>
 							</h1>
 							<p className='mt-8 max-w-md text-base leading-7 text-muted'>
-								Задачи, фокус-таймер, тайм-блокинг и дневник мыслей
-								в&nbsp;одном спокойном интерфейсе. Ничего лишнего.
+								Задачи, фокус-таймер, тайм-блокинг и дневник мыслей в&nbsp;одном
+								спокойном интерфейсе. Ничего лишнего.
 							</p>
 						</div>
 
@@ -306,10 +342,22 @@ export function Auth() {
 											className='h-[18px] w-[18px] shrink-0'
 											viewBox='0 0 24 24'
 										>
-											<path fill='#4285F4' d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z' />
-											<path fill='#34A853' d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z' />
-											<path fill='#FBBC05' d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z' />
-											<path fill='#EA4335' d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z' />
+											<path
+												fill='#4285F4'
+												d='M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z'
+											/>
+											<path
+												fill='#34A853'
+												d='M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z'
+											/>
+											<path
+												fill='#FBBC05'
+												d='M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z'
+											/>
+											<path
+												fill='#EA4335'
+												d='M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z'
+											/>
 										</svg>
 									)}
 									{isLoading ? 'Авторизация…' : 'Продолжить через Google'}
@@ -394,10 +442,7 @@ export function Auth() {
 									</span>
 									<span className='flex items-center gap-2 justify-self-end text-xs text-muted'>
 										<span
-											className={cn(
-												'h-1.5 w-1.5',
-												PRIORITY_DOT[task.priority]
-											)}
+											className={cn('h-1.5 w-1.5', PRIORITY_DOT[task.priority])}
 										/>
 										{PRIORITY_LABEL[task.priority]}
 									</span>

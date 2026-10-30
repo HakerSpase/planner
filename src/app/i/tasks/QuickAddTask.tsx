@@ -10,7 +10,7 @@ import {
 	Loader2,
 	Zap
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { EnumTaskPriority } from '@/types/task.types'
@@ -31,6 +31,23 @@ export function QuickAddTask() {
 	const [text, setText] = useState('')
 	const [saving, setSaving] = useState(false)
 	const parsed = useMemo(() => parseQuickTask(text), [text])
+	const inputRef = useRef<HTMLInputElement>(null)
+
+	// «Поделиться → Planner» на Android открывает /i/tasks?share=текст
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search)
+		const shared = params.get('share')
+		if (!shared) return
+		setText(shared.replace(/\s+/g, ' ').slice(0, 300))
+		params.delete('share')
+		const rest = params.toString()
+		history.replaceState(
+			null,
+			'',
+			window.location.pathname + (rest ? `?${rest}` : '')
+		)
+		requestAnimationFrame(() => inputRef.current?.focus())
+	}, [])
 
 	const submit = async () => {
 		if (!parsed.name.trim() || saving) return
@@ -78,6 +95,7 @@ export function QuickAddTask() {
 					className='shrink-0 text-primary'
 				/>
 				<input
+					ref={inputRef}
 					value={text}
 					onChange={event => setText(event.target.value)}
 					onKeyDown={event => {

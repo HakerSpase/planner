@@ -3,6 +3,7 @@ import type {
 	CueStyleType,
 	SoundscapeType
 } from './breathing.types'
+import { nativePlugin } from '@/lib/native'
 
 class BreathingAudioManager {
 	private audioContext: AudioContext | null = null
@@ -14,7 +15,9 @@ class BreathingAudioManager {
 	private soundscapeType: SoundscapeType = 'none'
 	private soundscapeVolume: number = 0.45
 	private soundscapeMasterGain: GainNode | null = null
-	private soundscapeActiveNodes: (AudioNode | OscillatorNode | AudioBufferSourceNode)[] = []
+	private soundscapeActiveNodes: (
+		AudioNode | OscillatorNode | AudioBufferSourceNode
+	)[] = []
 	private isSoundscapePlaying: boolean = false
 
 	// Cues state
@@ -78,14 +81,25 @@ class BreathingAudioManager {
 	}
 
 	async requestWakeLock() {
+		// Android-приложение: экран держит система
+		const keepAwake = nativePlugin('KeepAwake')
+		if (keepAwake) {
+			keepAwake.keepAwake().catch(() => {})
+			return
+		}
 		if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
 			try {
-				this.wakeLockSentinel = await (navigator as any).wakeLock.request('screen')
+				this.wakeLockSentinel = await (navigator as any).wakeLock.request(
+					'screen'
+				)
 			} catch {}
 		}
 	}
 
 	releaseWakeLock() {
+		nativePlugin('KeepAwake')
+			?.allowSleep()
+			.catch(() => {})
 		if (this.wakeLockSentinel) {
 			try {
 				this.wakeLockSentinel.release().catch(() => {})

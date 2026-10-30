@@ -1,3 +1,4 @@
+import { nativePlugin } from '@/lib/native'
 import { createClient } from '@/lib/supabase/client'
 
 /*
@@ -34,7 +35,8 @@ export async function registerServiceWorker() {
  * через Windows, пока оно запущено (в том числе свёрнутым в трей). Разрешение спрашивает
  * окно Windows, а не браузер.
  */
-export const desktopBridge = () => (typeof window !== 'undefined' ? window.plannerDesktop : undefined)
+export const desktopBridge = () =>
+	typeof window !== 'undefined' ? window.plannerDesktop : undefined
 
 function desktopState(): TypePushState {
 	if (typeof Notification === 'undefined') return 'unsupported'
@@ -44,11 +46,26 @@ function desktopState(): TypePushState {
 
 /** Включён ли настоящий веб-пуш (его доставит сервер, даже когда планер закрыт) */
 export async function hasServerPush() {
-	return !desktopBridge() && (await getPushState()) === 'on'
+	return (
+		!desktopBridge() &&
+		!nativePlugin('LocalNotifications') &&
+		(await getPushState()) === 'on'
+	)
+}
+
+/*
+ * В Android-приложении веб-пуша нет (WebView), зато есть системные уведомления:
+ * расписание из задач ставится в Android и сработает, даже когда приложение закрыто.
+ */
+async function nativeState(): Promise<TypePushState> {
+	const { display } =
+		await nativePlugin('LocalNotifications')!.checkPermissions()
+	return display === 'granted' ? 'on' : display === 'denied' ? 'denied' : 'off'
 }
 
 export async function getPushState(): Promise<TypePushState> {
 	if (desktopBridge()) return desktopState()
+	if (nativePlugin('LocalNotifications')) return nativeState()
 	if (!pushSupported()) return 'unsupported'
 	if (Notification.permission === 'denied') return 'denied'
 	const registration = await navigator.serviceWorker.getRegistration('/')
@@ -80,6 +97,12 @@ const deviceName = () => {
 }
 
 export async function enablePush() {
+	const native = nativePlugin('LocalNotifications')
+	if (native) {
+		const { display } = await native.requestPermissions()
+		if (display !== 'granted') throw new Error('denied')
+		return
+	}
 	const desktop = desktopBridge()
 	if (desktop) {
 		if (desktop.requestNotifications) {
@@ -87,7 +110,10 @@ export async function enablePush() {
 			if (!notifications) throw new Error('denied')
 		}
 		// Разрешение уже выдано приложением; если страница ещё не узнала о нём — спросит сама
-		if (Notification.permission !== 'granted' && (await Notification.requestPermission()) !== 'granted')
+		if (
+			Notification.permission !== 'granted' &&
+			(await Notification.requestPermission()) !== 'granted'
+		)
 			throw new Error('reload')
 		return
 	}
@@ -113,15 +139,33 @@ export async function enablePush() {
 }
 
 export async function disablePush() {
+	if (nativePlugin('LocalNotifications')) return
 	const registration = await navigator.serviceWorker.getRegistration('/')
 	const subscription = await registration?.pushManager.getSubscription()
 	if (!subscription) return
-	await createClient().from('push_subscription').delete().eq('endpoint', subscription.endpoint)
+	await createClient()
+		.from('push_subscription')
+		.delete()
+		.eq('endpoint', subscription.endpoint)
 	await subscription.unsubscribe()
 }
 
 /** Прислать проверочное уведомление на все устройства пользователя */
 export async function sendTestPush() {
+	const native = nativePlugin('LocalNotifications')
+	if (native) {
+		await native.schedule({
+			notifications: [
+				{
+					id: 1,
+					title: 'Planner',
+					body: 'Уведомления работают — так будут приходить напоминания о задачах',
+					schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true }
+				}
+			]
+		})
+		return 1
+	}
 	if (desktopBridge()) {
 		new Notification('Planner', {
 			body: 'Уведомления работают — так будут приходить напоминания о задачах',
@@ -129,7 +173,9 @@ export async function sendTestPush() {
 		})
 		return 1
 	}
-	const { data, error } = await createClient().functions.invoke<{ delivered: number }>('send-reminders', {
+	const { data, error } = await createClient().functions.invoke<{
+		delivered: number
+	}>('send-reminders', {
 		body: { test: true }
 	})
 	if (error) throw error

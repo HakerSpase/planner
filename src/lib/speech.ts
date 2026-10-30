@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
+import { nativePlugin } from './native'
 import { getPreferences } from './preferences'
 
 /*
@@ -36,15 +37,36 @@ const emit = (patch: Partial<ISpeechState>) => {
 	listeners.forEach(listener => listener())
 }
 
+// В Android-приложении WebView не умеет говорить — озвучивает движок Android (плагин)
+const nativeTts = () => nativePlugin('TextToSpeech')
+export const isNativeSpeech = () => Boolean(nativeTts())
+
 export const isSpeechSupported = () =>
+	typeof window !== 'undefined' &&
+	(isNativeSpeech() || 'speechSynthesis' in window)
+
+const hasWebSpeech = () =>
 	typeof window !== 'undefined' && 'speechSynthesis' in window
+
+/** Язык фразы: латиницы больше кириллицы — читаем английским голосом */
+export function langOf(text: string) {
+	const cyrillic = (text.match(/[а-яё]/gi) || []).length
+	const latin = (text.match(/[a-z]/gi) || []).length
+	return latin > cyrillic ? 'en-US' : 'ru-RU'
+}
+
+function cancelSynth() {
+	const native = nativeTts()
+	if (native) void native.stop().catch(() => {})
+	else if (hasWebSpeech()) window.speechSynthesis.cancel()
+}
 
 /* ---------- Голоса ---------- */
 
 let voicesCache: SpeechSynthesisVoice[] = []
 
 export function getVoices() {
-	if (!isSpeechSupported()) return []
+	if (!hasWebSpeech()) return []
 	const voices = window.speechSynthesis.getVoices()
 	if (voices.length) voicesCache = voices
 	return voicesCache
@@ -52,7 +74,7 @@ export function getVoices() {
 
 /** Голоса грузятся асинхронно (особенно на Android) — ждём событие */
 export function onVoicesChanged(callback: () => void) {
-	if (!isSpeechSupported()) return () => {}
+	if (!hasWebSpeech()) return () => {}
 	window.speechSynthesis.addEventListener('voiceschanged', callback)
 	return () =>
 		window.speechSynthesis.removeEventListener('voiceschanged', callback)
@@ -71,12 +93,25 @@ export function sortVoices(voices: SpeechSynthesisVoice[]) {
 	)
 }
 
-function pickVoice() {
+/** Выбранный голос; если фраза на другом языке — лучший голос этого языка */
+function pickVoice(lang = 'ru-RU') {
 	const voices = getVoices()
 	const { ttsVoice } = getPreferences()
-	return (
-		voices.find(voice => voice.voiceURI === ttsVoice) ?? sortVoices(voices)[0]
+	const prefix = lang.slice(0, 2)
+	const chosen = voices.find(voice => voice.voiceURI === ttsVoice)
+	if (chosen?.lang.toLowerCase().startsWith(prefix)) return chosen
+	const sameLang = voices.filter(voice =>
+		voice.lang.toLowerCase().startsWith(prefix)
 	)
+	if (sameLang.length)
+		return [...sameLang].sort(
+			(a, b) =>
+				(/natural|neural|online/i.test(b.name) ? 2 : 0) +
+				(/google/i.test(b.name) ? 1 : 0) -
+				((/natural|neural|online/i.test(a.name) ? 2 : 0) +
+					(/google/i.test(a.name) ? 1 : 0))
+		)[0]
+	return chosen ?? sortVoices(voices)[0]
 }
 
 /* ---------- Подготовка текста ---------- */
@@ -109,8 +144,7 @@ export function splitIntoChunks(text: string) {
 	return result
 }
 
-const BLOCK =
-	/^(P|LI|H[1-6]|TR|BLOCKQUOTE|DIV|PRE|UL|OL|TABLE|SECTION|FIGURE)$/
+const BLOCK = /^(P|LI|H[1-6]|TR|BLOCKQUOTE|DIV|PRE|UL|OL|TABLE|SECTION|FIGURE)$/
 
 /**
  * Текст для чтения вслух из куска страницы: без формул, кода, графиков, скрытых ответов
@@ -177,18 +211,41 @@ export function selectedSpeechText() {
 /* ---------- Плеер ---------- */
 
 function speakChunk(index: number) {
-	const synth = window.speechSynthesis
 	const my = ++generation
-	synth.cancel()
+	cancelSynth()
 	if (index >= chunks.length) {
 		stopSpeech()
 		return
 	}
 	const { ttsRate, ttsPitch } = getPreferences()
+	const lang = langOf(chunks[index])
+
+	const native = nativeTts()
+	if (native) {
+		emit({ status: 'playing', index, current: chunks[index] })
+		native
+			.speak({
+				text: chunks[index],
+				lang,
+				rate: ttsRate,
+				pitch: ttsPitch,
+				category: 'playback'
+			})
+			.then(() => {
+				if (my === generation && state.status === 'playing')
+					speakChunk(index + 1)
+			})
+			.catch(() => {
+				if (my === generation) stopSpeech()
+			})
+		return
+	}
+
+	const synth = window.speechSynthesis
 	const utterance = new SpeechSynthesisUtterance(chunks[index])
-	const voice = pickVoice()
+	const voice = pickVoice(lang)
 	if (voice) utterance.voice = voice
-	utterance.lang = voice?.lang || 'ru-RU'
+	utterance.lang = voice?.lang || lang
 	utterance.rate = ttsRate
 	utterance.pitch = ttsPitch
 	utterance.onend = () => {
@@ -223,7 +280,7 @@ export function pauseSpeech() {
 	if (state.status !== 'playing') return
 	// pause() на Android глохнет навсегда — останавливаемся и продолжаем с этой же фразы
 	generation++
-	window.speechSynthesis.cancel()
+	cancelSynth()
 	emit({ status: 'paused' })
 }
 
@@ -243,7 +300,7 @@ export function restartCurrent() {
 
 export function stopSpeech() {
 	generation++
-	if (isSpeechSupported()) window.speechSynthesis.cancel()
+	if (isSpeechSupported()) cancelSynth()
 	chunks = []
 	emit(IDLE)
 }
@@ -253,10 +310,26 @@ export function sayCue(text: string) {
 	if (!isSpeechSupported()) return
 	stopSpeech()
 	const { ttsRate, ttsPitch } = getPreferences()
+	const native = nativeTts()
+	if (native) {
+		// stop() асинхронный — говорим чуть позже, чтобы он не оборвал подсказку
+		setTimeout(() => {
+			void native
+				.speak({
+					text,
+					lang: langOf(text),
+					rate: Math.min(1.2, ttsRate),
+					pitch: ttsPitch,
+					category: 'playback'
+				})
+				.catch(() => {})
+		}, 60)
+		return
+	}
 	const utterance = new SpeechSynthesisUtterance(text)
-	const voice = pickVoice()
+	const voice = pickVoice(langOf(text))
 	if (voice) utterance.voice = voice
-	utterance.lang = voice?.lang || 'ru-RU'
+	utterance.lang = voice?.lang || langOf(text)
 	utterance.rate = Math.min(1.2, ttsRate)
 	utterance.pitch = ttsPitch
 	window.speechSynthesis.speak(utterance)

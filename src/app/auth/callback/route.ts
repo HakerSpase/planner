@@ -1,9 +1,10 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createServerClient, parseCookieHeader } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const SUPABASE_URL =
-	process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rlnqozoalmzboqypgbcq.supabase.co'
+	process.env.NEXT_PUBLIC_SUPABASE_URL ||
+	'https://rlnqozoalmzboqypgbcq.supabase.co'
 const SUPABASE_KEY =
 	process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
 	'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsbnFvem9hbG16Ym9xeXBnYmNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MTA0NjYsImV4cCI6MjEwNzM4NjQ2Nn0.qSGsOjQwouqFjHlXq8au1zq5RIT-pYD32Vnw5r-MoPA'
@@ -19,7 +20,9 @@ export async function GET(request: Request) {
 	const forwardedProto = request.headers.get('x-forwarded-proto')
 	let origin = requestUrl.origin
 	if (forwardedHost) {
-		const proto = forwardedProto || (requestUrl.protocol.startsWith('https') ? 'https' : 'http')
+		const proto =
+			forwardedProto ||
+			(requestUrl.protocol.startsWith('https') ? 'https' : 'http')
 		origin = `${proto}://${forwardedHost}`
 	}
 
@@ -43,14 +46,38 @@ export async function GET(request: Request) {
 	}
 
 	const redirectWithError = (errorType: string) => {
-		const redirectUrl = new URL(`/auth?error=${encodeURIComponent(errorType)}`, origin)
+		const redirectUrl = new URL(
+			`/auth?error=${encodeURIComponent(errorType)}`,
+			origin
+		)
 		const res = NextResponse.redirect(redirectUrl)
 		clearCaptchaCookies(res)
 		return res
 	}
 
+	// Вход из Android-приложения шёл во вкладке Chrome: код отдаём приложению,
+	// а обменивает его WebView — там лежит PKCE-ключ (см. /auth/callback/native)
+	const isNative = parseCookieHeader(request.headers.get('cookie') ?? '').some(
+		cookie => cookie.name === 'planner-native-auth'
+	)
+	if (isNative) {
+		const deepLink = new URL('app.mplanner.planner://auth')
+		if (code) deepLink.searchParams.set('code', code)
+		else deepLink.searchParams.set('error', errorParam || 'no_code')
+		const res = NextResponse.redirect(deepLink.toString())
+		res.cookies.set('planner-native-auth', '', {
+			path: '/auth/callback',
+			maxAge: 0
+		})
+		return res
+	}
+
 	if (errorParam) {
-		console.error('OAuth provider returned error:', errorParam, errorDescription)
+		console.error(
+			'OAuth provider returned error:',
+			errorParam,
+			errorDescription
+		)
 		return redirectWithError(errorParam)
 	}
 
@@ -60,7 +87,9 @@ export async function GET(request: Request) {
 
 	const cookieHeader = request.headers.get('cookie') ?? ''
 	const allCookies = parseCookieHeader(cookieHeader)
-	const cookieValue = allCookies.find(c => c.name === 'planner-captcha-oauth')?.value
+	const cookieValue = allCookies.find(
+		c => c.name === 'planner-captcha-oauth'
+	)?.value
 	const secret = process.env.TURNSTILE_SECRET_KEY
 
 	if (secret && cookieValue) {
@@ -69,7 +98,9 @@ export async function GET(request: Request) {
 		const suppliedSignature = cookieValue.slice(separator + 1)
 		let signatureMatches = false
 		try {
-			const expectedSignature = createHmac('sha256', secret).update(payload).digest()
+			const expectedSignature = createHmac('sha256', secret)
+				.update(payload)
+				.digest()
 			const supplied = Buffer.from(suppliedSignature, 'base64url')
 			signatureMatches =
 				supplied.length === expectedSignature.length &&
@@ -89,7 +120,8 @@ export async function GET(request: Request) {
 			return redirectWithError('captcha_required')
 		}
 
-		const isFresh = Date.now() - issuedAt >= 0 && Date.now() - issuedAt <= 15 * 60 * 1000
+		const isFresh =
+			Date.now() - issuedAt >= 0 && Date.now() - issuedAt <= 15 * 60 * 1000
 		if (!signatureMatches || !isFresh || !nonce) {
 			return redirectWithError('captcha_required')
 		}

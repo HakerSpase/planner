@@ -5,6 +5,7 @@ import { BellOff, BellRing, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { isNativeApp } from '@/lib/native'
 import {
 	type TypePushState,
 	desktopBridge,
@@ -33,13 +34,31 @@ const DESKTOP_STATUS: Record<TypePushState, string> = {
 	on: 'Напоминания придут уведомлениями Windows, пока Planner запущен — в том числе свёрнутым в трей.'
 }
 
+// В Android-приложении напоминания ставятся в систему и приходят, даже когда оно закрыто
+const ANDROID_STATUS: Record<TypePushState, string> = {
+	unsupported:
+		'Обновите приложение Planner — эта версия не умеет показывать уведомления.',
+	denied:
+		'Уведомления для Planner выключены в Android. Включите их: Настройки → Приложения → Planner → Уведомления.',
+	off: 'Уведомления пока не разрешены.',
+	on: 'Напоминания придут уведомлениями Android — даже когда приложение закрыто.'
+}
+
 /** Включение веб-пуша на текущем устройстве и проверка, что уведомления доходят */
 export function NotificationSettings() {
 	const [state, setState] = useState<TypePushState | null>(null)
 	const [busy, setBusy] = useState(false)
 	const [isDesktop, setIsDesktop] = useState(false)
-	useEffect(() => setIsDesktop(Boolean(desktopBridge())), [])
-	const status = isDesktop ? DESKTOP_STATUS : STATUS
+	const [isAndroid, setIsAndroid] = useState(false)
+	useEffect(() => {
+		setIsDesktop(Boolean(desktopBridge()))
+		setIsAndroid(isNativeApp())
+	}, [])
+	const status = isAndroid
+		? ANDROID_STATUS
+		: isDesktop
+			? DESKTOP_STATUS
+			: STATUS
 
 	useEffect(() => {
 		getPushState()
@@ -112,7 +131,7 @@ export function NotificationSettings() {
 							<Send size={14} />
 							Проверить
 						</button>
-						{!isDesktop && (
+						{!isDesktop && !isAndroid && (
 							<button
 								type='button'
 								disabled={busy}

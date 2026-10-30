@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { type TypeSttModel, usePreferences } from '@/lib/preferences'
 import {
 	getVoices,
+	isNativeSpeech,
 	isSpeechSupported,
 	onVoicesChanged,
 	sortVoices,
@@ -28,9 +29,11 @@ export function SpeechSettings() {
 	const speech = useSpeech()
 	// Поддержку узнаём только в браузере — иначе разметка сервера и клиента разойдётся
 	const [supported, setSupported] = useState(true)
+	const [native, setNative] = useState(false)
 
 	useEffect(() => {
 		setSupported(isSpeechSupported())
+		setNative(isNativeSpeech())
 		const update = () => setVoices(sortVoices(getVoices()))
 		update()
 		return onVoicesChanged(update)
@@ -46,9 +49,16 @@ export function SpeechSettings() {
 
 	return (
 		<div className='space-y-5'>
-			{!supported ? (
+			{native ? (
+				<p className='border border-border px-4 py-3 text-sm leading-6 text-muted'>
+					В приложении читает голос Android. Русский и английский переключаются
+					сами — по языку фразы. Сменить голос или скачать получше: Настройки
+					Android → «Синтез речи» (движок Google).
+				</p>
+			) : !supported ? (
 				<p className='text-sm text-subtle'>
-					В этом браузере нет голосов системы — выберите нейроголоса Edge.
+					В этом браузере нет голосов системы — откройте планер в Chrome или
+					Edge.
 				</p>
 			) : (
 				<div>
