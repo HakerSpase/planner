@@ -683,11 +683,13 @@ body {
 /* ---------- Наглядные блоки: графики, окружность, диаграммы ---------- */
 .visual-node {
 	margin: 1.25rem 0;
+	cursor: default;
 }
 
 .visual-block {
 	@apply overflow-hidden border border-border bg-surface;
 	margin: 0;
+	cursor: default;
 
 	.visual-title {
 		@apply border-b border-border px-3 py-2 text-sm font-medium text-fg;

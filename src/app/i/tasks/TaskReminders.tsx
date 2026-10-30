@@ -3,7 +3,7 @@
 import cn from 'clsx'
 import { Bell, Clock, Plus, Repeat, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { type TypePushState, getPushState } from '@/lib/push'
 
@@ -28,6 +28,10 @@ const UNITS: [number, string][] = [
 	[60, 'ч'],
 	[1440, 'дн']
 ]
+
+const QUICK_TIMES = ['09:00', '12:00', '15:00', '18:00', '21:00']
+const HOURS_LIST = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES_STEP_LIST = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
 
 export function formatOffset(minutes: number) {
 	if (minutes === 0) return 'В момент'
@@ -74,9 +78,55 @@ export function TaskReminders({
 	const [seriesCount, setSeriesCount] = useState('4')
 	const [push, setPush] = useState<TypePushState | null>(null)
 
+	const [pickerOpen, setPickerOpen] = useState(false)
+	const [hoursText, setHoursText] = useState('')
+	const [minutesText, setMinutesText] = useState('')
+	const pickerRef = useRef<HTMLDivElement>(null)
+	const hoursInputRef = useRef<HTMLInputElement>(null)
+	const minutesInputRef = useRef<HTMLInputElement>(null)
+
+	useEffect(() => {
+		const [h = '', m = ''] = (time || '').split(':')
+		setHoursText(h)
+		setMinutesText(m)
+	}, [time])
+
+	useEffect(() => {
+		if (!pickerOpen) return
+		const onDown = (event: PointerEvent) => {
+			if (!pickerRef.current?.contains(event.target as Node)) setPickerOpen(false)
+		}
+		document.addEventListener('pointerdown', onDown)
+		return () => document.removeEventListener('pointerdown', onDown)
+	}, [pickerOpen])
+
 	useEffect(() => {
 		getPushState().then(setPush).catch(() => setPush('unsupported'))
 	}, [])
+
+	const applyTime = (nextHours: number, nextMinutes: number) => {
+		const clampedH = Math.max(0, Math.min(23, nextHours))
+		const clampedM = Math.max(0, Math.min(59, nextMinutes))
+		const formatted = `${pad(clampedH)}:${pad(clampedM)}`
+		setHoursText(pad(clampedH))
+		setMinutesText(pad(clampedM))
+		onChange({
+			dueAt: combineDateTime(day, formatted),
+			// Первое время — «в момент» и «за 15 минут»; при смене времени
+			// «в момент» есть всегда, чтобы уведомление пришло ко времени события
+			reminders: !list.length ? [15, 0] : list.includes(0) ? list : [...list, 0]
+		})
+	}
+
+	const currentHoursNum = () => {
+		const parsed = parseInt(hoursText || time.split(':')[0] || '9', 10)
+		return Number.isFinite(parsed) ? Math.max(0, Math.min(23, parsed)) : 9
+	}
+
+	const currentMinutesNum = () => {
+		const parsed = parseInt(minutesText || time.split(':')[1] || '0', 10)
+		return Number.isFinite(parsed) ? Math.max(0, Math.min(59, parsed)) : 0
+	}
 
 	const setList = (next: number[]) =>
 		onChange({ reminders: next.length ? Array.from(new Set(next)).sort((a, b) => b - a) : null })
@@ -100,7 +150,10 @@ export function TaskReminders({
 				{time && (
 					<button
 						type='button'
-						onClick={() => onChange({ dueAt: null, reminders: null })}
+						onClick={() => {
+							setPickerOpen(false)
+							onChange({ dueAt: null, reminders: null })
+						}}
 						className='text-xs text-subtle transition-colors hover:text-danger'
 					>
 						Убрать время
@@ -109,51 +162,206 @@ export function TaskReminders({
 			</div>
 
 			<div className='flex flex-wrap items-center gap-3'>
-				{/* Часы и минуты — двумя списками: системные «часы» Android вылезали за край экрана */}
-				<div className='flex h-10 items-center gap-1 border border-border bg-surface-2 px-3 focus-within:border-primary/70'>
-					<Clock
-						size={15}
-						className='mr-1 text-subtle'
-					/>
-					{(['hours', 'minutes'] as const).map((part, index) => {
-						const [hours, minutes] = (time || '').split(':')
-						const current = part === 'hours' ? hours : minutes
-						return (
-							<span
-								key={part}
-								className='flex items-center'
-							>
-								{index === 1 && <span className='px-0.5 font-mono text-base text-subtle'>:</span>}
-								<select
-									aria-label={part === 'hours' ? 'Часы' : 'Минуты'}
-									value={current ?? ''}
-									onChange={event => {
-										const nextHours = part === 'hours' ? event.target.value : hours || '09'
-										const nextMinutes = part === 'minutes' ? event.target.value : minutes || '00'
-										onChange({
-											dueAt: combineDateTime(day, `${nextHours}:${nextMinutes}`),
-											// Первое время — «в момент» и «за 15 минут»; при смене времени
-											// «в момент» есть всегда, чтобы уведомление пришло ко времени события
-											reminders: !list.length ? [15, 0] : list.includes(0) ? list : [...list, 0]
-										})
-									}}
-									className='appearance-none bg-transparent font-mono text-base text-fg outline-none [color-scheme:dark]'
-								>
-									{!time && <option value=''>--</option>}
-									{Array.from({ length: part === 'hours' ? 24 : 60 }, (_, value) => String(value).padStart(2, '0')).map(
-										value => (
-											<option
-												key={value}
-												value={value}
-											>
-												{value}
-											</option>
-										)
-									)}
-								</select>
-							</span>
-						)
-					})}
+				<div
+					ref={pickerRef}
+					className='relative'
+				>
+					<div
+						onClick={event => {
+							setPickerOpen(true)
+							if (event.target === event.currentTarget) {
+								hoursInputRef.current?.focus()
+								hoursInputRef.current?.select()
+							}
+						}}
+						className={cn(
+							'flex h-10 items-center gap-1 border bg-surface-2 px-3 transition-colors',
+							pickerOpen ? 'border-primary/70' : 'border-border focus-within:border-primary/70'
+						)}
+					>
+						<Clock
+							size={15}
+							className='mr-1 shrink-0 text-subtle'
+						/>
+						<input
+							ref={hoursInputRef}
+							type='text'
+							inputMode='numeric'
+							aria-label='Часы'
+							placeholder='--'
+							value={hoursText}
+							onFocus={event => {
+								setPickerOpen(true)
+								event.currentTarget.select()
+							}}
+							onChange={event => {
+								const raw = event.target.value.replace(/\D/g, '').slice(0, 2)
+								setHoursText(raw)
+								if (!raw) return
+								const num = parseInt(raw, 10)
+								if (raw.length === 2 || num > 2) {
+									const validH = Math.min(23, num)
+									applyTime(validH, currentMinutesNum())
+									minutesInputRef.current?.focus()
+									minutesInputRef.current?.select()
+								}
+							}}
+							onBlur={() => {
+								if (!hoursText && !time) return
+								applyTime(currentHoursNum(), currentMinutesNum())
+							}}
+							onKeyDown={event => {
+								if (event.key === ':' || event.key === 'ArrowRight') {
+									event.preventDefault()
+									applyTime(currentHoursNum(), currentMinutesNum())
+									minutesInputRef.current?.focus()
+									minutesInputRef.current?.select()
+								} else if (event.key === 'ArrowUp') {
+									event.preventDefault()
+									applyTime((currentHoursNum() + 1) % 24, currentMinutesNum())
+								} else if (event.key === 'ArrowDown') {
+									event.preventDefault()
+									applyTime((currentHoursNum() + 23) % 24, currentMinutesNum())
+								} else if (event.key === 'Enter' || event.key === 'Escape') {
+									event.preventDefault()
+									applyTime(currentHoursNum(), currentMinutesNum())
+									setPickerOpen(false)
+									event.currentTarget.blur()
+								}
+							}}
+							className='w-7 bg-transparent text-center font-mono text-base text-fg outline-none placeholder:text-subtle'
+						/>
+						<span className='font-mono text-base text-subtle'>:</span>
+						<input
+							ref={minutesInputRef}
+							type='text'
+							inputMode='numeric'
+							aria-label='Минуты'
+							placeholder='--'
+							value={minutesText}
+							onFocus={event => {
+								setPickerOpen(true)
+								event.currentTarget.select()
+							}}
+							onChange={event => {
+								const raw = event.target.value.replace(/\D/g, '').slice(0, 2)
+								setMinutesText(raw)
+								if (!raw) return
+								const num = parseInt(raw, 10)
+								if (raw.length === 2 || num > 5) {
+									const validM = Math.min(59, num)
+									applyTime(currentHoursNum(), validM)
+								}
+							}}
+							onBlur={() => {
+								if (!minutesText && !time) return
+								applyTime(currentHoursNum(), currentMinutesNum())
+							}}
+							onKeyDown={event => {
+								if (
+									(event.key === 'Backspace' && !minutesText) ||
+									(event.key === 'ArrowLeft' && event.currentTarget.selectionStart === 0)
+								) {
+									event.preventDefault()
+									hoursInputRef.current?.focus()
+									hoursInputRef.current?.select()
+								} else if (event.key === 'ArrowUp') {
+									event.preventDefault()
+									applyTime(currentHoursNum(), (currentMinutesNum() + 1) % 60)
+								} else if (event.key === 'ArrowDown') {
+									event.preventDefault()
+									applyTime(currentHoursNum(), (currentMinutesNum() + 59) % 60)
+								} else if (event.key === 'Enter' || event.key === 'Escape') {
+									event.preventDefault()
+									applyTime(currentHoursNum(), currentMinutesNum())
+									setPickerOpen(false)
+									event.currentTarget.blur()
+								}
+							}}
+							className='w-7 bg-transparent text-center font-mono text-base text-fg outline-none placeholder:text-subtle'
+						/>
+					</div>
+
+					{pickerOpen && (
+						<div className='absolute left-0 top-full z-40 mt-1.5 w-64 animate-pop-in border border-border bg-elevated p-2.5 shadow-pop'>
+							<div className='mb-2 flex flex-wrap gap-1 border-b border-border pb-2'>
+								{QUICK_TIMES.map(preset => (
+									<button
+										key={preset}
+										type='button'
+										onClick={() => {
+											const [h, m] = preset.split(':').map(Number)
+											applyTime(h, m)
+											setPickerOpen(false)
+										}}
+										className={cn(
+											'h-7 flex-1 border font-mono text-xs transition-colors',
+											time === preset
+												? 'border-primary bg-primary/20 text-fg'
+												: 'border-border bg-surface text-muted hover:text-fg'
+										)}
+									>
+										{preset}
+									</button>
+								))}
+							</div>
+							<div className='grid grid-cols-2 gap-2'>
+								<div>
+									<p className='mb-1 px-1 font-mono text-2xs uppercase tracking-wider text-subtle'>
+										Часы
+									</p>
+									<div className='grid max-h-44 grid-cols-3 gap-0.5 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+										{HOURS_LIST.map(h => {
+											const active = time && pad(currentHoursNum()) === h
+											return (
+												<button
+													key={h}
+													type='button'
+													onClick={() => applyTime(Number(h), currentMinutesNum())}
+													className={cn(
+														'h-7 font-mono text-xs transition-colors',
+														active
+															? 'bg-primary text-white'
+															: 'text-muted hover:bg-white/[0.06] hover:text-fg'
+													)}
+												>
+													{h}
+												</button>
+											)
+										})}
+									</div>
+								</div>
+								<div>
+									<p className='mb-1 px-1 font-mono text-2xs uppercase tracking-wider text-subtle'>
+										Минуты
+									</p>
+									<div className='grid max-h-44 grid-cols-3 gap-0.5 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+										{MINUTES_STEP_LIST.map(m => {
+											const active = time && pad(currentMinutesNum()) === m
+											return (
+												<button
+													key={m}
+													type='button'
+													onClick={() => {
+														applyTime(currentHoursNum(), Number(m))
+														setPickerOpen(false)
+													}}
+													className={cn(
+														'h-7 font-mono text-xs transition-colors',
+														active
+															? 'bg-primary text-white'
+															: 'text-muted hover:bg-white/[0.06] hover:text-fg'
+													)}
+												>
+													{m}
+												</button>
+											)
+										})}
+									</div>
+								</div>
+							</div>
+						</div>
+					)}
 				</div>
 				{dueDate && (
 					<span className={cn('text-sm', isPast ? 'text-danger' : 'text-muted')}>
@@ -225,20 +433,25 @@ export function TaskReminders({
 							onChange={event => setCustomValue(event.target.value)}
 							className='h-8 w-16 border border-border bg-surface-2 px-2 text-center font-mono text-sm text-fg outline-none focus:border-primary/70'
 						/>
-						<select
-							value={customUnit}
-							onChange={event => setCustomUnit(Number(event.target.value))}
-							className='h-8 border border-border bg-surface-2 px-2 text-sm text-fg outline-none [color-scheme:dark]'
+						<div
+							role='group'
+							aria-label='Единица времени'
+							className='flex h-8 divide-x divide-border border border-border bg-surface-2'
 						>
 							{UNITS.map(([value, label]) => (
-								<option
+								<button
 									key={value}
-									value={value}
+									type='button'
+									onClick={() => setCustomUnit(value)}
+									className={cn(
+										'px-2.5 text-xs transition-colors',
+										customUnit === value ? 'bg-primary/20 text-fg' : 'text-muted hover:text-fg'
+									)}
 								>
 									{label}
-								</option>
+								</button>
 							))}
-						</select>
+						</div>
 						<button
 							type='button'
 							onClick={() => {
