@@ -997,7 +997,7 @@ function PageView({
 			ref={articleRef}
 			className='library-article'
 		>
-			<header className='sticky -top-2 z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
+			<header className='sticky top-[calc(-1*max(0.5rem,env(safe-area-inset-top)))] z-20 -mx-4 lg:-top-3 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10'>
 				<ReadingProgress anchorRef={articleRef} />
 				<button
 					type='button'

@@ -49,18 +49,22 @@ export function useHeadings(rootRef: RefObject<HTMLElement>, version: unknown) {
 	return headings
 }
 
-/** Какой заголовок сейчас на экране */
+/** Какие разделы сейчас на экране — подсвечиваем все видимые, а не только последний */
 function useActiveHeading(headings: IHeading[]) {
-	const [active, setActive] = useState(0)
+	const [active, setActive] = useState<number[]>([0])
 	useEffect(() => {
 		if (!headings.length) return
 		const scroller = headings[0].element.closest('main')
 		const update = () => {
-			let index = 0
+			const top = 72
+			const bottom = window.innerHeight
+			const visible: number[] = []
 			headings.forEach((heading, i) => {
-				if (heading.element.getBoundingClientRect().top < 140) index = i
+				const start = heading.element.getBoundingClientRect().top
+				const end = headings[i + 1]?.element.getBoundingClientRect().top ?? Infinity
+				if (end > top + 24 && start < bottom - 40) visible.push(i)
 			})
-			setActive(index)
+			setActive(visible.length ? visible : [0])
 		}
 		update()
 		scroller?.addEventListener('scroll', update, { passive: true })
@@ -91,7 +95,7 @@ export function PageOutline({ headings, onPick }: { headings: IHeading[]; onPick
 							}}
 							className={cn(
 								'-ml-px block w-full border-l-2 py-1 pr-2 text-left text-[13px] leading-5 transition-colors',
-								index === active
+								active.includes(index)
 									? 'border-primary text-fg'
 									: 'border-transparent text-subtle hover:text-fg'
 							)}

@@ -3,7 +3,7 @@ import type { Node as PMNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
-import { markdownFixups } from './markdown-fixups'
+import { markdownFixups, splitMergedCards } from './markdown-fixups'
 
 /*
  * Учебная разметка поверх обычного Markdown:
@@ -257,13 +257,17 @@ export function extractFlashcards(pageId: string, markdown: string): IFlashcard[
 	for (const raw of markdown.split('\n')) {
 		if (/^\s*```/.test(raw)) inCode = !inCode
 		if (inCode) continue
-		const line = raw.replace(/^\s*(?:>\s*)*(?:[-*+]\s+(?:\[[ x]\]\s+)?|\d+[.)]\s+)?/, '')
-		const index = line.indexOf(CARD_SEPARATOR)
-		if (index <= 0) continue
-		const front = line.slice(0, index).trim()
-		const back = line.slice(index + CARD_SEPARATOR.length).trim()
-		if (!front || !back || line.trimStart().startsWith('|')) continue
-		cards.push({ id: `${pageId}:${hash(front)}`, front, back })
+		const stripped = raw.replace(/^\s*(?:>\s*)*(?:[-*+]\s+(?:\[[ x]\]\s+)?|\d+[.)]\s+)?/, '')
+		if (stripped.trimStart().startsWith('|')) continue
+		// Карточки, слипшиеся в одну строку, разрезаем
+		for (const line of splitMergedCards(stripped)) {
+			const index = line.indexOf(CARD_SEPARATOR)
+			if (index <= 0) continue
+			const front = line.slice(0, index).trim()
+			const back = line.slice(index + CARD_SEPARATOR.length).trim()
+			if (!front || !back) continue
+			cards.push({ id: `${pageId}:${hash(front)}`, front, back })
+		}
 	}
 	return cards
 }
