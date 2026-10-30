@@ -1,29 +1,32 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
 import { usePathname, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
 import { type PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { useBackground } from '@/lib/background-preference'
-import { watchKeyboard } from '@/lib/keyboard-state'
-import { syncDesktopReminders, watchLocalReminders } from '@/lib/local-reminders'
-import { registerServiceWorker } from '@/lib/push'
-
-import { taskService } from '@/services/task.service'
-import { haptic, usePreferences } from '@/lib/preferences'
+import { CommandPalette } from '@/components/search/CommandPalette'
+import { SpeechPlayer } from '@/components/speech/SpeechPlayer'
 
 import { useBackClose } from '@/hooks/useBackClose'
 
 import { AppBackground } from './AppBackground'
 import { MobileNav } from './MobileNav'
 import { MusicController } from './MusicController'
-import { SpeechPlayer } from '@/components/speech/SpeechPlayer'
 import { UploadProgress } from './UploadProgress'
 import { Header } from './header/Header'
 import { Sidebar } from './sidebar/Sidebar'
 import { MENU } from './sidebar/menu.data'
+import { useBackground } from '@/lib/background-preference'
+import { watchKeyboard } from '@/lib/keyboard-state'
+import {
+	syncDesktopReminders,
+	watchLocalReminders
+} from '@/lib/local-reminders'
+import { haptic, usePreferences } from '@/lib/preferences'
+import { registerServiceWorker } from '@/lib/push'
+import { taskService } from '@/services/task.service'
 
 export default function DashboardLayout({
 	children
@@ -34,7 +37,9 @@ export default function DashboardLayout({
 	const pathname = usePathname()
 	const [appBackground] = useBackground('app')
 	const [libraryBackground] = useBackground('library')
-	const background = pathname.startsWith('/i/library') ? libraryBackground : appBackground
+	const background = pathname.startsWith('/i/library')
+		? libraryBackground
+		: appBackground
 
 	const [preferences] = usePreferences()
 
@@ -73,8 +78,14 @@ export default function DashboardLayout({
 		const onPointerDown = (event: PointerEvent) => {
 			if (event.pointerType !== 'touch') return
 			const target = event.target as HTMLElement
-			const check = target.closest('input[type=checkbox], [role=checkbox], label')
-			if (check && (check.matches('input, [role=checkbox]') || check.querySelector('input[type=checkbox]')))
+			const check = target.closest(
+				'input[type=checkbox], [role=checkbox], label'
+			)
+			if (
+				check &&
+				(check.matches('input, [role=checkbox]') ||
+					check.querySelector('input[type=checkbox]'))
+			)
 				return haptic('check')
 			if (target.closest('a[href^="/i"]')) return haptic('nav')
 			if (target.closest('button')) return haptic('button')
@@ -169,6 +180,7 @@ export default function DashboardLayout({
 			<UploadProgress />
 			<MusicController />
 			<SpeechPlayer />
+			<CommandPalette />
 		</div>
 	)
 }

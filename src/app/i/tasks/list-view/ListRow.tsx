@@ -53,6 +53,7 @@ export function ListRow({
 
 	return (
 		<div
+			data-task-id={item.id}
 			className={cn(
 				styles.row,
 				watch('isCompleted') ? styles.completed : '',
@@ -83,21 +84,23 @@ export function ListRow({
 						/>
 
 						<TransparentField
-						{...register('name')}
-						autoFocus={item.id.startsWith('draft-')}
-						onKeyDown={event => {
-							if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
-							event.preventDefault()
-							event.currentTarget.blur()
-							// у черновика ещё нет id на сервере — следующую добавим после сохранения
-							if (!item.id.startsWith('draft-')) onAddNext?.()
-						}} />
+							{...register('name')}
+							autoFocus={item.id.startsWith('draft-')}
+							onKeyDown={event => {
+								if (event.key !== 'Enter' || event.nativeEvent.isComposing)
+									return
+								event.preventDefault()
+								event.currentTarget.blur()
+								// у черновика ещё нет id на сервере — следующую добавим после сохранения
+								if (!item.id.startsWith('draft-')) onAddNext?.()
+							}}
+						/>
 					</span>
 					<div className='pl-[2.6rem]'>
 						<TaskDetails
 							control={control}
 							taskName={watch('name')}
-					taskId={item.id}
+							taskId={item.id}
 						/>
 					</div>
 				</div>
@@ -145,7 +148,10 @@ export function ListRow({
 					className='grid h-8 w-8 shrink-0 place-items-center rounded-md text-subtle transition-colors hover:bg-danger/10 hover:text-danger'
 				>
 					{isCreating || isDeletePending ? (
-						<Loader size={15} className='animate-spin' />
+						<Loader
+							size={15}
+							className='animate-spin'
+						/>
 					) : (
 						<Trash size={15} />
 					)}

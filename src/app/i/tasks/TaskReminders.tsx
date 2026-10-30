@@ -29,15 +29,19 @@ const UNITS: [number, string][] = [
 	[1440, 'дн']
 ]
 
-const QUICK_TIMES = ['09:00', '12:00', '15:00', '18:00', '21:00']
-const HOURS_LIST = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const MINUTES_STEP_LIST = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
+const HOURS_LIST = Array.from({ length: 24 }, (_, i) =>
+	String(i).padStart(2, '0')
+)
+const MINUTES_STEP_LIST = Array.from({ length: 12 }, (_, i) =>
+	String(i * 5).padStart(2, '0')
+)
 
 export function formatOffset(minutes: number) {
 	if (minutes === 0) return 'В момент'
 	if (minutes % 1440 === 0) return `За ${minutes / 1440} дн`
 	if (minutes % 60 === 0) return `За ${minutes / 60} ч`
-	if (minutes > 60) return `За ${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
+	if (minutes > 60)
+		return `За ${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 	return `За ${minutes} мин`
 }
 
@@ -47,14 +51,24 @@ const pad = (value: number) => String(value).padStart(2, '0')
 export const timeOf = (dueAt?: string | null) => {
 	if (!dueAt) return ''
 	const date = new Date(dueAt)
-	return Number.isNaN(date.getTime()) ? '' : `${pad(date.getHours())}:${pad(date.getMinutes())}`
+	return Number.isNaN(date.getTime())
+		? ''
+		: `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 /** Собрать момент события из дня задачи и времени */
 export function combineDateTime(day: string | null | undefined, time: string) {
 	const base = day ? new Date(day) : new Date()
 	const [hours, minutes] = time.split(':').map(Number)
-	const date = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hours, minutes, 0, 0)
+	const date = new Date(
+		base.getFullYear(),
+		base.getMonth(),
+		base.getDate(),
+		hours,
+		minutes,
+		0,
+		0
+	)
 	return date.toISOString()
 }
 
@@ -67,7 +81,10 @@ export function TaskReminders({
 	day?: string | null
 	dueAt?: string | null
 	reminders?: number[] | null
-	onChange: (patch: { dueAt?: string | null; reminders?: number[] | null }) => void
+	onChange: (patch: {
+		dueAt?: string | null
+		reminders?: number[] | null
+	}) => void
 }) {
 	const time = timeOf(dueAt)
 	const list = reminders || []
@@ -94,14 +111,17 @@ export function TaskReminders({
 	useEffect(() => {
 		if (!pickerOpen) return
 		const onDown = (event: PointerEvent) => {
-			if (!pickerRef.current?.contains(event.target as Node)) setPickerOpen(false)
+			if (!pickerRef.current?.contains(event.target as Node))
+				setPickerOpen(false)
 		}
 		document.addEventListener('pointerdown', onDown)
 		return () => document.removeEventListener('pointerdown', onDown)
 	}, [pickerOpen])
 
 	useEffect(() => {
-		getPushState().then(setPush).catch(() => setPush('unsupported'))
+		getPushState()
+			.then(setPush)
+			.catch(() => setPush('unsupported'))
 	}, [])
 
 	const applyTime = (nextHours: number, nextMinutes: number) => {
@@ -129,15 +149,25 @@ export function TaskReminders({
 	}
 
 	const setList = (next: number[]) =>
-		onChange({ reminders: next.length ? Array.from(new Set(next)).sort((a, b) => b - a) : null })
+		onChange({
+			reminders: next.length
+				? Array.from(new Set(next)).sort((a, b) => b - a)
+				: null
+		})
 
 	const toggle = (minutes: number) =>
-		setList(list.includes(minutes) ? list.filter(item => item !== minutes) : [...list, minutes])
+		setList(
+			list.includes(minutes)
+				? list.filter(item => item !== minutes)
+				: [...list, minutes]
+		)
 
 	const seriesOffsets = (() => {
 		const start = Math.max(1, Math.min(7 * 1440, Number(seriesStart) || 0))
 		const count = Math.max(2, Math.min(20, Number(seriesCount) || 0))
-		return Array.from({ length: count }, (_, index) => Math.round(start - (start * index) / (count - 1)))
+		return Array.from({ length: count }, (_, index) =>
+			Math.round(start - (start * index) / (count - 1))
+		)
 	})()
 
 	const dueDate = dueAt ? new Date(dueAt) : null
@@ -176,7 +206,9 @@ export function TaskReminders({
 						}}
 						className={cn(
 							'flex h-10 items-center gap-1 border bg-surface-2 px-3 transition-colors',
-							pickerOpen ? 'border-primary/70' : 'border-border focus-within:border-primary/70'
+							pickerOpen
+								? 'border-primary/70'
+								: 'border-border focus-within:border-primary/70'
 						)}
 					>
 						<Clock
@@ -260,7 +292,8 @@ export function TaskReminders({
 							onKeyDown={event => {
 								if (
 									(event.key === 'Backspace' && !minutesText) ||
-									(event.key === 'ArrowLeft' && event.currentTarget.selectionStart === 0)
+									(event.key === 'ArrowLeft' &&
+										event.currentTarget.selectionStart === 0)
 								) {
 									event.preventDefault()
 									hoursInputRef.current?.focus()
@@ -284,27 +317,6 @@ export function TaskReminders({
 
 					{pickerOpen && (
 						<div className='absolute left-0 top-full z-40 mt-1.5 w-64 animate-pop-in border border-border bg-elevated p-2.5 shadow-pop'>
-							<div className='mb-2 flex flex-wrap gap-1 border-b border-border pb-2'>
-								{QUICK_TIMES.map(preset => (
-									<button
-										key={preset}
-										type='button'
-										onClick={() => {
-											const [h, m] = preset.split(':').map(Number)
-											applyTime(h, m)
-											setPickerOpen(false)
-										}}
-										className={cn(
-											'h-7 flex-1 border font-mono text-xs transition-colors',
-											time === preset
-												? 'border-primary bg-primary/20 text-fg'
-												: 'border-border bg-surface text-muted hover:text-fg'
-										)}
-									>
-										{preset}
-									</button>
-								))}
-							</div>
 							<div className='grid grid-cols-2 gap-2'>
 								<div>
 									<p className='mb-1 px-1 font-mono text-2xs uppercase tracking-wider text-subtle'>
@@ -317,7 +329,9 @@ export function TaskReminders({
 												<button
 													key={h}
 													type='button'
-													onClick={() => applyTime(Number(h), currentMinutesNum())}
+													onClick={() =>
+														applyTime(Number(h), currentMinutesNum())
+													}
 													className={cn(
 														'h-7 font-mono text-xs transition-colors',
 														active
@@ -364,14 +378,22 @@ export function TaskReminders({
 					)}
 				</div>
 				{dueDate && (
-					<span className={cn('text-sm', isPast ? 'text-danger' : 'text-muted')}>
-						{dueDate.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' })}
+					<span
+						className={cn('text-sm', isPast ? 'text-danger' : 'text-muted')}
+					>
+						{dueDate.toLocaleDateString('ru-RU', {
+							weekday: 'short',
+							day: 'numeric',
+							month: 'long'
+						})}
 						{isPast && ' · уже прошло'}
 					</span>
 				)}
 			</div>
 			{!day && time && (
-				<p className='mt-2 text-xs text-subtle'>У задачи нет даты — время отнесено к сегодняшнему дню.</p>
+				<p className='mt-2 text-xs text-subtle'>
+					У задачи нет даты — время отнесено к сегодняшнему дню.
+				</p>
 			)}
 
 			{time && (
@@ -400,10 +422,14 @@ export function TaskReminders({
 					</div>
 
 					{/* Свои значения, которых нет среди готовых */}
-					{list.some(minutes => !PRESETS.some(([preset]) => preset === minutes)) && (
+					{list.some(
+						minutes => !PRESETS.some(([preset]) => preset === minutes)
+					) && (
 						<div className='mt-2 flex flex-wrap gap-1.5'>
 							{list
-								.filter(minutes => !PRESETS.some(([preset]) => preset === minutes))
+								.filter(
+									minutes => !PRESETS.some(([preset]) => preset === minutes)
+								)
 								.map(minutes => (
 									<span
 										key={minutes}
@@ -445,7 +471,9 @@ export function TaskReminders({
 									onClick={() => setCustomUnit(value)}
 									className={cn(
 										'px-2.5 text-xs transition-colors',
-										customUnit === value ? 'bg-primary/20 text-fg' : 'text-muted hover:text-fg'
+										customUnit === value
+											? 'bg-primary/20 text-fg'
+											: 'text-muted hover:text-fg'
 									)}
 								>
 									{label}
@@ -455,8 +483,11 @@ export function TaskReminders({
 						<button
 							type='button'
 							onClick={() => {
-								const minutes = Math.round((Number(customValue) || 0) * customUnit)
-								if (minutes > 0 && minutes <= 7 * 1440) setList([...list, minutes])
+								const minutes = Math.round(
+									(Number(customValue) || 0) * customUnit
+								)
+								if (minutes > 0 && minutes <= 7 * 1440)
+									setList([...list, minutes])
 							}}
 							className='flex h-8 items-center gap-1 border border-border px-2.5 text-sm text-muted transition-colors hover:text-fg'
 						>
@@ -469,7 +500,9 @@ export function TaskReminders({
 							onClick={() => setSeriesOpen(value => !value)}
 							className={cn(
 								'flex h-8 items-center gap-1.5 border px-2.5 text-sm transition-colors',
-								seriesOpen ? 'border-primary/60 text-fg' : 'border-border text-muted hover:text-fg'
+								seriesOpen
+									? 'border-primary/60 text-fg'
+									: 'border-border text-muted hover:text-fg'
 							)}
 						>
 							<Repeat size={13} />
@@ -519,13 +552,20 @@ export function TaskReminders({
 
 					{(() => {
 						// Напоминания, время которых уже прошло, не придут — честно говорим об этом
-						const passed = dueDate && !isPast
-							? list.filter(minutes => minutes > 0 && dueDate.getTime() - minutes * 60_000 < Date.now())
-							: []
+						const passed =
+							dueDate && !isPast
+								? list.filter(
+										minutes =>
+											minutes > 0 &&
+											dueDate.getTime() - minutes * 60_000 < Date.now()
+									)
+								: []
 						return passed.length ? (
 							<p className='mt-3 text-xs leading-5 text-muted'>
-								{passed.map(formatOffset).join(', ')} — уже прошло, это напоминание не придёт.
-								{!list.includes(0) && ' Добавьте «В момент», чтобы получить уведомление ко времени.'}
+								{passed.map(formatOffset).join(', ')} — уже прошло, это
+								напоминание не придёт.
+								{!list.includes(0) &&
+									' Добавьте «В момент», чтобы получить уведомление ко времени.'}
 							</p>
 						) : null
 					})()}

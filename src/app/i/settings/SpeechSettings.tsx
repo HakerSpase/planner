@@ -164,6 +164,25 @@ export function SpeechSettings() {
 				)}
 				{testing ? 'Остановить' : 'Послушать'}
 			</button>
+			<label className='flex cursor-pointer items-start gap-3 border border-border px-4 py-3'>
+				<input
+					type='checkbox'
+					checked={preferences.breathingVoice}
+					onChange={event =>
+						setPreferences({ breathingVoice: event.target.checked })
+					}
+					className='mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--primary))]'
+				/>
+				<span className='min-w-0'>
+					<span className='block text-sm text-fg'>
+						Голосовые подсказки в дыхании
+					</span>
+					<span className='block text-xs leading-5 text-subtle'>
+						В программах (Вим Хоф, туммо и др.) голос говорит «Раунд 2», «Выдох
+						и задержка», «Ещё десять секунд». По умолчанию выключено.
+					</span>
+				</span>
+			</label>
 			<p className='text-xs leading-5 text-subtle'>
 				Читать: «⋯» на листе → «Озвучить лист», или выделите текст — появится
 				кнопка «Озвучить».

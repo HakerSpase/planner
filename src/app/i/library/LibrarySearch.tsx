@@ -18,15 +18,27 @@ interface ISearchPage {
 }
 
 type TypeResult =
-	| { kind: 'page'; id: string; topicId: string; title: string; path: string; snippet: ReactNode; score: number }
+	| {
+			kind: 'page'
+			id: string
+			topicId: string
+			title: string
+			path: string
+			snippet: ReactNode
+			score: number
+	  }
 	| { kind: 'topic'; id: string; title: string; path: string; score: number }
 	| { kind: 'section'; id: string; title: string; score: number }
 
 // Нормализация: регистр, ё → е, лишние знаки
-const normalize = (value: string) =>
-	value.toLowerCase().replace(/ё/g, 'е').replace(/[^0-9a-zа-я\s]/g, ' ')
+export const normalize = (value: string) =>
+	value
+		.toLowerCase()
+		.replace(/ё/g, 'е')
+		.replace(/[^0-9a-zа-я\s]/g, ' ')
 
-const tokenize = (value: string) => normalize(value).split(/\s+/).filter(Boolean)
+export const tokenize = (value: string) =>
+	normalize(value).split(/\s+/).filter(Boolean)
 
 // Расстояние Левенштейна с ранним выходом — для опечаток в словах от 5 букв
 function withinOneEdit(a: string, b: string) {
@@ -52,14 +64,18 @@ function withinOneEdit(a: string, b: string) {
 }
 
 // Насколько текст подходит под слово запроса: точное вхождение, начало слова или опечатка
-function matchToken(token: string, text: string, words: string[]) {
-	if (text.includes(token)) return words.some(word => word.startsWith(token)) ? 2 : 1
-	if (token.length >= 5 && words.some(word => withinOneEdit(token, word.slice(0, token.length + 1))))
+export function matchToken(token: string, text: string, words: string[]) {
+	if (text.includes(token))
+		return words.some(word => word.startsWith(token)) ? 2 : 1
+	if (
+		token.length >= 5 &&
+		words.some(word => withinOneEdit(token, word.slice(0, token.length + 1)))
+	)
 		return 0.6
 	return 0
 }
 
-function highlight(text: string, tokens: string[]) {
+export function highlight(text: string, tokens: string[]) {
 	const normalized = normalize(text)
 	const first = tokens
 		.map(token => normalized.indexOf(token))
@@ -123,12 +139,15 @@ export function LibrarySearch({
 	const [pages, setPages] = useState<ISearchPage[] | null>(null)
 	const [active, setActive] = useState(0)
 
-	// Ctrl+K или «/» — к поиску
+	// «/» — к поиску по архиву
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement
-			const typing = target.isContentEditable || ['INPUT', 'TEXTAREA'].includes(target.tagName)
-			if ((event.key === 'k' && (event.ctrlKey || event.metaKey)) || (event.key === '/' && !typing)) {
+			const typing =
+				target.isContentEditable ||
+				['INPUT', 'TEXTAREA'].includes(target.tagName)
+			// Ctrl+K — общий поиск приложения, здесь только «/»
+			if (event.key === '/' && !typing) {
 				event.preventDefault()
 				inputRef.current?.focus()
 			}
@@ -196,7 +215,10 @@ export function LibrarySearch({
 		for (const topic of topics) {
 			const title = normalize(topic.title)
 			const words = title.split(/\s+/)
-			const score = tokens.reduce((sum, token) => sum + matchToken(token, title, words), 0)
+			const score = tokens.reduce(
+				(sum, token) => sum + matchToken(token, title, words),
+				0
+			)
 			if (tokens.every(token => matchToken(token, title, words)))
 				scored.push({
 					kind: 'topic',
@@ -211,7 +233,12 @@ export function LibrarySearch({
 			const title = normalize(section.title)
 			const words = title.split(/\s+/)
 			if (tokens.every(token => matchToken(token, title, words)))
-				scored.push({ kind: 'section', id: section.id, title: section.title, score: 4 })
+				scored.push({
+					kind: 'section',
+					id: section.id,
+					title: section.title,
+					score: 4
+				})
 		}
 
 		return scored.sort((a, b) => b.score - a.score).slice(0, 12)
@@ -275,7 +302,12 @@ export function LibrarySearch({
 						<p className='px-4 py-3 text-sm text-subtle'>Ничего не нашлось</p>
 					) : (
 						results.map((result, index) => {
-							const Icon = result.kind === 'page' ? FileText : result.kind === 'topic' ? Hash : Folder
+							const Icon =
+								result.kind === 'page'
+									? FileText
+									: result.kind === 'topic'
+										? Hash
+										: Folder
 							return (
 								<button
 									key={`${result.kind}-${result.id}`}
@@ -293,7 +325,9 @@ export function LibrarySearch({
 										className='mt-0.5 shrink-0 text-subtle'
 									/>
 									<span className='min-w-0 flex-1'>
-										<span className='block truncate text-sm text-fg'>{result.title}</span>
+										<span className='block truncate text-sm text-fg'>
+											{result.title}
+										</span>
 										{'path' in result && result.path && (
 											<span className='block truncate font-mono text-2xs uppercase tracking-wider text-subtle'>
 												{result.path}
@@ -316,7 +350,7 @@ export function LibrarySearch({
 }
 
 // Для поиска нужен весь текст без разметки (формулы оставляем — по ним тоже ищут)
-const toPlainText = (markdown: string) =>
+export const toPlainText = (markdown: string) =>
 	markdown
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/!\[[^\]]*]\([^)]*\)/g, ' ')

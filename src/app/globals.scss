@@ -1189,3 +1189,29 @@ body {
 		left: 100%;
 	}
 }
+
+/* Дыхание: свободный отдых — форма медленно «дышит» сама */
+@keyframes orb-free {
+	0%,
+	100% {
+		transform: scale(0.7);
+	}
+	50% {
+		transform: scale(0.85);
+	}
+}
+
+/* Нашли через поиск — короткая подсветка */
+.search-flash {
+	animation: search-flash 2.2s ease-out;
+}
+@keyframes search-flash {
+	0%,
+	30% {
+		box-shadow: 0 0 0 2px rgb(var(--primary));
+		background-color: rgb(var(--primary) / 0.12);
+	}
+	100% {
+		box-shadow: 0 0 0 2px transparent;
+	}
+}

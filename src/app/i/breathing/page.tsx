@@ -1,5 +1,6 @@
 'use client'
 
+import cn from 'clsx'
 import {
 	Activity,
 	Bell,
@@ -21,29 +22,32 @@ import {
 	Waves,
 	X
 } from 'lucide-react'
-import cn from 'clsx'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Heading } from '@/components/ui/Heading'
+
+import { useProfile } from '@/hooks/useProfile'
+
+import { BreathingCircle } from './BreathingCircle'
+import { BreathingStats } from './BreathingStats'
+import { ProtocolSession, formatClock } from './ProtocolSession'
+import { breathingAudio } from './breathing-audio'
+import { type IProtocol, PROTOCOLS, findProtocol } from './breathing-protocols'
 import {
 	BREATHING_TECHNIQUES,
 	CUE_STYLE_OPTIONS,
-	SOUNDSCAPE_OPTIONS,
 	type CueStyleType,
 	type IBreathingPhase,
 	type IBreathingTechnique,
+	SOUNDSCAPE_OPTIONS,
 	type SoundscapeType
 } from './breathing.types'
-import { breathingAudio } from './breathing-audio'
-import { BreathingCircle } from './BreathingCircle'
-import { BreathingStats } from './BreathingStats'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Heading } from '@/components/ui/Heading'
-import { useProfile } from '@/hooks/useProfile'
 import { dateKeyInTimeZone } from '@/lib/time-zone'
 import {
-	breathingService,
-	type IBreathingSession
+	type IBreathingSession,
+	breathingService
 } from '@/services/breathing.service'
 
 interface IDurationOption {
@@ -61,10 +65,10 @@ const DURATIONS: IDurationOption[] = [
 ]
 
 export default function BreathingPage() {
-	const [selectedTechnique, setSelectedTechnique] = useState<IBreathingTechnique>(
-		BREATHING_TECHNIQUES[0]
-	)
-	const [targetDurationSeconds, setTargetDurationSeconds] = useState<number>(180) // 3 min default
+	const [selectedTechnique, setSelectedTechnique] =
+		useState<IBreathingTechnique>(BREATHING_TECHNIQUES[0])
+	const [targetDurationSeconds, setTargetDurationSeconds] =
+		useState<number>(180) // 3 min default
 	const [isActive, setIsActive] = useState<boolean>(false)
 	const [isPaused, setIsPaused] = useState<boolean>(false)
 
@@ -72,7 +76,14 @@ export default function BreathingPage() {
 	const [isZenMode, setIsZenMode] = useState<boolean>(false)
 	const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState<boolean>(false)
 	const [sidebarTab, setSidebarTab] = useState<'catalog' | 'history'>('catalog')
-	const [pendingTechnique, setPendingTechnique] = useState<IBreathingTechnique | null>(null)
+	const [pendingTechnique, setPendingTechnique] = useState<
+		IBreathingTechnique | IProtocol | null
+	>(null)
+	// Программа по шагам (Вим Хоф, туммо…) вместо цикла
+	const [selectedProtocol, setSelectedProtocol] = useState<IProtocol | null>(
+		null
+	)
+	const [protocolRunning, setProtocolRunning] = useState(false)
 
 	const { data: profile } = useProfile()
 	const timeZone =
@@ -103,7 +114,8 @@ export default function BreathingPage() {
 	// Sessions history
 	const [sessions, setSessions] = useState<IBreathingSession[]>([])
 	const [loadingHistory, setLoadingHistory] = useState<boolean>(true)
-	const [sessionToDelete, setSessionToDelete] = useState<IBreathingSession | null>(null)
+	const [sessionToDelete, setSessionToDelete] =
+		useState<IBreathingSession | null>(null)
 	const [isDeleting, setIsDeleting] = useState<boolean>(false)
 
 	// Internal timing references
@@ -124,8 +136,13 @@ export default function BreathingPage() {
 			const snd = localStorage.getItem('planner_breathing_sound')
 			if (snd !== null) setSoundEnabled(snd === 'true')
 
-			const sc = localStorage.getItem('planner_breathing_soundscape') as SoundscapeType | null
-			if (sc && ['none', 'rain', 'waves', 'forest', 'brown_noise'].includes(sc)) {
+			const sc = localStorage.getItem(
+				'planner_breathing_soundscape'
+			) as SoundscapeType | null
+			if (
+				sc &&
+				['none', 'rain', 'waves', 'forest', 'brown_noise'].includes(sc)
+			) {
 				setSoundscape(sc)
 				breathingAudio.setSoundscape(sc)
 			}
@@ -135,7 +152,9 @@ export default function BreathingPage() {
 				setSoundscapeVolume(v)
 				breathingAudio.setSoundscapeVolume(v / 100)
 			}
-			const cue = localStorage.getItem('planner_breathing_cue_style') as CueStyleType | null
+			const cue = localStorage.getItem(
+				'planner_breathing_cue_style'
+			) as CueStyleType | null
 			if (cue && ['tibetan', 'bell', 'soft_sine', 'none'].includes(cue)) {
 				setCueStyle(cue)
 				breathingAudio.setCueStyle(cue)
@@ -149,15 +168,26 @@ export default function BreathingPage() {
 		} catch {}
 
 		loadHistory()
+		// Ссылка из поиска: /i/breathing?program=wim-hof
+		const program = findProtocol(
+			new URLSearchParams(window.location.search).get('program') || ''
+		)
+		if (program) setSelectedProtocol(program)
 	}, [])
 
 	// Пока идёт сеанс дыхания, фоновая музыка приложения затихает
 	useEffect(() => {
-		window.dispatchEvent(new CustomEvent('planner:breathing', { detail: { active: isActive } }))
-	}, [isActive])
+		window.dispatchEvent(
+			new CustomEvent('planner:breathing', {
+				detail: { active: isActive || protocolRunning }
+			})
+		)
+	}, [isActive, protocolRunning])
 	useEffect(
 		() => () => {
-			window.dispatchEvent(new CustomEvent('planner:breathing', { detail: { active: false } }))
+			window.dispatchEvent(
+				new CustomEvent('planner:breathing', { detail: { active: false } })
+			)
 		},
 		[]
 	)
@@ -502,12 +532,22 @@ export default function BreathingPage() {
 	}
 
 	const selectTechnique = (tech: IBreathingTechnique) => {
-		if (tech.id === selectedTechnique.id) return
-		if (isActive) {
+		if (tech.id === selectedTechnique.id && !selectedProtocol) return
+		if (isActive || protocolRunning) {
 			setPendingTechnique(tech)
 			return
 		}
+		setSelectedProtocol(null)
 		applyTechnique(tech)
+	}
+
+	const selectProtocol = (protocol: IProtocol) => {
+		if (protocol.id === selectedProtocol?.id) return
+		if (isActive || protocolRunning) {
+			setPendingTechnique(protocol)
+			return
+		}
+		setSelectedProtocol(protocol)
 	}
 
 	const applyTechnique = (tech: IBreathingTechnique) => {
@@ -638,7 +678,9 @@ export default function BreathingPage() {
 				<Smartphone size={15} />
 			</IconToggle>
 			<IconToggle
-				label={isZenMode ? 'Выйти из дзен-режима (Esc)' : 'Дзен-режим на весь экран'}
+				label={
+					isZenMode ? 'Выйти из дзен-режима (Esc)' : 'Дзен-режим на весь экран'
+				}
 				onClick={toggleZenMode}
 			>
 				{isZenMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
@@ -664,7 +706,9 @@ export default function BreathingPage() {
 								type='button'
 								role='radio'
 								aria-checked={targetDurationSeconds === duration.seconds}
-								title={duration.seconds ? `${duration.label} мин` : 'Без ограничения'}
+								title={
+									duration.seconds ? `${duration.label} мин` : 'Без ограничения'
+								}
 								onClick={() => setTargetDurationSeconds(duration.seconds)}
 								className={cn(
 									'h-9 min-w-9 px-2 font-mono text-xs tabular-nums transition-colors',
@@ -696,7 +740,9 @@ export default function BreathingPage() {
 		) : (
 			<div className='flex w-full flex-wrap items-center justify-between gap-3'>
 				<p className='font-mono tabular-nums'>
-					<span className='text-lg text-fg'>{formatTime(totalElapsedSeconds)}</span>
+					<span className='text-lg text-fg'>
+						{formatTime(totalElapsedSeconds)}
+					</span>
 					<span className='text-xs text-subtle'>
 						{targetDurationSeconds > 0
 							? ` / ${formatTime(targetDurationSeconds)}`
@@ -769,42 +815,66 @@ export default function BreathingPage() {
 
 			<div className='mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]'>
 				{/* Сцена практики */}
-				<section className='relative isolate flex min-h-[560px] flex-col overflow-hidden border border-border bg-surface'>
-					<header className='flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5'>
-						<div className='min-w-0'>
-							<h2 className='truncate text-base font-semibold text-fg'>
-								{selectedTechnique.name}
-							</h2>
-							<div className='mt-1.5'>{phaseStrip}</div>
-						</div>
-						{feedbackControls}
-					</header>
+				{selectedProtocol ? (
+					<ProtocolSession
+						protocol={selectedProtocol}
+						sessions={sessions}
+						soundEnabled={soundEnabled}
+						vibrationEnabled={vibrationEnabled}
+						onToggleSound={toggleSound}
+						onToggleVibration={toggleVibration}
+						onSaved={session => {
+							setSessions(prev => [session, ...prev])
+							toast.success('Сеанс записан в историю')
+						}}
+						onRunningChange={setProtocolRunning}
+						onOpenProtocol={id => {
+							const protocol = findProtocol(id)
+							if (protocol) setSelectedProtocol(protocol)
+						}}
+					/>
+				) : (
+					<section className='relative isolate flex min-h-[560px] flex-col overflow-hidden border border-border bg-surface'>
+						<header className='flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5'>
+							<div className='min-w-0'>
+								<h2 className='truncate text-base font-semibold text-fg'>
+									{selectedTechnique.name}
+								</h2>
+								<div className='mt-1.5'>{phaseStrip}</div>
+							</div>
+							{feedbackControls}
+						</header>
 
-					<div className='flex flex-1 flex-col items-center justify-center px-4 py-6'>
-						<BreathingCircle
-							technique={selectedTechnique}
-							currentPhase={currentPhase}
-							phaseRemainingSeconds={phaseRemainingSeconds}
-							phaseProgress={phaseProgress}
-							isActive={isActive}
-							isPaused={isPaused}
-							cycleCount={completedCycles}
-						/>
-						<p className='mt-5 min-h-[2.5rem] max-w-md text-center text-sm leading-5 text-muted'>
-							{isActive ? (isPaused ? 'Пауза' : currentPhase.hint) : selectedTechnique.tagline}
-						</p>
-					</div>
-
-					<footer className='relative border-t border-border px-4 py-3 sm:px-5'>
-						{sessionProgress > 0 && (
-							<div
-								className='absolute -top-px left-0 h-px bg-primary transition-[width] duration-300 ease-linear'
-								style={{ width: `${sessionProgress}%` }}
+						<div className='flex flex-1 flex-col items-center justify-center px-4 py-6'>
+							<BreathingCircle
+								technique={selectedTechnique}
+								currentPhase={currentPhase}
+								phaseRemainingSeconds={phaseRemainingSeconds}
+								phaseProgress={phaseProgress}
+								isActive={isActive}
+								isPaused={isPaused}
+								cycleCount={completedCycles}
 							/>
-						)}
-						{sessionControls('md')}
-					</footer>
-				</section>
+							<p className='mt-5 min-h-[2.5rem] max-w-md text-center text-sm leading-5 text-muted'>
+								{isActive
+									? isPaused
+										? 'Пауза'
+										: currentPhase.hint
+									: selectedTechnique.tagline}
+							</p>
+						</div>
+
+						<footer className='relative border-t border-border px-4 py-3 sm:px-5'>
+							{sessionProgress > 0 && (
+								<div
+									className='absolute -top-px left-0 h-px bg-primary transition-[width] duration-300 ease-linear'
+									style={{ width: `${sessionProgress}%` }}
+								/>
+							)}
+							{sessionControls('md')}
+						</footer>
+					</section>
+				)}
 
 				{/* Каталог и история */}
 				<aside className='flex flex-col border border-border bg-surface lg:h-[560px]'>
@@ -814,7 +884,11 @@ export default function BreathingPage() {
 					>
 						{(
 							[
-								['catalog', 'Практики', BREATHING_TECHNIQUES.length],
+								[
+									'catalog',
+									'Практики',
+									BREATHING_TECHNIQUES.length + PROTOCOLS.length
+								],
 								['history', 'История', sessions.length]
 							] as const
 						).map(([tab, label, count]) => (
@@ -839,46 +913,117 @@ export default function BreathingPage() {
 
 					<div className='min-h-0 flex-1 overflow-y-auto'>
 						{sidebarTab === 'catalog' ? (
-							<ul>
-								{BREATHING_TECHNIQUES.map((tech, index) => {
-									const isSelected = tech.id === selectedTechnique.id
-									return (
-										<li key={tech.id}>
-											<button
-												type='button'
-												onClick={() => selectTechnique(tech)}
-												aria-pressed={isSelected}
-												className={cn(
-													'relative grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border px-4 py-3.5 text-left transition-colors',
-													isSelected
-														? 'bg-white/[0.04] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary'
-														: 'hover:bg-white/[0.02]'
-												)}
-											>
-												<span className='pt-0.5 font-mono text-xs text-subtle'>
-													{String(index + 1).padStart(2, '0')}
-												</span>
-												<span className='min-w-0'>
+							<>
+								<h3 className='sticky top-0 z-10 border-b border-border bg-surface px-4 py-2'>
+									<span className='eyebrow'>Программы с задержками</span>
+								</h3>
+								<ul>
+									{PROTOCOLS.map(protocol => {
+										const isSelected = protocol.id === selectedProtocol?.id
+										const Icon = protocol.icon
+										return (
+											<li key={protocol.id}>
+												<button
+													type='button'
+													onClick={() => selectProtocol(protocol)}
+													aria-pressed={isSelected}
+													className={cn(
+														'relative grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border px-4 py-3.5 text-left transition-colors',
+														isSelected
+															? 'bg-white/[0.04] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary'
+															: 'hover:bg-white/[0.02]'
+													)}
+												>
+													<Icon
+														size={15}
+														className='mt-0.5'
+														style={{ color: protocol.accent }}
+													/>
+													<span className='min-w-0'>
+														<span
+															className={cn(
+																'block truncate text-sm font-medium',
+																isSelected ? 'text-fg' : 'text-muted'
+															)}
+														>
+															{protocol.shortName}
+														</span>
+														<span className='mt-0.5 block text-xs leading-5 text-subtle'>
+															{protocol.tagline}
+														</span>
+													</span>
 													<span
-														className={cn(
-															'block truncate text-sm font-medium',
-															isSelected ? 'text-fg' : 'text-muted'
-														)}
+														className='flex gap-0.5 pt-1.5'
+														title={
+															['', 'Мягко', 'Интенсивно', 'Жёстко'][
+																protocol.intensity
+															]
+														}
 													>
-														{tech.shortName || tech.name}
+														{[1, 2, 3].map(level => (
+															<span
+																key={level}
+																className={cn(
+																	'h-2 w-1',
+																	level <= protocol.intensity
+																		? protocol.intensity === 3
+																			? 'bg-danger'
+																			: 'bg-warning'
+																		: 'bg-white/15'
+																)}
+															/>
+														))}
 													</span>
-													<span className='mt-0.5 block text-xs leading-5 text-subtle'>
-														{tech.tagline}
+												</button>
+											</li>
+										)
+									})}
+								</ul>
+								<h3 className='sticky top-0 z-10 border-b border-border bg-surface px-4 py-2'>
+									<span className='eyebrow'>Циклы</span>
+								</h3>
+								<ul>
+									{BREATHING_TECHNIQUES.map((tech, index) => {
+										const isSelected =
+											!selectedProtocol && tech.id === selectedTechnique.id
+										return (
+											<li key={tech.id}>
+												<button
+													type='button'
+													onClick={() => selectTechnique(tech)}
+													aria-pressed={isSelected}
+													className={cn(
+														'relative grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] gap-x-2 border-b border-border px-4 py-3.5 text-left transition-colors',
+														isSelected
+															? 'bg-white/[0.04] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary'
+															: 'hover:bg-white/[0.02]'
+													)}
+												>
+													<span className='pt-0.5 font-mono text-xs text-subtle'>
+														{String(index + 1).padStart(2, '0')}
 													</span>
-												</span>
-												<span className='pt-0.5 font-mono text-2xs text-subtle'>
-													{tech.totalCycleSeconds} с
-												</span>
-											</button>
-										</li>
-									)
-								})}
-							</ul>
+													<span className='min-w-0'>
+														<span
+															className={cn(
+																'block truncate text-sm font-medium',
+																isSelected ? 'text-fg' : 'text-muted'
+															)}
+														>
+															{tech.shortName || tech.name}
+														</span>
+														<span className='mt-0.5 block text-xs leading-5 text-subtle'>
+															{tech.tagline}
+														</span>
+													</span>
+													<span className='pt-0.5 font-mono text-2xs text-subtle'>
+														{tech.totalCycleSeconds} с
+													</span>
+												</button>
+											</li>
+										)
+									})}
+								</ul>
+							</>
 						) : loadingHistory ? (
 							<div className='space-y-px p-4'>
 								{[0, 1, 2, 3].map(item => (
@@ -899,8 +1044,10 @@ export default function BreathingPage() {
 						) : (
 							historyGroups.map(group => {
 								const minutes = Math.round(
-									group.items.reduce((sum, item) => sum + item.duration_seconds, 0) /
-										60
+									group.items.reduce(
+										(sum, item) => sum + item.duration_seconds,
+										0
+									) / 60
 								)
 								return (
 									<section key={group.key}>
@@ -917,20 +1064,33 @@ export default function BreathingPage() {
 													className='group flex items-center gap-3 border-b border-border px-4 py-2.5'
 												>
 													<span className='w-11 shrink-0 font-mono text-xs text-subtle'>
-														{new Date(session.created_at).toLocaleTimeString('ru-RU', {
-															hour: '2-digit',
-															minute: '2-digit',
-															timeZone
-														})}
+														{new Date(session.created_at).toLocaleTimeString(
+															'ru-RU',
+															{
+																hour: '2-digit',
+																minute: '2-digit',
+																timeZone
+															}
+														)}
 													</span>
 													<span className='min-w-0 flex-1 truncate text-sm text-fg'>
 														{BREATHING_TECHNIQUES.find(
 															tech => tech.id === session.technique_id
-														)?.shortName || session.technique_name}
+														)?.shortName ||
+															findProtocol(session.technique_id)?.shortName ||
+															session.technique_name}
 													</span>
 													<span className='shrink-0 font-mono text-xs tabular-nums text-muted'>
-														{Math.max(1, Math.round(session.duration_seconds / 60))} мин
-														<span className='text-subtle'> · {session.cycles_count} ц</span>
+														{Math.max(
+															1,
+															Math.round(session.duration_seconds / 60)
+														)}{' '}
+														мин
+														<span className='text-subtle'>
+															{session.details?.holds?.length
+																? ` · ${formatClock(Math.max(...session.details.holds))}`
+																: ` · ${session.cycles_count} ц`}
+														</span>
 													</span>
 													<button
 														type='button'
@@ -976,7 +1136,11 @@ export default function BreathingPage() {
 							isZen
 						/>
 						<p className='mt-6 min-h-[3rem] max-w-md text-center text-base leading-6 text-muted'>
-							{isActive ? (isPaused ? 'Пауза' : currentPhase.hint) : selectedTechnique.tagline}
+							{isActive
+								? isPaused
+									? 'Пауза'
+									: currentPhase.hint
+								: selectedTechnique.tagline}
 						</p>
 					</div>
 
@@ -1037,7 +1201,9 @@ export default function BreathingPage() {
 											aria-pressed={isSelected}
 											className={cn(
 												'flex flex-col items-start gap-1 border-b border-r border-border p-3 text-left transition-colors',
-												isSelected ? 'bg-white/[0.06] text-fg' : 'text-muted hover:text-fg'
+												isSelected
+													? 'bg-white/[0.06] text-fg'
+													: 'text-muted hover:text-fg'
 											)}
 										>
 											<Icon
@@ -1090,13 +1256,23 @@ export default function BreathingPage() {
 										>
 											<Icon
 												size={15}
-												className={cn('mt-0.5 shrink-0', isSelected ? 'text-primary' : 'text-subtle')}
+												className={cn(
+													'mt-0.5 shrink-0',
+													isSelected ? 'text-primary' : 'text-subtle'
+												)}
 											/>
 											<span className='min-w-0'>
-												<span className={cn('block text-sm', isSelected ? 'text-fg' : 'text-muted')}>
+												<span
+													className={cn(
+														'block text-sm',
+														isSelected ? 'text-fg' : 'text-muted'
+													)}
+												>
 													{option.label}
 												</span>
-												<span className='block text-xs text-subtle'>{option.description}</span>
+												<span className='block text-xs text-subtle'>
+													{option.description}
+												</span>
 											</span>
 										</button>
 									)
@@ -1122,7 +1298,10 @@ export default function BreathingPage() {
 					confirmLabel='Сменить'
 					onConfirm={() => {
 						resetSession()
-						applyTechnique(pendingTechnique)
+						if ('phases' in pendingTechnique) {
+							setSelectedProtocol(null)
+							applyTechnique(pendingTechnique)
+						} else setSelectedProtocol(pendingTechnique)
 						setPendingTechnique(null)
 					}}
 					onClose={() => setPendingTechnique(null)}

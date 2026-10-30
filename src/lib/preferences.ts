@@ -8,14 +8,7 @@ import { useSyncExternalStore } from 'react'
 export type TypeTransition = 'off' | 'soft' | 'smooth'
 export type TypeHapticLevel = 'off' | 'light' | 'strong'
 export type TypeMusicStyle =
-	| 'lofi'
-	| 'jazz'
-	| 'piano'
-	| 'ambient'
-	| 'rain'
-	| 'forest'
-	| 'space'
-	| 'fire'
+	'lofi' | 'jazz' | 'piano' | 'ambient' | 'rain' | 'forest' | 'space' | 'fire'
 
 export interface IPreferences {
 	transition: TypeTransition
@@ -30,6 +23,8 @@ export interface IPreferences {
 	ttsVoice: string
 	ttsRate: number
 	ttsPitch: number
+	// Голосовые подсказки в программах дыхания (по умолчанию выключены)
+	breathingVoice: boolean
 	// Расшифровка аудио нейросетью Whisper прямо в браузере
 	sttModel: TypeSttModel
 }
@@ -48,6 +43,7 @@ const DEFAULTS: IPreferences = {
 	ttsVoice: '',
 	ttsRate: 1,
 	ttsPitch: 1,
+	breathingVoice: false,
 	sttModel: 'off'
 }
 

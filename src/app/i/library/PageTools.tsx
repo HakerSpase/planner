@@ -2,17 +2,29 @@
 
 import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
-import { AudioLines, Check, Copy, Eye, Link2, ListTree, MoreHorizontal, Printer, Trash2, Unlink, X } from 'lucide-react'
+import {
+	AudioLines,
+	Check,
+	Copy,
+	Eye,
+	Link2,
+	ListTree,
+	MoreHorizontal,
+	Printer,
+	Trash2,
+	Unlink,
+	X
+} from 'lucide-react'
 import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { normalizeTitle } from '@/components/editor/wiki-links'
+
 import { useBackClose } from '@/hooks/useBackClose'
 
 import { createClient } from '@/lib/supabase/client'
-
 import { libraryService, toExcerpt } from '@/services/library.service'
 
 /* ------------------------------------------------------------------ */
@@ -26,14 +38,18 @@ export interface IHeading {
 }
 
 /** Заголовки из отрисованного листа; обновляются, когда меняется текст */
-export function useHeadings(rootRef: RefObject<HTMLElement>, version: unknown) {
+export function useHeadings(
+	rootRef: RefObject<HTMLElement>,
+	version: unknown,
+	selector = '.ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3'
+) {
 	const [headings, setHeadings] = useState<IHeading[]>([])
 	useEffect(() => {
 		const root = rootRef.current
 		if (!root) return
 		const read = () =>
 			setHeadings(
-				Array.from(root.querySelectorAll<HTMLElement>('.ProseMirror > h1, .ProseMirror > h2, .ProseMirror > h3'))
+				Array.from(root.querySelectorAll<HTMLElement>(selector))
 					.filter(element => element.textContent?.trim())
 					.map(element => ({
 						level: Number(element.tagName[1]),
@@ -43,9 +59,13 @@ export function useHeadings(rootRef: RefObject<HTMLElement>, version: unknown) {
 			)
 		read()
 		const observer = new MutationObserver(() => read())
-		observer.observe(root, { childList: true, subtree: true, characterData: true })
+		observer.observe(root, {
+			childList: true,
+			subtree: true,
+			characterData: true
+		})
 		return () => observer.disconnect()
-	}, [rootRef, version])
+	}, [rootRef, version, selector])
 	return headings
 }
 
@@ -54,14 +74,17 @@ function useActiveHeading(headings: IHeading[]) {
 	const [active, setActive] = useState<number[]>([0])
 	useEffect(() => {
 		if (!headings.length) return
-		const scroller = headings[0].element.closest<HTMLElement>('[data-scroll-root], main')
+		const scroller = headings[0].element.closest<HTMLElement>(
+			'[data-scroll-root], main'
+		)
 		const update = () => {
 			const top = 72
 			const bottom = window.innerHeight
 			const visible: number[] = []
 			headings.forEach((heading, i) => {
 				const start = heading.element.getBoundingClientRect().top
-				const end = headings[i + 1]?.element.getBoundingClientRect().top ?? Infinity
+				const end =
+					headings[i + 1]?.element.getBoundingClientRect().top ?? Infinity
 				if (end > top + 24 && start < bottom - 40) visible.push(i)
 			})
 			setActive(visible.length ? visible : [0])
@@ -77,13 +100,25 @@ const scrollToHeading = (heading: IHeading) => {
 	heading.element.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function PageOutline({ headings, onPick }: { headings: IHeading[]; onPick?: () => void }) {
+export function PageOutline({
+	headings,
+	onPick,
+	label = 'Содержание листа'
+}: {
+	headings: IHeading[]
+	onPick?: () => void
+	label?: string
+}) {
 	const active = useActiveHeading(headings)
 	const minLevel = Math.min(...headings.map(heading => heading.level))
 	if (!headings.length)
-		return <p className='text-xs leading-5 text-subtle'>Заголовков нет — добавьте их кнопками H1/H2 при правке.</p>
+		return (
+			<p className='text-xs leading-5 text-subtle'>
+				Заголовков нет — добавьте их кнопками H1/H2 при правке.
+			</p>
+		)
 	return (
-		<nav aria-label='Содержание листа'>
+		<nav aria-label={label}>
 			<ul className='space-y-0.5 border-l border-border'>
 				{headings.map((heading, index) => (
 					<li key={`${index}:${heading.text}`}>
@@ -99,7 +134,9 @@ export function PageOutline({ headings, onPick }: { headings: IHeading[]; onPick
 									? 'border-primary text-fg'
 									: 'border-transparent text-subtle hover:text-fg'
 							)}
-							style={{ paddingLeft: `${0.75 + (heading.level - minLevel) * 0.75}rem` }}
+							style={{
+								paddingLeft: `${0.75 + (heading.level - minLevel) * 0.75}rem`
+							}}
 						>
 							{heading.text}
 						</button>
@@ -111,10 +148,16 @@ export function PageOutline({ headings, onPick }: { headings: IHeading[]; onPick
 }
 
 /** Полоска прочитанного под шапкой листа */
-export function ReadingProgress({ anchorRef }: { anchorRef: RefObject<HTMLElement> }) {
+export function ReadingProgress({
+	anchorRef
+}: {
+	anchorRef: RefObject<HTMLElement>
+}) {
 	const barRef = useRef<HTMLDivElement>(null)
 	useEffect(() => {
-		const scroller = anchorRef.current?.closest<HTMLElement>('[data-scroll-root], main')
+		const scroller = anchorRef.current?.closest<HTMLElement>(
+			'[data-scroll-root], main'
+		)
 		if (!scroller) return
 		const update = () => {
 			const max = scroller.scrollHeight - scroller.clientHeight
@@ -159,13 +202,16 @@ export function PageBacklinks({
 		return pages
 			.filter(page => page.id !== pageId)
 			.map(page => {
-				const match = Array.from(page.content.matchAll(/\[\[([^\[\]\n|]+)(?:\|[^\[\]\n]*)?\]\]/g)).find(
-					item => normalizeTitle(item[1]) === key
-				)
+				const match = Array.from(
+					page.content.matchAll(/\[\[([^\[\]\n|]+)(?:\|[^\[\]\n]*)?\]\]/g)
+				).find(item => normalizeTitle(item[1]) === key)
 				if (!match) return null
 				// Кусочек текста вокруг ссылки
 				const start = Math.max(0, (match.index ?? 0) - 120)
-				const context = toExcerpt(page.content.slice(start, (match.index ?? 0) + match[0].length + 120), 200)
+				const context = toExcerpt(
+					page.content.slice(start, (match.index ?? 0) + match[0].length + 120),
+					200
+				)
 				return { page, context }
 			})
 			.filter(Boolean) as { page: (typeof pages)[number]; context: string }[]
@@ -174,7 +220,9 @@ export function PageBacklinks({
 	if (!backlinks.length) return null
 	return (
 		<section className='mt-12 border-t border-border pt-6'>
-			<h2 className='eyebrow mb-3'>Ссылаются на этот лист · {backlinks.length}</h2>
+			<h2 className='eyebrow mb-3'>
+				Ссылаются на этот лист · {backlinks.length}
+			</h2>
 			<ul className='grid gap-2 sm:grid-cols-2'>
 				{backlinks.map(({ page, context }) => (
 					<li key={page.id}>
@@ -183,7 +231,9 @@ export function PageBacklinks({
 							onClick={() => onOpen(page.topic_id, page.id)}
 							className='block h-full w-full border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-primary/50'
 						>
-							<span className='block truncate text-sm font-medium text-fg'>{page.title || 'Без названия'}</span>
+							<span className='block truncate text-sm font-medium text-fg'>
+								{page.title || 'Без названия'}
+							</span>
 							<span className='mt-1 line-clamp-2 text-xs leading-5 text-subtle'>
 								<MathExcerpt text={context} />
 							</span>
@@ -233,7 +283,10 @@ export function PageMenu({
 			const rect = root.getBoundingClientRect()
 			const menuWidth = Math.min(256, window.innerWidth - 16)
 			const idealLeft = rect.right - menuWidth
-			const clampedLeft = Math.max(8, Math.min(idealLeft, window.innerWidth - menuWidth - 8))
+			const clampedLeft = Math.max(
+				8,
+				Math.min(idealLeft, window.innerWidth - menuWidth - 8)
+			)
 			setMenuLeft(clampedLeft - rect.left)
 		}
 		updatePosition()
@@ -249,8 +302,19 @@ export function PageMenu({
 	}, [open])
 
 	const items = [
-		{ icon: Eye, label: selfCheck ? 'Выключить проверку' : 'Режим проверки', hint: 'Закрыть ответы и формулы', action: onToggleSelfCheck },
-		{ icon: ListTree, label: 'Содержание', hint: 'Перейти к разделу листа', action: onOpenOutline, mobileOnly: true },
+		{
+			icon: Eye,
+			label: selfCheck ? 'Выключить проверку' : 'Режим проверки',
+			hint: 'Закрыть ответы и формулы',
+			action: onToggleSelfCheck
+		},
+		{
+			icon: ListTree,
+			label: 'Содержание',
+			hint: 'Перейти к разделу листа',
+			action: onOpenOutline,
+			mobileOnly: true
+		},
 		...(onToggleOutline
 			? [
 					{
@@ -262,10 +326,35 @@ export function PageMenu({
 					}
 				]
 			: []),
-		...(onSpeak ? [{ icon: AudioLines, label: 'Озвучить лист', hint: 'Прочитать вслух, без формул', action: onSpeak }] : []),
-		{ icon: Printer, label: 'Печать или PDF', hint: 'Сохранить как PDF в окне печати', action: () => window.print() },
-		{ icon: Link2, label: 'Поделиться ссылкой', hint: 'Только для чтения', action: onShare },
-		{ icon: Trash2, label: 'Удалить лист', hint: '', action: onDelete, danger: true }
+		...(onSpeak
+			? [
+					{
+						icon: AudioLines,
+						label: 'Озвучить лист',
+						hint: 'Прочитать вслух, без формул',
+						action: onSpeak
+					}
+				]
+			: []),
+		{
+			icon: Printer,
+			label: 'Печать или PDF',
+			hint: 'Сохранить как PDF в окне печати',
+			action: () => window.print()
+		},
+		{
+			icon: Link2,
+			label: 'Поделиться ссылкой',
+			hint: 'Только для чтения',
+			action: onShare
+		},
+		{
+			icon: Trash2,
+			label: 'Удалить лист',
+			hint: '',
+			action: onDelete,
+			danger: true
+		}
 	]
 
 	return (
@@ -288,34 +377,60 @@ export function PageMenu({
 			{open && (
 				<div
 					role='menu'
-					style={menuLeft !== undefined ? { left: menuLeft, right: 'auto' } : undefined}
+					style={
+						menuLeft !== undefined
+							? { left: menuLeft, right: 'auto' }
+							: undefined
+					}
 					className='absolute right-0 top-full z-40 mt-1 w-64 max-w-[calc(100vw-1rem)] animate-pop-in border border-border bg-elevated p-1 shadow-pop'
 				>
-					{items.map(({ icon: Icon, label, hint, action, danger, mobileOnly, desktopOnly }) => (
-						<button
-							key={label}
-							type='button'
-							role='menuitem'
-							onClick={() => {
-								setOpen(false)
-								action()
-							}}
-							className={cn(
-								'flex w-full items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-white/[0.06]',
-								mobileOnly && 'xl:hidden',
-								desktopOnly && 'hidden xl:flex'
-							)}
-						>
-							<Icon
-								size={15}
-								className={cn('mt-0.5 shrink-0', danger ? 'text-danger' : 'text-subtle')}
-							/>
-							<span>
-								<span className={cn('block text-sm', danger ? 'text-danger' : 'text-fg')}>{label}</span>
-								{hint && <span className='block text-xs text-subtle'>{hint}</span>}
-							</span>
-						</button>
-					))}
+					{items.map(
+						({
+							icon: Icon,
+							label,
+							hint,
+							action,
+							danger,
+							mobileOnly,
+							desktopOnly
+						}) => (
+							<button
+								key={label}
+								type='button'
+								role='menuitem'
+								onClick={() => {
+									setOpen(false)
+									action()
+								}}
+								className={cn(
+									'flex w-full items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-white/[0.06]',
+									mobileOnly && 'xl:hidden',
+									desktopOnly && 'hidden xl:flex'
+								)}
+							>
+								<Icon
+									size={15}
+									className={cn(
+										'mt-0.5 shrink-0',
+										danger ? 'text-danger' : 'text-subtle'
+									)}
+								/>
+								<span>
+									<span
+										className={cn(
+											'block text-sm',
+											danger ? 'text-danger' : 'text-fg'
+										)}
+									>
+										{label}
+									</span>
+									{hint && (
+										<span className='block text-xs text-subtle'>{hint}</span>
+									)}
+								</span>
+							</button>
+						)
+					)}
 				</div>
 			)}
 		</div>
@@ -323,7 +438,13 @@ export function PageMenu({
 }
 
 /** Нижняя «шторка» с содержанием — на телефоне и узких экранах */
-export function OutlineSheet({ headings, onClose }: { headings: IHeading[]; onClose: () => void }) {
+export function OutlineSheet({
+	headings,
+	onClose
+}: {
+	headings: IHeading[]
+	onClose: () => void
+}) {
 	useBackClose(true, onClose)
 	if (typeof document === 'undefined') return null
 	return createPortal(
@@ -357,7 +478,13 @@ export function OutlineSheet({ headings, onClose }: { headings: IHeading[]; onCl
 /* Публичная ссылка                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ShareDialog({ pageId, onClose }: { pageId: string; onClose: () => void }) {
+export function ShareDialog({
+	pageId,
+	onClose
+}: {
+	pageId: string
+	onClose: () => void
+}) {
 	useBackClose(true, onClose)
 	const [token, setToken] = useState<string | null | undefined>(undefined)
 	const [busy, setBusy] = useState(false)
@@ -376,7 +503,11 @@ export function ShareDialog({ pageId, onClose }: { pageId: string; onClose: () =
 
 	const create = async () => {
 		setBusy(true)
-		const { data, error } = await db.from('library_share').insert({ page_id: pageId }).select('token').single()
+		const { data, error } = await db
+			.from('library_share')
+			.insert({ page_id: pageId })
+			.select('token')
+			.single()
 		setBusy(false)
 		if (error) return toast.error('Не получилось создать ссылку')
 		setToken(data.token)
@@ -384,7 +515,10 @@ export function ShareDialog({ pageId, onClose }: { pageId: string; onClose: () =
 
 	const revoke = async () => {
 		setBusy(true)
-		const { error } = await db.from('library_share').delete().eq('page_id', pageId)
+		const { error } = await db
+			.from('library_share')
+			.delete()
+			.eq('page_id', pageId)
 		setBusy(false)
 		if (error) return toast.error('Не получилось закрыть доступ')
 		setToken(null)
@@ -410,9 +544,12 @@ export function ShareDialog({ pageId, onClose }: { pageId: string; onClose: () =
 			<section className='w-full max-w-md animate-pop-in border border-border bg-elevated p-5 shadow-pop'>
 				<div className='flex items-start justify-between gap-3'>
 					<div>
-						<h2 className='text-base font-semibold text-fg'>Поделиться листом</h2>
+						<h2 className='text-base font-semibold text-fg'>
+							Поделиться листом
+						</h2>
 						<p className='mt-1 text-sm leading-5 text-muted'>
-							По ссылке лист откроется только для чтения — без входа и без доступа к остальному архиву.
+							По ссылке лист откроется только для чтения — без входа и без
+							доступа к остальному архиву.
 						</p>
 					</div>
 					<button

@@ -6,6 +6,8 @@ export interface IBreathingSession {
 	technique_name: string
 	duration_seconds: number
 	cycles_count: number
+	/** Задержки по раундам у программ (Вим Хоф и др.) */
+	details?: { holds?: number[] } | null
 	created_at: string
 }
 
@@ -14,6 +16,7 @@ export interface ICreateBreathingSessionDto {
 	techniqueName: string
 	durationSeconds: number
 	cyclesCount: number
+	details?: { holds?: number[] }
 }
 
 class BreathingService {

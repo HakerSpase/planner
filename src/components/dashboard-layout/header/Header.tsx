@@ -1,6 +1,8 @@
 'use client'
 
-import { Menu } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
+
+import { openSearch } from '@/components/search/CommandPalette'
 
 import { MusicToggle } from '../MusicController'
 
@@ -26,6 +28,20 @@ export function Header({ onToggleMobile }: IHeaderProps) {
 						<Menu size={20} />
 					</button>
 				)}
+				<button
+					type='button'
+					onClick={openSearch}
+					title='Поиск (Ctrl+K)'
+					aria-label='Поиск'
+					className='flex h-9 min-w-0 items-center gap-2 border border-border px-3 text-sm text-subtle transition-colors hover:border-white/20 hover:text-fg max-sm:w-9 max-sm:justify-center max-sm:border-transparent max-sm:px-0 sm:w-64'
+				>
+					<Search
+						size={15}
+						className='shrink-0'
+					/>
+					<span className='flex-1 truncate text-left max-sm:hidden'>Поиск</span>
+					<kbd className='font-mono text-2xs max-sm:hidden'>Ctrl K</kbd>
+				</button>
 			</div>
 
 			{/* Профиль пользователя */}

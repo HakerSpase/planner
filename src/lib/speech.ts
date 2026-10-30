@@ -248,6 +248,20 @@ export function stopSpeech() {
 	emit(IDLE)
 }
 
+/** Короткая голосовая подсказка (дыхание и т. п.) — мимо плеера, перебивает прошлую */
+export function sayCue(text: string) {
+	if (!isSpeechSupported()) return
+	stopSpeech()
+	const { ttsRate, ttsPitch } = getPreferences()
+	const utterance = new SpeechSynthesisUtterance(text)
+	const voice = pickVoice()
+	if (voice) utterance.voice = voice
+	utterance.lang = voice?.lang || 'ru-RU'
+	utterance.rate = Math.min(1.2, ttsRate)
+	utterance.pitch = ttsPitch
+	window.speechSynthesis.speak(utterance)
+}
+
 const subscribe = (listener: () => void) => {
 	listeners.add(listener)
 	return () => listeners.delete(listener)

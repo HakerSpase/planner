@@ -15,7 +15,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from('breathing_session')
-		.select('id,technique_id,technique_name,duration_seconds,cycles_count,created_at')
+		.select('id,technique_id,technique_name,duration_seconds,cycles_count,details,created_at')
 		.eq('user_id', user.id)
 		.order('created_at', { ascending: false })
 		.limit(30)
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
 			technique_name: body.techniqueName || 'Квадратное дыхание',
 			duration_seconds: body.durationSeconds || 0,
 			cycles_count: body.cyclesCount || 0,
+			details: body.details ?? null,
 			user_id: user.id
 		})
 		.select()

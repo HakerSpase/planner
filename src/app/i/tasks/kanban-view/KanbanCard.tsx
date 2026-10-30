@@ -19,7 +19,6 @@ import { useTaskDebounce } from '../hooks/useTaskDebounce'
 
 import styles from './KanbanView.module.scss'
 
-
 interface IKanbanCard {
 	item: ITaskResponse
 	setItems: Dispatch<SetStateAction<ITaskResponse[] | undefined>>
@@ -54,6 +53,7 @@ export function KanbanCard({
 
 	return (
 		<div
+			data-task-id={item.id}
 			className={cn(
 				styles.card,
 				{
