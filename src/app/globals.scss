@@ -186,9 +186,24 @@ body {
 
 	pre {
 		@apply overflow-x-auto border border-border bg-surface-2 p-4 font-mono text-sm leading-6;
+		white-space: pre;
+		word-wrap: normal;
+		overflow-wrap: normal;
+		word-break: normal;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
 
-		code {
+		&::-webkit-scrollbar {
+			display: none;
+		}
+
+		code,
+		code * {
 			@apply bg-transparent p-0 text-[inherit];
+			white-space: pre !important;
+			word-wrap: normal !important;
+			overflow-wrap: normal !important;
 		}
 	}
 

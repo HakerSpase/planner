@@ -218,14 +218,32 @@ export function PageMenu({
 }) {
 	const [open, setOpen] = useState(false)
 	const rootRef = useRef<HTMLDivElement>(null)
+	const [menuLeft, setMenuLeft] = useState<number | undefined>(undefined)
 
 	useEffect(() => {
-		if (!open) return
+		if (!open) {
+			setMenuLeft(undefined)
+			return
+		}
+		const updatePosition = () => {
+			const root = rootRef.current
+			if (!root) return
+			const rect = root.getBoundingClientRect()
+			const menuWidth = Math.min(256, window.innerWidth - 16)
+			const idealLeft = rect.right - menuWidth
+			const clampedLeft = Math.max(8, Math.min(idealLeft, window.innerWidth - menuWidth - 8))
+			setMenuLeft(clampedLeft - rect.left)
+		}
+		updatePosition()
+		window.addEventListener('resize', updatePosition)
 		const close = (event: PointerEvent) => {
 			if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
 		}
 		document.addEventListener('pointerdown', close)
-		return () => document.removeEventListener('pointerdown', close)
+		return () => {
+			window.removeEventListener('resize', updatePosition)
+			document.removeEventListener('pointerdown', close)
+		}
 	}, [open])
 
 	const items = [
@@ -267,7 +285,8 @@ export function PageMenu({
 			{open && (
 				<div
 					role='menu'
-					className='absolute right-0 top-full z-40 mt-1 w-64 animate-pop-in border border-border bg-elevated p-1 shadow-pop'
+					style={menuLeft !== undefined ? { left: menuLeft, right: 'auto' } : undefined}
+					className='absolute right-0 top-full z-40 mt-1 w-64 max-w-[calc(100vw-1rem)] animate-pop-in border border-border bg-elevated p-1 shadow-pop'
 				>
 					{items.map(({ icon: Icon, label, hint, action, danger, mobileOnly, desktopOnly }) => (
 						<button

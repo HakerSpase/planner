@@ -63,7 +63,7 @@ export function ChartView({ source }: { source: string }) {
 			{chart.title && <figcaption className='visual-title'>{chart.title}</figcaption>}
 			<div
 				ref={containerRef}
-				className='px-2 py-3'
+				className='overflow-x-auto overscroll-x-contain px-2 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 			>
 				{width > 0 &&
 					(chart.type === 'pie' ? (
@@ -106,7 +106,7 @@ type TypeParsed = ReturnType<typeof parseChart>
 
 function Cartesian({
 	chart,
-	width,
+	width: containerWidth,
 	active,
 	setActive
 }: {
@@ -115,8 +115,11 @@ function Cartesian({
 	active: number | null
 	setActive: (index: number | null) => void
 }) {
-	const height = Math.round(Math.min(320, Math.max(200, width * 0.5)))
+	const maxChars = Math.max(8, ...chart.rows.map(row => Math.min(18, row.label.length)))
+	const minBand = Math.max(76, Math.ceil(maxChars * 6.6) + 14)
 	const left = 40
+	const width = Math.max(containerWidth, left + 8 + chart.rows.length * minBand)
+	const height = Math.round(Math.min(320, Math.max(200, containerWidth * 0.5)))
 	const bottom = 26
 	const top = 14
 	const innerWidth = width - left - 8
@@ -209,7 +212,7 @@ function Cartesian({
 						textAnchor='middle'
 						className='visual-tick'
 					>
-						{row.label.length > 10 && band < 80 ? `${row.label.slice(0, 8)}…` : row.label}
+						{row.label.length > 18 && band < 110 ? `${row.label.slice(0, 16)}…` : row.label}
 					</text>
 				</g>
 			))}
