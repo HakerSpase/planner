@@ -4,6 +4,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.graphics.Rect;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
 import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
@@ -26,10 +31,88 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Свой плагин регистрируем до старта моста
         registerPlugin(WidgetPlugin.class);
+        registerPlugin(UiPlugin.class);
         super.onCreate(savedInstanceState);
         handleIntent(getIntent());
         // Фоновое обновление виджетов и напоминаний (если токен уже выдан)
         SyncWorker.schedule(this);
+    }
+
+    /* ---------- Системная плашка выделения ---------- */
+
+    private volatile boolean selectionMenuHidden = false;
+    private ActionMode selectionMode;
+
+    /** Сайт сообщает: выделение в редактируемой заметке — системную плашку прячем */
+    void setSelectionMenuHidden(boolean hidden) {
+        if (selectionMenuHidden == hidden) return;
+        selectionMenuHidden = hidden;
+        runOnUiThread(() -> {
+            // Пересобрать меню текущей плашки: обёртка ниже очистит его или вернёт как было
+            if (selectionMode != null) selectionMode.invalidate();
+        });
+    }
+
+    @Override
+    public ActionMode onWindowStartingActionMode(ActionMode.Callback callback, int type) {
+        return super.onWindowStartingActionMode(new HidingCallback(callback), type);
+    }
+
+    @Override
+    public void onActionModeStarted(ActionMode mode) {
+        super.onActionModeStarted(mode);
+        selectionMode = mode;
+    }
+
+    @Override
+    public void onActionModeFinished(ActionMode mode) {
+        super.onActionModeFinished(mode);
+        if (selectionMode == mode) selectionMode = null;
+    }
+
+    /** Обёртка над плашкой WebView: пустое меню — плашка не показывается, выделение остаётся */
+    private class HidingCallback extends ActionMode.Callback2 {
+        private final ActionMode.Callback inner;
+
+        HidingCallback(ActionMode.Callback inner) {
+            this.inner = inner;
+        }
+
+        @Override
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            boolean result = inner.onCreateActionMode(mode, menu);
+            if (selectionMenuHidden) menu.clear();
+            return result;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            boolean result = inner.onPrepareActionMode(mode, menu);
+            if (selectionMenuHidden) {
+                menu.clear();
+                return true;
+            }
+            return result;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            return inner.onActionItemClicked(mode, item);
+        }
+
+        @Override
+        public void onDestroyActionMode(ActionMode mode) {
+            inner.onDestroyActionMode(mode);
+        }
+
+        @Override
+        public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
+            if (inner instanceof ActionMode.Callback2) {
+                ((ActionMode.Callback2) inner).onGetContentRect(mode, view, outRect);
+            } else {
+                super.onGetContentRect(mode, view, outRect);
+            }
+        }
     }
 
     @Override

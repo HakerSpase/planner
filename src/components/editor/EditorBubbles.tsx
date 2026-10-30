@@ -11,17 +11,22 @@ import {
 	BetweenVerticalEnd,
 	BetweenVerticalStart,
 	Bold,
+	ClipboardPaste,
 	Combine,
+	Copy,
 	Eraser,
 	Highlighter,
 	Italic,
 	PanelTop,
+	Scissors,
 	Split,
 	Strikethrough,
+	TextSelect,
 	Trash2,
 	Underline
 } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { AnnotationMenu, apply, isApplied } from './AnnotationMenu'
 import {
@@ -31,6 +36,8 @@ import {
 	TEXT_COLORS,
 	resolveAnnotation
 } from './annotations'
+import { copyText, readText } from '@/lib/clipboard'
+import { nativePlugin } from '@/lib/native'
 import { isSpeechSupported, selectedSpeechText, speak } from '@/lib/speech'
 
 /*
@@ -93,6 +100,54 @@ const Divider = () => (
 export function SelectionBubble({ editor }: { editor: Editor }) {
 	const [panel, setPanel] = useState<'line' | 'highlight' | null>(null)
 	const [lineColor, setLineColor] = useState<string | null>(null)
+	// На сенсорном экране системной плашки нет (в приложении) или она мешает — свои кнопки буфера
+	const [touch, setTouch] = useState(false)
+	useEffect(() => setTouch(window.matchMedia('(pointer: coarse)').matches), [])
+
+	// Android-приложение: пока выделение в этой заметке, системную плашку прячем
+	useEffect(() => {
+		const ui = nativePlugin('PlannerUi')
+		if (!ui) return
+		let hidden = false
+		const update = () => {
+			const next =
+				editor.isEditable && editor.isFocused && !editor.state.selection.empty
+			if (next === hidden) return
+			hidden = next
+			ui.setSelectionMenu({ hidden }).catch(() => {})
+		}
+		editor.on('selectionUpdate', update)
+		editor.on('focus', update)
+		editor.on('blur', update)
+		return () => {
+			editor.off('selectionUpdate', update)
+			editor.off('focus', update)
+			editor.off('blur', update)
+			if (hidden) ui.setSelectionMenu({ hidden: false }).catch(() => {})
+		}
+	}, [editor])
+
+	const selectedText = () => {
+		const { from, to } = editor.state.selection
+		return editor.state.doc.textBetween(from, to, '\n')
+	}
+	const copy = async (cut: boolean) => {
+		try {
+			await copyText(selectedText())
+			if (cut) editor.chain().focus().deleteSelection().run()
+			else toast('Скопировано', { duration: 1200 })
+		} catch {
+			toast.error('Не удалось скопировать')
+		}
+	}
+	const paste = async () => {
+		try {
+			const text = await readText()
+			if (text) editor.chain().focus().insertContent(text).run()
+		} catch {
+			toast.error('Нет доступа к буферу обмена')
+		}
+	}
 
 	return (
 		<BubbleMenu
@@ -118,12 +173,41 @@ export function SelectionBubble({ editor }: { editor: Editor }) {
 			}}
 		>
 			<div
-				className='relative flex max-w-[calc(100vw-1rem)] items-center overflow-visible border border-border bg-elevated p-0.5 shadow-pop sm-max:w-[14.75rem] sm-max:flex-wrap sm-max:justify-center'
+				className='relative flex max-w-[calc(100vw-1rem)] items-center overflow-visible border border-border bg-elevated p-0.5 shadow-pop sm-max:w-[18.5rem] sm-max:flex-wrap sm-max:justify-center'
 				onMouseDown={event => {
 					if (!(event.target as HTMLElement).closest('input'))
 						event.preventDefault()
 				}}
 			>
+				{touch && (
+					<>
+						<Button
+							label='Копировать'
+							onClick={() => void copy(false)}
+						>
+							<Copy size={15} />
+						</Button>
+						<Button
+							label='Вырезать'
+							onClick={() => void copy(true)}
+						>
+							<Scissors size={15} />
+						</Button>
+						<Button
+							label='Вставить'
+							onClick={() => void paste()}
+						>
+							<ClipboardPaste size={15} />
+						</Button>
+						<Button
+							label='Выделить всё'
+							onClick={() => editor.chain().focus().selectAll().run()}
+						>
+							<TextSelect size={15} />
+						</Button>
+						<Divider />
+					</>
+				)}
 				<Button
 					label='Жирный'
 					active={editor.isActive('bold')}
