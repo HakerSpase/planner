@@ -61,7 +61,9 @@ import {
 	moveSelectedNode,
 	replaceImageSrc
 } from './extensions'
+import { WikiSuggest } from './WikiSuggest'
 import { MathRender, MathText } from './math'
+import { WikiLinks } from './wiki-links'
 import { InsertVisualMenu } from './visuals/InsertVisualMenu'
 import { VisualCodeBlock } from './visuals/VisualCodeBlock'
 
@@ -194,6 +196,7 @@ export function RichEditor({
 	}
 
 	const editorRef = useRef<Editor | null>(null)
+	const wikiKeyRef = useRef<((event: KeyboardEvent) => boolean) | null>(null)
 
 	const editor = useEditor({
 		immediatelyRender: false,
@@ -205,6 +208,7 @@ export function RichEditor({
 			MathText,
 			MathRender,
 			...ANNOTATION_MARKS,
+			WikiLinks,
 			Table.configure({ resizable: false }),
 			TableRow,
 			TableHeader,
@@ -238,6 +242,7 @@ export function RichEditor({
 				class: cn('rich-editor-content', contentClassName)
 			},
 			handleKeyDown(_view, event) {
+				if (wikiKeyRef.current?.(event)) return true
 				if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
 					onSubmitRef.current?.()
 					return Boolean(onSubmitRef.current)
@@ -564,6 +569,12 @@ export function RichEditor({
 				</BubbleMenu>
 			)}
 			</div>
+			{editor && editable && (
+				<WikiSuggest
+					editor={editor}
+					keyHandlerRef={wikiKeyRef}
+				/>
+			)}
 			{/* Тап по любому месту поля ставит курсор в конец текста */}
 			<div
 				className='min-h-0 flex-1 cursor-text'

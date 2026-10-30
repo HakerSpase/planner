@@ -685,3 +685,24 @@ body {
 .rich-editor-content .visual-source {
 	@apply m-0 border-x border-b border-border;
 }
+
+/* Ссылки на листы [[…]] */
+.rich-editor-content .wiki-link {
+	color: rgb(var(--primary));
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-color: rgb(var(--primary) / 0.35);
+	text-underline-offset: 3px;
+
+	&:hover {
+		text-decoration-color: rgb(var(--primary));
+	}
+}
+
+.rich-editor-content[contenteditable='true'] .wiki-link {
+	cursor: text;
+}
+
+.rich-editor-content .wiki-bracket {
+	opacity: 0.4;
+}

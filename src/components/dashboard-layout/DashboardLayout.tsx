@@ -3,6 +3,7 @@
 import cn from 'clsx'
 import { usePathname, useRouter } from 'next/navigation'
 import { type PropsWithChildren, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { useBackground } from '@/lib/background-preference'
 import { watchKeyboard } from '@/lib/keyboard-state'
@@ -48,6 +49,17 @@ export default function DashboardLayout({
 		document.addEventListener('pointerdown', onPointerDown, { passive: true })
 		return () => document.removeEventListener('pointerdown', onPointerDown)
 	}, [])
+
+	// Переход по ссылке [[лист]] из любого редактора
+	useEffect(() => {
+		const onNavigate = (event: Event) => {
+			const { href, missing } = (event as CustomEvent).detail || {}
+			if (href) router.push(href)
+			else if (missing) toast.info(`Листа «${missing}» в архиве пока нет`)
+		}
+		window.addEventListener('planner:navigate', onNavigate)
+		return () => window.removeEventListener('planner:navigate', onNavigate)
+	}, [router])
 
 	// Alt+1…8 — быстрый переход между разделами (порядок как в меню)
 	useEffect(() => {

@@ -6,6 +6,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import katex from 'katex'
 
 import { KATEX_MACROS } from './katex-macros'
+import { WIKI_LINK } from './wiki-links'
 
 /*
  * Формулы LaTeX. В тексте хранятся как $…$ (в строке) и $$…$$ (отдельной формулой).
@@ -17,6 +18,8 @@ import { KATEX_MACROS } from './katex-macros'
 // \[…\] и \(…\) тоже рисуем — так формулы видны и до сохранения
 const MATH_REGEX =
 	/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)|\\\(([\s\S]+?)\\\)/g
+
+const RAW_REGEX = new RegExp(`${WIKI_LINK.source}|${MATH_REGEX.source}`, 'g')
 
 // Нейросети при копировании «в Markdown» удваивают слеши: \\( \frac … \\, \\)
 // Внутри такой формулы снимаем экранирование Markdown: \\, → \,
@@ -122,7 +125,9 @@ export const MathText = Text.extend({
 				serialize(state: any, node: PMNode) {
 					const text = node.text || ''
 					let last = 0
-					for (const match of Array.from(text.matchAll(MATH_REGEX))) {
+					// Формулы и ссылки [[…]] пишем как есть; иначе скобки ссылки экранируются в \[ \],
+					// а это уже обозначение формулы
+					for (const match of Array.from(text.matchAll(RAW_REGEX))) {
 						const index = match.index ?? 0
 						if (index > last) state.text(escapeHtml(text.slice(last, index)))
 						state.text(match[0], false)

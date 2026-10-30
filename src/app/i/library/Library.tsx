@@ -9,10 +9,12 @@ import {
 	Check,
 	ChevronRight,
 	FilePlus2,
+	FolderTree,
 	FolderPlus,
 	Pencil,
 	Plus,
-	Trash2
+	Trash2,
+	Waypoints
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -35,6 +37,11 @@ import {
 	newLibraryId,
 	toExcerpt
 } from '@/services/library.service'
+
+const LibraryGraph = dynamic(() => import('./LibraryGraph').then(mod => mod.LibraryGraph), {
+	ssr: false,
+	loading: () => <div className='h-[min(70vh,44rem)] animate-pulse border border-border bg-white/[0.02]' />
+})
 
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
@@ -101,6 +108,7 @@ export function Library() {
 	const topicId = params.get('topic')
 	const pageId = params.get('page')
 	const sectionId = params.get('section')
+	const isGraph = params.get('view') === 'graph'
 
 	const { data: tree, isLoading } = useQuery({
 		queryKey: TREE_KEY,
@@ -116,8 +124,14 @@ export function Library() {
 	const [isDeleting, setIsDeleting] = useState(false)
 
 	const navigate = useCallback(
-		(next: { topic?: string | null; page?: string | null; section?: string | null }) => {
+		(next: {
+			topic?: string | null
+			page?: string | null
+			section?: string | null
+			view?: 'graph' | null
+		}) => {
 			const search = new URLSearchParams()
+			if (next.view) search.set('view', next.view)
 			if (next.section) search.set('section', next.section)
 			if (next.topic) search.set('topic', next.topic)
 			if (next.page) search.set('page', next.page)
@@ -211,58 +225,102 @@ export function Library() {
 				title='Архив'
 				description='Разделы, темы и конспекты — с формулами, таблицами и файлами'
 			/>
-			<div className='mb-6 max-w-xl'>
-				<LibrarySearch
+			<div className='mb-6 flex flex-wrap items-start gap-2'>
+				<div className='min-w-0 max-w-xl flex-1 basis-64'>
+					<LibrarySearch
+						sections={sections}
+						topics={topics}
+						onOpenPage={(topic, page) => navigate({ topic, page })}
+						onOpenTopic={topic => navigate({ topic })}
+						onOpenSection={id => navigate({ section: id })}
+					/>
+				</div>
+				<div
+					role='tablist'
+					aria-label='Вид архива'
+					className='flex h-11 divide-x divide-border border border-border'
+				>
+					<ViewTab
+						active={!isGraph}
+						onClick={() => navigate({})}
+					>
+						<FolderTree size={15} />
+						Разделы
+					</ViewTab>
+					<ViewTab
+						active={isGraph}
+						onClick={() => navigate({ view: 'graph' })}
+					>
+						<Waypoints size={15} />
+						Граф
+					</ViewTab>
+				</div>
+			</div>
+
+			{isGraph ? (
+				<LibraryGraph
 					sections={sections}
 					topics={topics}
 					onOpenPage={(topic, page) => navigate({ topic, page })}
 					onOpenTopic={topic => navigate({ topic })}
-					onOpenSection={id => navigate({ section: id })}
 				/>
-			</div>
-		<div className='grid gap-x-12 lg:grid-cols-[15rem_minmax(0,1fr)]'>
-			{/* Дерево: на телефоне показывается, пока не выбрана тема */}
-			<aside
-				className={cn(
-					'min-w-0',
-					topicId || sectionId ? 'hidden lg:block' : 'block'
-				)}
-			>
-				<LibraryTree
-					sections={sections}
-					topics={topics}
-					isLoading={isLoading}
-					activeTopicId={topicId}
-					onOpenTopic={id => navigate({ topic: id })}
-					onOpenSection={id => navigate({ section: id })}
-					activeSectionId={!topicId ? sectionId : null}
-					onDelete={setDeleteTarget}
-				/>
-			</aside>
+			) : (
+				<div className='grid gap-x-12 lg:grid-cols-[15rem_minmax(0,1fr)]'>
+					{/* Дерево: на телефоне показывается, пока не выбрана тема */}
+					<aside className={cn('min-w-0', topicId || sectionId ? 'hidden lg:block' : 'block')}>
+						<LibraryTree
+							sections={sections}
+							topics={topics}
+							isLoading={isLoading}
+							activeTopicId={topicId}
+							onOpenTopic={id => navigate({ topic: id })}
+							onOpenSection={id => navigate({ section: id })}
+							activeSectionId={!topicId ? sectionId : null}
+							onDelete={setDeleteTarget}
+						/>
+					</aside>
 
-			<main className={cn('min-w-0', !topicId && !sectionId && 'hidden lg:block')}>
-				{!topic && section ? (
-					<SectionView
-						section={section}
-						topics={topics.filter(item => item.section_id === section.id)}
-						onBack={() => navigate({})}
-						onOpenTopic={id => navigate({ topic: id })}
-					/>
-				) : topic ? (
-					<TopicView
-						topic={topic}
-						section={section}
-						onBack={() => navigate({})}
-						onOpenPage={id => navigate({ topic: topic.id, page: id })}
-						onDelete={setDeleteTarget}
-					/>
-				) : (
-					<EmptyState hasSections={sections.length > 0} />
-				)}
-			</main>
-		</div>
+					<main className={cn('min-w-0', !topicId && !sectionId && 'hidden lg:block')}>
+						{!topic && section ? (
+							<SectionView
+								section={section}
+								topics={topics.filter(item => item.section_id === section.id)}
+								onBack={() => navigate({})}
+								onOpenTopic={id => navigate({ topic: id })}
+							/>
+						) : topic ? (
+							<TopicView
+								topic={topic}
+								section={section}
+								onBack={() => navigate({})}
+								onOpenPage={id => navigate({ topic: topic.id, page: id })}
+								onDelete={setDeleteTarget}
+							/>
+						) : (
+							<EmptyState hasSections={sections.length > 0} />
+						)}
+					</main>
+				</div>
+			)}
 			{deleteDialog}
 		</div>
+	)
+}
+
+function ViewTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+	return (
+		<button
+			type='button'
+			role='tab'
+			aria-selected={active}
+			onClick={onClick}
+			className={cn(
+				'flex items-center gap-2 px-3.5 text-sm transition-colors',
+				active ? 'bg-white/[0.08] text-fg' : 'text-muted hover:text-fg'
+			)}
+		>
+			{children}
+		</button>
 	)
 }
 
