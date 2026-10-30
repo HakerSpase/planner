@@ -156,6 +156,8 @@ const studyKey = new PluginKey<IStudyState>('study')
  * Разрезаем: первая строка — заголовок выноски, остальное — её содержимое.
  */
 function markdownCallouts(md: any) {
+	if (md.__plannerCallouts) return
+	md.__plannerCallouts = true
 	md.core.ruler.before('inline', 'planner_callout_title', (state: any) => {
 		const tokens = state.tokens
 		for (let i = 0; i < tokens.length - 2; i++) {

@@ -265,8 +265,40 @@ export function RichEditor({
 					''
 				)
 			},
-			handlePaste(_view, event) {
+			handlePaste(view, event) {
 				const files = Array.from(event.clipboardData?.files || [])
+				const text = event.clipboardData?.getData('text/plain') || ''
+				const html = event.clipboardData?.getData('text/html') || ''
+				const hasPlannerSyntax =
+					/\{[^\s|{}]{1,24}\\?\||\$\$|\$[^$\n]+\$|^```|^> \[!| :: |\[\[[^\]]+\]\]|^#{1,3} |\*\*[^*\n]+\*\*/m.test(
+						text
+					)
+				if (
+					!files.length &&
+					view.state.selection.$from.parent.type.name !== 'codeBlock' &&
+					(hasPlannerSyntax || /<(table|blockquote|pre)\b/i.test(html))
+				) {
+					const hasRichHtml = /<(h[1-6]|table|ul|ol|blockquote)\b/i.test(html)
+					const normalizeAfterPaste = () => {
+						queueMicrotask(() => {
+							const current = editorRef.current
+							if (!current || current.isDestroyed) return
+							current.commands.setContent(getMarkdown(current), true)
+						})
+					}
+					// Если в HTML нет готовых таблиц/заголовков/списков (например, весь ответ — один <pre>),
+					// вставляем чистый Markdown-текст; иначе даём редактору разобрать HTML и сразу пересобираем разметку
+					if (html && !hasRichHtml && hasPlannerSyntax) {
+						event.preventDefault()
+						const cleaned =
+							view.someProp('transformPastedText', f => f(text, false, view)) ?? text
+						editorRef.current?.commands.insertContent(cleaned)
+						normalizeAfterPaste()
+						return true
+					}
+					normalizeAfterPaste()
+					return false
+				}
 				if (!files.length || !editor) return false
 				event.preventDefault()
 				insertFiles(editor, files)
@@ -303,6 +335,9 @@ export function RichEditor({
 	// Переключение «чтение ↔ правка» (архив)
 	useEffect(() => {
 		if (!editor || editor.isDestroyed || editor.isEditable === editable) return
+		if (!editable) {
+			editor.commands.setContent(getMarkdown(editor), false)
+		}
 		editor.setEditable(editable)
 		// формулы в режиме чтения и правки рисуются по-разному
 		editor.view.dispatch(editor.state.tr.setMeta('mathRefresh', true))

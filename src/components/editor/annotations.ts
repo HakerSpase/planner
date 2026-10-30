@@ -318,8 +318,7 @@ const createAnnotationMark = (name: string, groups: TypeAnnotationGroup[], optio
 					serialize: {
 						open: (state: { inTable?: boolean }, mark: { attrs: { code: string } }) =>
 							`{${mark.attrs.code}${state.inTable ? '\\|' : '|'}`,
-						close: '}',
-						expelEnclosingWhitespace: true
+						close: '}'
 					},
 					parse: options.withParser
 						? {

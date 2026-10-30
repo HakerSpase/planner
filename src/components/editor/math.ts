@@ -45,6 +45,8 @@ function findInlineDollarEnd(src: string, from: number) {
 // markdown-it съедает обратные слеши и подчёркивания внутри формул. Забираем формулу
 // целиком раньше остальных правил и кладём в текст как есть.
 function markdownMath(md: any) {
+	if (md.__plannerMath) return
+	md.__plannerMath = true
 	md.inline.ruler.before('escape', 'planner_math_inline', (state: any, silent: boolean) => {
 		const src: string = state.src
 		const start: number = state.pos

@@ -88,12 +88,62 @@ export function splitMergedCards(line: string): string[] {
 	return parts.filter(Boolean)
 }
 
+/**
+ * Gemini и ChatGPT показывают ответ блоком «Markdown» с ```, и при копировании
+ * вся заметка оказывается внутри блока кода. Снимаем эту обёртку.
+ */
+export function unwrapMarkdownFence(src: string) {
+	// Подпись «Markdown» и ``` под ней, либо сразу ```markdown / ``` перед заголовком конспекта
+	const match =
+		/^\s*(?:(?:markdown|md)[ \t]*\n+`{3,}[a-z]*|`{3,}(?:markdown|md)|`{3,}(?=[ \t]*\n#{1,3} ))[ \t]*\n/i.exec(
+			src
+		)
+	if (!match) return src
+	// Обёртка — только если внутри действительно Markdown: заголовки, списки, пометки, формулы
+	const body = src.slice(match[0].length)
+	if (!/^#{1,3} |^[-*] |\{[^\s|{}]{1,24}\||\$|^> /m.test(body)) return src
+	if (/\n`{4,}\s*$/.test(body)) return body.replace(/\n`{4,}\s*$/, '\n')
+	const fences = (body.match(/^```.*$/gm) || []).length
+	return fences % 2 === 1 ? body.replace(/\n```\s*$/, '\n') : body
+}
+
 export function markdownFixups(md: any) {
 	if (md.__plannerFixups) return
 	md.__plannerFixups = true
 
 	md.core.ruler.before('block', 'planner_fixups_source', (state: any) => {
-		state.src = joinMultilineAnnotations(state.src)
+		state.src = joinMultilineAnnotations(unwrapMarkdownFence(state.src))
+			// Чекбоксы, экранированные после HTML-вставки: «- \[ \]» → «- [ ]»
+			.replace(/^([ \t]*[-*+][ \t]+)\\\[([ xX])\\\](?=[ \t])/gm, '$1[$2]')
+			// Стрелка \to, побитая при копировании таблицы со страницы чата: «$$\t$» → «$\to$»
+			.replace(/\$\$?\\t\$/g, '$\\to$')
+	})
+
+	// Таблица, сохранённая HTML-ом: пометки {код|текст} внутри неё превращаем в разметку,
+	// а первую строку без <th> делаем шапкой, чтобы таблица сохранялась чистым Markdown
+	md.core.ruler.after('block', 'planner_html_annotations', (state: any) => {
+		for (const token of state.tokens) {
+			if (token.type !== 'html_block') continue
+			if (/<table\b/i.test(token.content) && !/<th\b/i.test(token.content)) {
+				token.content = token.content.replace(/<tr\b[^>]*>[\s\S]*?<\/tr>/i, (row: string) =>
+					row.replace(
+						/<td\b([^>]*)>([\s\S]*?)<\/td>/gi,
+						(_match: string, attrs: string, inner: string) =>
+							`<th${attrs}>${inner.replace(/^(\s*<p>)\s*<strong>([\s\S]*?)<\/strong>\s*(<\/p>\s*)$/i, '$1$2$3')}</th>`
+					)
+				)
+			}
+			if (!token.content.includes('|')) continue
+			let previous = ''
+			while (previous !== token.content) {
+				previous = token.content
+				token.content = token.content.replace(
+					/\{([^\s|{}\\<>]{1,24})\\?\|([^{}<]*(?:<(?!\/?(?:td|th|tr|table|p)\b)[^>]*>[^{}<]*)*)\}/g,
+					(match: string, code: string, inner: string) =>
+						resolveAnnotation(code) ? `<span data-annot="${code}">${inner}</span>` : match
+				)
+			}
+		}
 	})
 
 	// Абзац из нескольких строк, где есть «::», — каждая строка своим абзацем

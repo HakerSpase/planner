@@ -1012,3 +1012,11 @@ body {
 		display: none;
 	}
 }
+
+/* Пустые абзацы (остатки вставки со страницы чата) в чтении не занимают место */
+.rich-editor-content[contenteditable='false'] {
+	p:empty,
+	p:has(> br:only-child) {
+		display: none;
+	}
+}
