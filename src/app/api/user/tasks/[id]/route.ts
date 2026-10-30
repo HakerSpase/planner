@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-import { formatTask, sanitizeSubtasks } from '../task.mapper'
+import { formatTask, sanitizeDueAt, sanitizeReminders, sanitizeSubtasks } from '../task.mapper'
 
 export async function PUT(
 	request: Request,
@@ -45,6 +45,8 @@ export async function PUT(
 	if (body.createdAt !== undefined)
 		updateData.created_at = body.createdAt || null
 	if (body.order !== undefined) updateData.order = body.order
+	if (body.dueAt !== undefined) updateData.due_at = sanitizeDueAt(body.dueAt)
+	if (body.reminders !== undefined) updateData.reminders = sanitizeReminders(body.reminders)
 
 	const { data, error } = await supabase
 		.from('task')

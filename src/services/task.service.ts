@@ -1,6 +1,11 @@
 import type { ITaskResponse, TypeTaskFormState } from '@/types/task.types'
 
-import { formatTask, sanitizeSubtasks } from '@/app/api/user/tasks/task.mapper'
+import {
+	formatTask,
+	sanitizeDueAt,
+	sanitizeReminders,
+	sanitizeSubtasks
+} from '@/app/api/user/tasks/task.mapper'
 import { createClient } from '@/lib/supabase/client'
 
 /*
@@ -9,7 +14,8 @@ import { createClient } from '@/lib/supabase/client'
  * функцию Vercel. Ответы оставлены в форме { data }, как раньше у axios.
  */
 
-const COLUMNS = 'id,name,note,subtasks,priority,is_completed,created_at,completed_at,updated_at,order'
+const COLUMNS =
+	'id,name,note,subtasks,priority,is_completed,created_at,completed_at,updated_at,order,due_at,reminders'
 
 let client: ReturnType<typeof createClient> | null = null
 const db = () => (client ??= createClient())
@@ -39,6 +45,8 @@ function toRow(data: TypeTaskFormState) {
 	// пустая дата — задача без срока (NULL), а не невалидная строка
 	if (data.createdAt !== undefined) row.created_at = data.createdAt || null
 	if (data.order !== undefined) row.order = data.order
+	if (data.dueAt !== undefined) row.due_at = sanitizeDueAt(data.dueAt)
+	if (data.reminders !== undefined) row.reminders = sanitizeReminders(data.reminders)
 	return row
 }
 
@@ -72,6 +80,8 @@ class TaskService {
 					? new Date(data.createdAt).toISOString()
 					: new Date().toISOString(),
 				order: typeof data.order === 'number' ? data.order : 0,
+				due_at: sanitizeDueAt(data.dueAt),
+				reminders: sanitizeReminders(data.reminders),
 				user_id: userId
 			})
 			.select(COLUMNS)

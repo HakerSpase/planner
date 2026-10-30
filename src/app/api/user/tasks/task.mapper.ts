@@ -33,6 +33,24 @@ export function formatTask(task: Record<string, any>): ITaskResponse {
 		completedAt: task.completed_at,
 		createdAt: task.created_at,
 		updatedAt: task.updated_at,
-		order: task.order ?? 0
+		order: task.order ?? 0,
+		dueAt: task.due_at ?? null,
+		reminders: Array.isArray(task.reminders) ? task.reminders : null
 	}
+}
+
+// Напоминания: до 20 штук, от 0 минут до 7 суток до события
+export function sanitizeReminders(value: unknown): number[] | null {
+	if (value === null || value === undefined) return null
+	if (!Array.isArray(value)) return null
+	const minutes = value
+		.map(Number)
+		.filter(item => Number.isInteger(item) && item >= 0 && item <= 7 * 24 * 60)
+	return minutes.length ? Array.from(new Set(minutes)).sort((a, b) => b - a).slice(0, 20) : null
+}
+
+export function sanitizeDueAt(value: unknown): string | null {
+	if (typeof value !== 'string' || !value) return null
+	const date = new Date(value)
+	return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import cn from 'clsx'
-import { Check, FileText, ListChecks, Plus, X } from 'lucide-react'
+import { Bell, Check, FileText, ListChecks, Plus, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
@@ -10,6 +10,8 @@ import { type Control, useController } from 'react-hook-form'
 import type { ISubtask, TypeTaskFormState } from '@/types/task.types'
 
 import { useBackClose } from '@/hooks/useBackClose'
+
+import { TaskReminders, combineDateTime, timeOf } from './TaskReminders'
 
 // Редактор тяжёлый (Tiptap + ProseMirror) — грузим его только когда он нужен
 const RichEditor = dynamic(
@@ -55,12 +57,25 @@ export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails
 	const [isOpen, setIsOpen] = useState(false)
 	const { field: noteField } = useController({ control, name: 'note' })
 	const { field: subtasksField } = useController({ control, name: 'subtasks' })
+	const { field: dueAtField } = useController({ control, name: 'dueAt' })
+	const { field: remindersField } = useController({ control, name: 'reminders' })
+	const { field: dayField } = useController({ control, name: 'createdAt' })
+
+	// Задачу перенесли на другой день — время события едет вместе с ней
+	const dueAt = dueAtField.value
+	const day = dayField.value
+	const onDueAtChange = dueAtField.onChange
+	useEffect(() => {
+		if (!dueAt || !day) return
+		const next = combineDateTime(day, timeOf(dueAt))
+		if (next !== new Date(dueAt).toISOString()) onDueAtChange(next)
+	}, [day, dueAt, onDueAtChange])
 
 	const note = noteField.value || ''
 	const subtasks: ISubtask[] = subtasksField.value || []
 	const doneCount = subtasks.filter(subtask => subtask.isCompleted).length
 	const preview = notePreview(note)
-	const isEmpty = !subtasks.length && !note.trim()
+	const isEmpty = !subtasks.length && !note.trim() && !dueAt
 
 	// Менеджер загрузок дописал файл прямо в базу — обновляем заметку в форме,
 	// иначе следующее автосохранение вернуло бы старый текст с отметкой загрузки
@@ -88,6 +103,17 @@ export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails
 				)}
 				aria-label='Открыть подзадачи и заметку'
 			>
+				{dueAt && (
+					<span
+						className={cn(
+							'flex shrink-0 items-center gap-1 font-mono tabular-nums',
+							remindersField.value?.length ? 'text-primary' : 'text-muted'
+						)}
+					>
+						<Bell size={12} />
+						{timeOf(dueAt)}
+					</span>
+				)}
 				{subtasks.length > 0 && (
 					<span
 						className={cn(
@@ -123,6 +149,17 @@ export function TaskDetails({ control, taskName, taskId, compact }: ITaskDetails
 					onNoteChange={noteField.onChange}
 					subtasks={subtasks}
 					onSubtasksChange={subtasksField.onChange}
+					reminders={
+						<TaskReminders
+							day={day}
+							dueAt={dueAt}
+							reminders={remindersField.value}
+							onChange={patch => {
+								if (patch.dueAt !== undefined) dueAtField.onChange(patch.dueAt)
+								if (patch.reminders !== undefined) remindersField.onChange(patch.reminders)
+							}}
+						/>
+					}
 					onClose={() => setIsOpen(false)}
 				/>
 			)}
@@ -137,6 +174,7 @@ interface ITaskDetailsPanel {
 	onNoteChange: (value: string) => void
 	subtasks: ISubtask[]
 	onSubtasksChange: (value: ISubtask[]) => void
+	reminders: React.ReactNode
 	onClose: () => void
 }
 
@@ -147,6 +185,7 @@ function TaskDetailsPanel({
 	onNoteChange,
 	subtasks,
 	onSubtasksChange,
+	reminders,
 	onClose
 }: ITaskDetailsPanel) {
 	const [newTitle, setNewTitle] = useState('')
@@ -196,7 +235,7 @@ function TaskDetailsPanel({
 			<aside
 				role='dialog'
 				aria-modal='true'
-				aria-label='Подзадачи и заметка'
+				aria-label='Время, подзадачи и заметка'
 				className='slide flex h-[100dvh] w-full max-w-xl flex-col border-l border-border bg-surface shadow-pop'
 			>
 				<header className='flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-5'>
@@ -217,6 +256,8 @@ function TaskDetailsPanel({
 							{taskName?.trim() || 'Без названия'}
 						</h2>
 					</div>
+
+					{reminders}
 
 					{/* Подзадачи */}
 					<section className='border-b border-border px-5 py-5'>

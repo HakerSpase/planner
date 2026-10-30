@@ -21,6 +21,9 @@ export interface ITaskResponse extends Omit<IBase, 'createdAt'> {
 	priority?: EnumTaskPriority
 	isCompleted: boolean
 	order?: number
+	// Момент события (дата + время) и за сколько минут до него напомнить
+	dueAt?: string | null
+	reminders?: number[] | null
 	clientKey?: string
 }
 

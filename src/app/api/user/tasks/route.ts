@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-import { formatTask, sanitizeSubtasks } from './task.mapper'
+import { formatTask, sanitizeDueAt, sanitizeReminders, sanitizeSubtasks } from './task.mapper'
 
 export async function GET() {
 	const supabase = createClient()
@@ -18,7 +18,7 @@ export async function GET() {
 	const { data, error } = await supabase
 		.from('task')
 		.select(
-			'id,name,note,subtasks,priority,is_completed,created_at,completed_at,updated_at,order'
+			'id,name,note,subtasks,priority,is_completed,created_at,completed_at,updated_at,order,due_at,reminders'
 		)
 		.eq('user_id', user.id)
 		.order('order', { ascending: true })
@@ -57,6 +57,8 @@ export async function POST(request: Request) {
 				? new Date(body.createdAt).toISOString()
 				: new Date().toISOString(),
 			order: typeof body.order === 'number' ? body.order : 0,
+			due_at: sanitizeDueAt(body.dueAt),
+			reminders: sanitizeReminders(body.reminders),
 			user_id: user.id
 		})
 		.select()

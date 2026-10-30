@@ -41,7 +41,9 @@ export function ListRow({
 			subtasks: item.subtasks ?? [],
 			isCompleted: item.isCompleted,
 			createdAt: item.createdAt,
-			priority: item.priority
+			priority: item.priority,
+			dueAt: item.dueAt ?? null,
+			reminders: item.reminders ?? null
 		}
 	})
 

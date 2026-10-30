@@ -2,11 +2,16 @@
 
 import cn from 'clsx'
 import { usePathname, useRouter } from 'next/navigation'
-import { type PropsWithChildren, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { type PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useBackground } from '@/lib/background-preference'
 import { watchKeyboard } from '@/lib/keyboard-state'
+import { watchLocalReminders } from '@/lib/local-reminders'
+import { registerServiceWorker } from '@/lib/push'
+
+import { taskService } from '@/services/task.service'
 import { haptic, usePreferences } from '@/lib/preferences'
 
 import { useBackClose } from '@/hooks/useBackClose'
@@ -34,6 +39,27 @@ export default function DashboardLayout({
 
 	useBackClose(isMobileOpen, () => setIsMobileOpen(false))
 	useEffect(() => watchKeyboard(), [])
+	// Напоминания, пока планер открыт, — если на этом устройстве нет веб-пуша (настольное приложение)
+	const { data: tasks } = useQuery({
+		queryKey: ['tasks'],
+		queryFn: () => taskService.getTasks(),
+		staleTime: 60_000
+	})
+	const tasksRef = useRef(tasks?.data)
+	tasksRef.current = tasks?.data
+	useEffect(
+		() =>
+			watchLocalReminders(
+				() => tasksRef.current,
+				(title, body) => toast(title, { description: body, duration: 20_000 })
+			),
+		[]
+	)
+
+	// Service worker нужен для уведомлений о задачах; регистрируем заранее, чтобы он обновлялся
+	useEffect(() => {
+		registerServiceWorker()?.catch(() => {})
+	}, [])
 
 	// Вибрация на телефоне: переходы, кнопки, отметки — по настройкам
 	useEffect(() => {
