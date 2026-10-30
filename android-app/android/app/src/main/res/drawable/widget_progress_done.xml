@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Все задачи дня сделаны: полоска зелёная -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape><corners android:radius="3dp" /><solid android:color="#1FFFFFFF" /></shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <corners android:radius="3dp" />
+                <gradient android:angle="0" android:startColor="#FF22C55E" android:endColor="#FF5EE38E" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

@@ -33,11 +33,14 @@ public class TodayWidget extends AppWidgetProvider {
             return;
         }
 
+        // Всё сделано — вместо фиолетовой полоски зелёная, без лишних надписей
+        boolean allDone = data.tasksTotal > 0 && data.tasksDone == data.tasksTotal;
+        views.setViewVisibility(R.id.tasks_progress, allDone ? View.GONE : View.VISIBLE);
+        views.setViewVisibility(R.id.tasks_progress_done, allDone ? View.VISIBLE : View.GONE);
+
         if (data.tasksTotal > 0) {
             views.setTextViewText(R.id.tasks_count, data.tasksDone + " из " + data.tasksTotal);
-            views.setTextViewText(
-                    R.id.tasks_caption,
-                    data.tasksDone == data.tasksTotal ? "всё сделано ✓" : WidgetData.plural(data.tasksTotal, "задача", "задачи", "задач"));
+            views.setTextViewText(R.id.tasks_caption, WidgetData.plural(data.tasksTotal, "задача", "задачи", "задач"));
             views.setProgressBar(R.id.tasks_progress, data.tasksTotal, data.tasksDone, false);
         } else {
             views.setTextViewText(R.id.tasks_count, "Свободно");

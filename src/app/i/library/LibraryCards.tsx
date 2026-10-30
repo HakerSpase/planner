@@ -2,15 +2,29 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import cn from 'clsx'
-import { ArrowLeft, Brain, Check, ChevronDown, ChevronRight, FileText, Folder, Layers, RotateCcw, Sparkles, X } from 'lucide-react'
+import {
+	ArrowLeft,
+	Brain,
+	Check,
+	ChevronDown,
+	ChevronRight,
+	FileText,
+	Folder,
+	Layers,
+	RotateCcw,
+	Sparkles,
+	X
+} from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
 import { MathExcerpt } from '@/components/editor/MathExcerpt'
 import { stripAnnotations } from '@/components/editor/annotations'
 
-import type { ILibrarySection, ILibraryTopic } from '@/services/library.service'
+import { useBackClose } from '@/hooks/useBackClose'
+
 import {
 	type IDeckCard,
 	type TypeGrade,
@@ -19,19 +33,48 @@ import {
 	isDue,
 	isLearned
 } from '@/services/flashcards.service'
+import type { ILibrarySection, ILibraryTopic } from '@/services/library.service'
 
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
-	{ ssr: false, loading: () => <div className='h-8 animate-pulse bg-white/[0.03]' /> }
+	{
+		ssr: false,
+		loading: () => <div className='h-8 animate-pulse bg-white/[0.03]' />
+	}
 )
 
 export const DECK_KEY = ['library', 'flashcards']
 
-const GRADES: { grade: TypeGrade; label: string; key: string; className: string }[] = [
-	{ grade: 'again', label: 'Снова', key: '1', className: 'border-danger/50 text-danger hover:bg-danger/10' },
-	{ grade: 'hard', label: 'Трудно', key: '2', className: 'border-warning/50 text-warning hover:bg-warning/10' },
-	{ grade: 'good', label: 'Хорошо', key: '3', className: 'border-success/50 text-success hover:bg-success/10' },
-	{ grade: 'easy', label: 'Легко', key: '4', className: 'border-primary/60 text-primary hover:bg-primary/10' }
+const GRADES: {
+	grade: TypeGrade
+	label: string
+	key: string
+	className: string
+}[] = [
+	{
+		grade: 'again',
+		label: 'Снова',
+		key: '1',
+		className: 'border-danger/50 text-danger hover:bg-danger/10'
+	},
+	{
+		grade: 'hard',
+		label: 'Трудно',
+		key: '2',
+		className: 'border-warning/50 text-warning hover:bg-warning/10'
+	},
+	{
+		grade: 'good',
+		label: 'Хорошо',
+		key: '3',
+		className: 'border-success/50 text-success hover:bg-success/10'
+	},
+	{
+		grade: 'easy',
+		label: 'Легко',
+		key: '4',
+		className: 'border-primary/60 text-primary hover:bg-primary/10'
+	}
 ]
 
 const noop = () => {}
@@ -67,9 +110,13 @@ export function LibraryCards({
 	const [scope, setScope] = useState<string>('all')
 	const [session, setSession] = useState<IDeckCard[] | null>(null)
 
-	const sectionOfTopic = useMemo(() => new Map(topics.map(topic => [topic.id, topic.section_id])), [topics])
+	const sectionOfTopic = useMemo(
+		() => new Map(topics.map(topic => [topic.id, topic.section_id])),
+		[topics]
+	)
 	const filtered = useMemo(
-		() => (deck || []).filter(card => matchesScope(scope, card, sectionOfTopic)),
+		() =>
+			(deck || []).filter(card => matchesScope(scope, card, sectionOfTopic)),
 		[deck, scope, sectionOfTopic]
 	)
 	const due = filtered.filter(card => isDue(card))
@@ -79,7 +126,10 @@ export function LibraryCards({
 	const start = (cards: IDeckCard[]) => {
 		// Сначала просроченные, потом новые — вперемешку внутри групп
 		const shuffled = [...cards].sort(() => Math.random() - 0.5)
-		setSession([...shuffled.filter(card => card.state), ...shuffled.filter(card => !card.state)])
+		setSession([
+			...shuffled.filter(card => card.state),
+			...shuffled.filter(card => !card.state)
+		])
 	}
 
 	if (session)
@@ -165,9 +215,21 @@ export function LibraryCards({
 							<span
 								className={cn(
 									'h-2 w-2 shrink-0 rounded-full',
-									!card.state ? 'bg-primary' : isDue(card) ? 'bg-warning' : isLearned(card) ? 'bg-success' : 'bg-white/25'
+									!card.state
+										? 'bg-primary'
+										: isDue(card)
+											? 'bg-warning'
+											: isLearned(card)
+												? 'bg-success'
+												: 'bg-white/25'
 								)}
-								title={!card.state ? 'Новая' : isDue(card) ? 'Пора повторить' : 'Ждёт своего дня'}
+								title={
+									!card.state
+										? 'Новая'
+										: isDue(card)
+											? 'Пора повторить'
+											: 'Ждёт своего дня'
+								}
 							/>
 							<span className='min-w-0 flex-1'>
 								<span className='block truncate text-sm text-fg'>
@@ -187,7 +249,10 @@ export function LibraryCards({
 									? 'новая'
 									: isDue(card)
 										? 'сейчас'
-										: new Date(card.state.due_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+										: new Date(card.state.due_at).toLocaleDateString('ru-RU', {
+												day: 'numeric',
+												month: 'short'
+											})}
 							</span>
 						</li>
 					))}
@@ -200,9 +265,13 @@ export function LibraryCards({
 					/>
 					<p className='mt-3 text-sm text-fg'>Карточек пока нет</p>
 					<p className='mx-auto mt-1 max-w-md text-xs leading-5 text-subtle'>
-						Напишите в любом листе строку «Вопрос :: Ответ» — она станет карточкой. Можно с формулами:
-						<span className='font-mono text-muted'> Формула дискриминанта :: $D = b^2 - 4ac$</span>. Или вставьте
-						кнопкой «Выноска → Карточка» в редакторе.
+						Напишите в любом листе строку «Вопрос :: Ответ» — она станет
+						карточкой. Можно с формулами:
+						<span className='font-mono text-muted'>
+							{' '}
+							Формула дискриминанта :: $D = b^2 - 4ac$
+						</span>
+						. Или вставьте кнопкой «Выноска → Карточка» в редакторе.
 					</p>
 				</div>
 			)}
@@ -210,7 +279,11 @@ export function LibraryCards({
 	)
 }
 
-function matchesScope(scope: string, card: IDeckCard, sectionOfTopic: Map<string, string>) {
+function matchesScope(
+	scope: string,
+	card: IDeckCard,
+	sectionOfTopic: Map<string, string>
+) {
 	if (scope === 'all') return true
 	const id = scope.slice(2)
 	if (scope.startsWith('s:')) return sectionOfTopic.get(card.topicId) === id
@@ -245,11 +318,27 @@ function ScopePicker({
 	const [open, setOpen] = useState(false)
 	const [expanded, setExpanded] = useState<Set<string>>(new Set())
 	const rootRef = useRef<HTMLDivElement>(null)
+	const sheetRef = useRef<HTMLDivElement>(null)
+	// На телефоне — шторка поверх всего экрана (через портал, иначе её режет нижнее меню)
+	const [isPhone, setIsPhone] = useState(false)
+	useEffect(() => {
+		const query = window.matchMedia('(max-width: 639px)')
+		const update = () => setIsPhone(query.matches)
+		update()
+		query.addEventListener('change', update)
+		return () => query.removeEventListener('change', update)
+	}, [])
+	useBackClose(open && isPhone, () => setOpen(false))
 
 	useEffect(() => {
 		if (!open) return
 		const close = (event: PointerEvent) => {
-			if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+			const target = event.target as Node
+			if (
+				!rootRef.current?.contains(target) &&
+				!sheetRef.current?.contains(target)
+			)
+				setOpen(false)
 		}
 		const escape = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') setOpen(false)
@@ -271,13 +360,19 @@ function ScopePicker({
 						.filter(topic => topic.section_id === section.id)
 						.map(topic => {
 							const cards = deck.filter(card => card.topicId === topic.id)
-							const pages = Array.from(new Map(cards.map(card => [card.pageId, card.pageTitle]))).map(
-								([id, title]) => ({ id, title, ...countCards(cards.filter(card => card.pageId === id)) })
-							)
+							const pages = Array.from(
+								new Map(cards.map(card => [card.pageId, card.pageTitle]))
+							).map(([id, title]) => ({
+								id,
+								title,
+								...countCards(cards.filter(card => card.pageId === id))
+							}))
 							return { ...topic, pages, ...countCards(cards) }
 						})
 						.filter(topic => topic.total)
-					const cards = deck.filter(card => sectionTopics.some(topic => topic.id === card.topicId))
+					const cards = deck.filter(card =>
+						sectionTopics.some(topic => topic.id === card.topicId)
+					)
 					return { ...section, topics: sectionTopics, ...countCards(cards) }
 				})
 				.filter(section => section.total),
@@ -310,12 +405,21 @@ function ScopePicker({
 		setOpen(false)
 	}
 
-	const row = (value: string, title: string, counts: ICounts, depth: number, icon: React.ReactNode, expandId?: string) => (
+	const row = (
+		value: string,
+		title: string,
+		counts: ICounts,
+		depth: number,
+		icon: React.ReactNode,
+		expandId?: string
+	) => (
 		<div
 			key={value}
 			className={cn(
 				'flex items-center transition-colors',
-				scope === value ? 'bg-primary/10 text-fg' : 'text-muted hover:bg-white/[0.04] hover:text-fg'
+				scope === value
+					? 'bg-primary/10 text-fg'
+					: 'text-muted hover:bg-white/[0.04] hover:text-fg'
 			)}
 			style={{ paddingLeft: `${depth * 1.1 + 0.25}rem` }}
 		>
@@ -328,7 +432,10 @@ function ScopePicker({
 				>
 					<ChevronRight
 						size={15}
-						className={cn('transition-transform', expanded.has(expandId) && 'rotate-90')}
+						className={cn(
+							'transition-transform',
+							expanded.has(expandId) && 'rotate-90'
+						)}
 					/>
 				</button>
 			) : (
@@ -357,9 +464,53 @@ function ScopePicker({
 				</span>
 				<Check
 					size={14}
-					className={cn('shrink-0 text-primary', scope !== value && 'invisible')}
+					className={cn(
+						'shrink-0 text-primary',
+						scope !== value && 'invisible'
+					)}
 				/>
 			</button>
+		</div>
+	)
+
+	const list = (
+		<div className='py-1'>
+			{row('all', 'Все карточки', countCards(deck), 0, <Layers size={14} />)}
+			{tree.map(section => (
+				<div key={section.id}>
+					{row(
+						`s:${section.id}`,
+						section.title,
+						section,
+						0,
+						<Folder size={14} />,
+						section.id
+					)}
+					{expanded.has(section.id) &&
+						section.topics.map(topic => (
+							<div key={topic.id}>
+								{row(
+									`t:${topic.id}`,
+									topic.title,
+									topic,
+									1,
+									<Folder size={13} />,
+									topic.pages.length > 1 ? topic.id : undefined
+								)}
+								{expanded.has(topic.id) &&
+									topic.pages.map(page =>
+										row(
+											`p:${page.id}`,
+											page.title,
+											page,
+											2,
+											<FileText size={13} />
+										)
+									)}
+							</div>
+						))}
+				</div>
+			))}
 		</div>
 	)
 
@@ -384,64 +535,79 @@ function ScopePicker({
 				<span className='min-w-0 flex-1 truncate'>{label}</span>
 				<ChevronDown
 					size={15}
-					className={cn('shrink-0 text-subtle transition-transform', open && 'rotate-180')}
+					className={cn(
+						'shrink-0 text-subtle transition-transform',
+						open && 'rotate-180'
+					)}
 				/>
 			</button>
 
-			{open && (
-				<>
-					{/* На телефоне — шторка снизу, на компьютере — выпадающий список */}
-					<div
-						className='fixed inset-0 z-40 bg-black/50 sm:hidden'
-						onClick={() => setOpen(false)}
-					/>
-					<div className='fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto border-t border-border bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-1 sm:max-h-[60vh] sm:w-[24rem] sm:border sm:pb-1'>
-						<div className='sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3 sm:hidden'>
-							<span className='text-sm font-medium text-fg'>Что повторять</span>
-							<button
-								type='button'
-								aria-label='Закрыть'
-								onClick={() => setOpen(false)}
-								className='text-subtle hover:text-fg'
-							>
-								<X size={18} />
-							</button>
-						</div>
-						<div className='py-1'>
-							{row('all', 'Все карточки', countCards(deck), 0, <Layers size={14} />)}
-							{tree.map(section => (
-								<div key={section.id}>
-									{row(`s:${section.id}`, section.title, section, 0, <Folder size={14} />, section.id)}
-									{expanded.has(section.id) &&
-										section.topics.map(topic => (
-											<div key={topic.id}>
-												{row(
-													`t:${topic.id}`,
-													topic.title,
-													topic,
-													1,
-													<Folder size={13} />,
-													topic.pages.length > 1 ? topic.id : undefined
-												)}
-												{expanded.has(topic.id) &&
-													topic.pages.map(page => row(`p:${page.id}`, page.title, page, 2, <FileText size={13} />))}
-											</div>
-										))}
-								</div>
-							))}
-						</div>
-					</div>
-				</>
+			{open && !isPhone && (
+				<div className='absolute left-0 top-full z-50 mt-1 max-h-[60vh] w-[24rem] max-w-[calc(100vw-2rem)] overflow-y-auto border border-border bg-surface pb-1 shadow-2xl'>
+					{list}
+				</div>
 			)}
+			{open &&
+				isPhone &&
+				createPortal(
+					<div
+						className='fixed inset-0 z-[110] flex animate-fade-in items-end bg-black/55'
+						onClick={event =>
+							event.target === event.currentTarget && setOpen(false)
+						}
+					>
+						<div
+							ref={sheetRef}
+							role='dialog'
+							aria-label='Что повторять'
+							className='flex max-h-[85dvh] w-full flex-col border-t border-border bg-surface shadow-2xl'
+						>
+							<div className='flex shrink-0 items-center justify-between border-b border-border px-4 py-3.5'>
+								<span className='text-base font-medium text-fg'>
+									Что повторять
+								</span>
+								<button
+									type='button'
+									aria-label='Закрыть'
+									onClick={() => setOpen(false)}
+									className='-mr-2 grid h-9 w-9 place-items-center text-subtle hover:text-fg'
+								>
+									<X size={18} />
+								</button>
+							</div>
+							<div className='min-h-0 flex-1 overflow-y-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]'>
+								{list}
+							</div>
+						</div>
+					</div>,
+					document.body
+				)}
 		</div>
 	)
 }
 
-function Stat({ label, value, hint, accent }: { label: string; value: number; hint: string; accent?: boolean }) {
+function Stat({
+	label,
+	value,
+	hint,
+	accent
+}: {
+	label: string
+	value: number
+	hint: string
+	accent?: boolean
+}) {
 	return (
 		<div className='bg-surface px-4 py-4'>
 			<p className='eyebrow'>{label}</p>
-			<p className={cn('mt-1 font-mono text-3xl tabular-nums', accent && value ? 'text-primary' : 'text-fg')}>{value}</p>
+			<p
+				className={cn(
+					'mt-1 font-mono text-3xl tabular-nums',
+					accent && value ? 'text-primary' : 'text-fg'
+				)}
+			>
+				{value}
+			</p>
 			<p className='mt-0.5 text-xs text-subtle'>{hint}</p>
 		</div>
 	)
@@ -491,7 +657,12 @@ function ReviewSession({
 	// Пробел — показать ответ, 1–4 — оценка
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
-			if ((event.target as HTMLElement).closest('input, textarea, [contenteditable=true]')) return
+			if (
+				(event.target as HTMLElement).closest(
+					'input, textarea, [contenteditable=true]'
+				)
+			)
+				return
 			if (!revealed && (event.key === ' ' || event.key === 'Enter')) {
 				event.preventDefault()
 				setRevealed(true)
@@ -515,12 +686,13 @@ function ReviewSession({
 					onClick={onExit}
 					className='flex items-center gap-1.5 text-sm text-subtle transition-colors hover:text-fg'
 				>
-					<ArrowLeft size={15} />
-					К списку
+					<ArrowLeft size={15} />К списку
 				</button>
 				<span className='font-mono text-xs tabular-nums text-muted'>
 					{Math.min(done, total)} / {total}
-					{again > 0 && <span className='text-danger'> · повторов {again}</span>}
+					{again > 0 && (
+						<span className='text-danger'> · повторов {again}</span>
+					)}
 				</span>
 			</div>
 			<div className='mb-5 h-1 bg-white/[0.06]'>
@@ -562,7 +734,10 @@ function ReviewSession({
 										key={grade}
 										type='button'
 										onClick={() => answer(grade)}
-										className={cn('flex flex-col items-center border px-1 py-2.5 transition-colors', className)}
+										className={cn(
+											'flex flex-col items-center border px-1 py-2.5 transition-colors',
+											className
+										)}
 									>
 										<span className='text-sm font-medium'>{label}</span>
 										<span className='mt-0.5 font-mono text-2xs opacity-80'>
@@ -581,7 +756,9 @@ function ReviewSession({
 								className='h-12 w-full bg-primary text-sm font-medium text-white transition-colors hover:bg-primary-hover'
 							>
 								Показать ответ
-								<span className='ml-2 hidden font-mono text-xs opacity-70 sm:inline'>пробел</span>
+								<span className='ml-2 hidden font-mono text-xs opacity-70 sm:inline'>
+									пробел
+								</span>
 							</button>
 						</div>
 					)}
@@ -592,10 +769,13 @@ function ReviewSession({
 						size={26}
 						className='mx-auto text-success'
 					/>
-					<p className='mt-3 text-lg font-semibold text-fg'>Тренировка закончена</p>
+					<p className='mt-3 text-lg font-semibold text-fg'>
+						Тренировка закончена
+					</p>
 					<p className='mt-1 text-sm text-muted'>
 						Карточек пройдено: {done}
-						{again > 0 && `, повторено после ошибки: ${again}`}. Следующие вернутся в свой день.
+						{again > 0 && `, повторено после ошибки: ${again}`}. Следующие
+						вернутся в свой день.
 					</p>
 					<div className='mt-6 flex justify-center gap-2'>
 						<button
@@ -603,8 +783,7 @@ function ReviewSession({
 							onClick={onExit}
 							className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover'
 						>
-							<RotateCcw size={14} />
-							К карточкам
+							<RotateCcw size={14} />К карточкам
 						</button>
 					</div>
 				</div>
