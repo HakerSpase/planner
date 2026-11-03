@@ -253,14 +253,27 @@ export function CommandPalette() {
 
 	const go = (result?: IResult) => {
 		if (!result) return
+		let done = false
+		const navigate = () => {
+			if (done) return
+			done = true
+			router.push(result.href)
+			// Уже на странице задач — переход по #якорю не перерисует её, подсветим сами
+			if (result.href.includes('#task-'))
+				setTimeout(
+					() => window.dispatchEvent(new Event('planner:flash-task')),
+					120
+				)
+		}
+		// Закрываясь, поиск убирает свою запись из истории шагом «назад» —
+		// он отменил бы переход, поэтому переходим, когда этот шаг завершится
+		if (window.history.state?.__plannerPanel) {
+			window.addEventListener('popstate', () => setTimeout(navigate), {
+				once: true
+			})
+			setTimeout(navigate, 400)
+		} else navigate()
 		setOpen(false)
-		router.push(result.href)
-		// Уже на странице задач — переход по #якорю не перерисует её, подсветим сами
-		if (result.href.includes('#task-'))
-			setTimeout(
-				() => window.dispatchEvent(new Event('planner:flash-task')),
-				120
-			)
 	}
 
 	if (!open) return null
