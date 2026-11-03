@@ -1573,7 +1573,7 @@ function PageCard({
 	onDelete: () => void
 }) {
 	return (
-		<div className='lazy-paint group relative flex w-full items-start gap-2 border-b border-border py-5 transition-colors hover:bg-white/[0.015]'>
+		<div className='lazy-paint group relative flex w-full items-start gap-1 border-b border-border px-1.5 py-5 transition-colors hover:bg-white/[0.02] sm:gap-2 sm:px-3'>
 			{dragHandleProps && (
 				<button
 					type='button'
@@ -1581,7 +1581,7 @@ function PageCard({
 					{...dragHandleProps.attributes}
 					{...dragHandleProps.listeners}
 					onClick={event => event.stopPropagation()}
-					className='-ml-1 mt-1 grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
+					className='mt-1 grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
 				>
 					<GripVertical size={14} />
 				</button>
@@ -1589,7 +1589,7 @@ function PageCard({
 			<button
 				type='button'
 				onClick={onOpen}
-				className='grid min-w-0 flex-1 grid-cols-[2.2rem_minmax(0,1fr)] gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)_auto]'
+				className='grid min-w-0 flex-1 grid-cols-[1.75rem_minmax(0,1fr)] gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)_auto]'
 			>
 				<span className='pt-1 font-mono text-xs text-subtle'>
 					{String(index + 1).padStart(2, '0')}
@@ -2475,21 +2475,21 @@ function SectionView({
 										id={topic.id}
 									>
 										{dragHandleProps => (
-											<div className='group flex w-full items-center gap-2 border-b border-border py-4 transition-colors hover:bg-white/[0.015]'>
+											<div className='group flex w-full items-center gap-1 border-b border-border px-1.5 py-4 transition-colors hover:bg-white/[0.02] sm:gap-2 sm:px-3'>
 												<button
 													type='button'
 													aria-label='Перетащить тему'
 													{...dragHandleProps.attributes}
 													{...dragHandleProps.listeners}
 													onClick={event => event.stopPropagation()}
-													className='-ml-1 grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
+													className='grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
 												>
 													<GripVertical size={14} />
 												</button>
 												<button
 													type='button'
 													onClick={() => onOpenTopic(topic.id)}
-													className='grid min-w-0 flex-1 grid-cols-[2.2rem_minmax(0,1fr)] items-center gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)]'
+													className='grid min-w-0 flex-1 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)]'
 												>
 													<span className='font-mono text-xs text-subtle'>
 														{String(index + 1).padStart(2, '0')}
@@ -2536,7 +2536,7 @@ function SectionView({
 												</div>
 												<ChevronRight
 													size={16}
-													className='shrink-0 text-subtle transition-transform group-hover:translate-x-0.5'
+													className='mr-1 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5 sm:mr-0'
 												/>
 											</div>
 										)}
