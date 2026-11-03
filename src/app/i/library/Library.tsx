@@ -33,6 +33,7 @@ import {
 	GripVertical,
 	ListTree,
 	Maximize2,
+	MoreHorizontal,
 	Minimize2,
 	Pencil,
 	Pin,
@@ -898,24 +899,6 @@ function LibraryTree({
 													actions={
 														<>
 															<IconButton
-																label={
-																	section.is_pinned
-																		? 'Открепить раздел'
-																		: 'Закрепить раздел'
-																}
-																active={Boolean(section.is_pinned)}
-																onClick={() =>
-																	togglePin('library_section', section)
-																}
-															>
-																<Pin
-																	size={13}
-																	className={cn(
-																		section.is_pinned && 'fill-current'
-																	)}
-																/>
-															</IconButton>
-															<IconButton
 																label='Новая тема'
 																onClick={() => {
 																	setCollapsed(state => ({
@@ -927,25 +910,35 @@ function LibraryTree({
 															>
 																<Plus size={14} />
 															</IconButton>
-															<IconButton
-																label='Переименовать'
-																onClick={() => setRenaming(section.id)}
-															>
-																<Pencil size={13} />
-															</IconButton>
-															<IconButton
-																label='Удалить раздел'
-																danger
-																onClick={() =>
-																	onDelete({
-																		table: 'library_section',
-																		id: section.id,
-																		title: section.title
-																	})
-																}
-															>
-																<Trash2 size={13} />
-															</IconButton>
+															<KebabMenu
+																label='Действия с разделом'
+																items={[
+																	{
+																		label: section.is_pinned
+																			? 'Открепить'
+																			: 'Закрепить',
+																		icon: <Pin size={14} />,
+																		onClick: () =>
+																			togglePin('library_section', section)
+																	},
+																	{
+																		label: 'Переименовать',
+																		icon: <Pencil size={14} />,
+																		onClick: () => setRenaming(section.id)
+																	},
+																	{
+																		label: 'Удалить',
+																		icon: <Trash2 size={14} />,
+																		danger: true,
+																		onClick: () =>
+																			onDelete({
+																				table: 'library_section',
+																				id: section.id,
+																				title: section.title
+																			})
+																	}
+																]}
+															/>
 														</>
 													}
 												/>
@@ -991,51 +984,36 @@ function LibraryTree({
 																				}
 																				dragHandleProps={topicDragHandleProps}
 																				actions={
-																					<>
-																						<IconButton
-																							label={
-																								topic.is_pinned
-																									? 'Открепить тему'
-																									: 'Закрепить тему'
+																					<KebabMenu
+																						label='Действия с темой'
+																						items={[
+																							{
+																								label: topic.is_pinned
+																									? 'Открепить'
+																									: 'Закрепить',
+																								icon: <Pin size={14} />,
+																								onClick: () =>
+																									togglePin('library_topic', topic)
+																							},
+																							{
+																								label: 'Переименовать',
+																								icon: <Pencil size={14} />,
+																								onClick: () =>
+																									setRenaming(topic.id)
+																							},
+																							{
+																								label: 'Удалить',
+																								icon: <Trash2 size={14} />,
+																								danger: true,
+																								onClick: () =>
+																									onDelete({
+																										table: 'library_topic',
+																										id: topic.id,
+																										title: topic.title
+																									})
 																							}
-																							active={Boolean(topic.is_pinned)}
-																							onClick={() =>
-																								togglePin(
-																									'library_topic',
-																									topic
-																								)
-																							}
-																						>
-																							<Pin
-																								size={13}
-																								className={cn(
-																									topic.is_pinned &&
-																										'fill-current'
-																								)}
-																							/>
-																						</IconButton>
-																						<IconButton
-																							label='Переименовать'
-																							onClick={() =>
-																								setRenaming(topic.id)
-																							}
-																						>
-																							<Pencil size={13} />
-																						</IconButton>
-																						<IconButton
-																							label='Удалить тему'
-																							danger
-																							onClick={() =>
-																								onDelete({
-																									table: 'library_topic',
-																									id: topic.id,
-																									title: topic.title
-																								})
-																							}
-																						>
-																							<Trash2 size={13} />
-																						</IconButton>
-																					</>
+																						]}
+																					/>
 																				}
 																			/>
 																		</>
@@ -1247,6 +1225,114 @@ function IconButton({
 	)
 }
 
+type TypeMenuItem = {
+	label: string
+	icon: ReactNode
+	onClick: () => void
+	danger?: boolean
+}
+
+/** Меню «⋯»: открывается поверх страницы и не выходит за края экрана */
+function KebabMenu({ label, items }: { label: string; items: TypeMenuItem[] }) {
+	const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+	const buttonRef = useRef<HTMLButtonElement>(null)
+
+	useEffect(() => {
+		if (!pos) return
+		const close = () => setPos(null)
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') close()
+		}
+		window.addEventListener('keydown', onKey)
+		window.addEventListener('resize', close)
+		window.addEventListener('scroll', close, true)
+		return () => {
+			window.removeEventListener('keydown', onKey)
+			window.removeEventListener('resize', close)
+			window.removeEventListener('scroll', close, true)
+		}
+	}, [pos])
+
+	const open = () => {
+		const rect = buttonRef.current?.getBoundingClientRect()
+		if (!rect) return
+		const width = 192
+		const height = items.length * 36 + 8
+		const left = Math.min(
+			Math.max(8, rect.right - width),
+			window.innerWidth - width - 8
+		)
+		const below = rect.bottom + 4
+		const top =
+			below + height > window.innerHeight - 8
+				? Math.max(8, rect.top - height - 4)
+				: below
+		setPos({ top, left })
+	}
+
+	return (
+		<>
+			<button
+				ref={buttonRef}
+				type='button'
+				title={label}
+				aria-label={label}
+				aria-haspopup='menu'
+				aria-expanded={Boolean(pos)}
+				onClick={event => {
+					event.stopPropagation()
+					if (pos) setPos(null)
+					else open()
+				}}
+				className={cn(
+					'grid h-7 w-7 place-items-center transition-colors hover:bg-white/[0.06] hover:text-fg',
+					pos ? 'bg-white/[0.06] text-fg' : 'text-subtle'
+				)}
+			>
+				<MoreHorizontal size={15} />
+			</button>
+			{pos &&
+				createPortal(
+					<div
+						className='fixed inset-0 z-[130]'
+						onMouseDown={() => setPos(null)}
+						onContextMenu={event => {
+							event.preventDefault()
+							setPos(null)
+						}}
+					>
+						<div
+							role='menu'
+							onMouseDown={event => event.stopPropagation()}
+							style={{ top: pos.top, left: pos.left, width: 192 }}
+							className='fixed animate-pop-in border border-border bg-elevated p-1 shadow-pop'
+						>
+							{items.map(item => (
+								<button
+									key={item.label}
+									type='button'
+									role='menuitem'
+									onClick={event => {
+										event.stopPropagation()
+										setPos(null)
+										item.onClick()
+									}}
+									className={cn(
+										'flex h-9 w-full items-center gap-2.5 px-2.5 text-left text-sm transition-colors hover:bg-white/[0.06]',
+										item.danger ? 'text-danger' : 'text-muted hover:text-fg'
+									)}
+								>
+									{item.icon}
+									{item.label}
+								</button>
+							))}
+						</div>
+					</div>,
+					document.body
+				)}
+		</>
+	)
+}
 /* ------------------------------------------------------------------ */
 /* Тема: список листов                                                  */
 /* ------------------------------------------------------------------ */
@@ -1349,16 +1435,7 @@ function TopicView({
 
 			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
 				<div className='min-w-0'>
-					{section && (
-						<p className='eyebrow flex items-center gap-1.5'>
-							<span>{section.title}</span>
-							{topic.is_pinned && (
-								<span className='inline-flex items-center gap-1 text-primary'>
-									· <Pin size={10} className='fill-current' /> Закреплена
-								</span>
-							)}
-						</p>
-					)}
+					{section && <p className='eyebrow'>{section.title}</p>}
 					{isRenaming ? (
 						<input
 							autoFocus
@@ -1390,16 +1467,6 @@ function TopicView({
 					</p>
 				</div>
 				<div className='flex items-center gap-1.5'>
-					<IconButton
-						label={topic.is_pinned ? 'Открепить тему' : 'Закрепить тему'}
-						active={Boolean(topic.is_pinned)}
-						onClick={toggleTopicPin}
-					>
-						<Pin
-							size={15}
-							className={cn(topic.is_pinned && 'fill-current')}
-						/>
-					</IconButton>
 					<IconButton
 						label='Переименовать тему'
 						onClick={() => setIsRenaming(true)}
@@ -1547,24 +1614,23 @@ function PageCard({
 					{dayjs(page.updated_at).locale('ru').format('D MMM, HH:mm')}
 				</span>
 			</button>
-			<div className='mt-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
-				<IconButton
-					label={page.is_pinned ? 'Открепить лист' : 'Закрепить лист'}
-					active={Boolean(page.is_pinned)}
-					onClick={onTogglePin}
-				>
-					<Pin
-						size={13}
-						className={cn(page.is_pinned && 'fill-current')}
-					/>
-				</IconButton>
-				<IconButton
-					label='Удалить лист'
-					danger
-					onClick={onDelete}
-				>
-					<Trash2 size={13} />
-				</IconButton>
+			<div className='mt-0.5 flex shrink-0 items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
+				<KebabMenu
+					label='Действия с листом'
+					items={[
+						{
+							label: page.is_pinned ? 'Открепить' : 'Закрепить',
+							icon: <Pin size={14} />,
+							onClick: onTogglePin
+						},
+						{
+							label: 'Удалить',
+							icon: <Trash2 size={14} />,
+							danger: true,
+							onClick: onDelete
+						}
+					]}
+				/>
 			</div>
 		</div>
 	)
@@ -2276,18 +2342,6 @@ function SectionView({
 		if (title) onOpenTopic(actions.addTopic(section.id, title, topics.length))
 	}
 
-	const toggleSectionPin = () => {
-		if (section.is_pinned) {
-			onRequestUnpin({
-				table: 'library_section',
-				id: section.id,
-				title: section.title
-			})
-		} else {
-			actions.setPinned('library_section', section.id, true)
-		}
-	}
-
 	const toggleTopicPin = (topic: ILibraryTopic) => {
 		if (topic.is_pinned) {
 			onRequestUnpin({
@@ -2320,14 +2374,7 @@ function SectionView({
 			</button>
 			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
 				<div className='min-w-0'>
-					<p className='eyebrow flex items-center gap-1.5'>
-						<span>Раздел</span>
-						{section.is_pinned && (
-							<span className='inline-flex items-center gap-1 text-primary'>
-								· <Pin size={10} className='fill-current' /> Закреплён
-							</span>
-						)}
-					</p>
+					<p className='eyebrow'>Раздел</p>
 					{isRenamingSection ? (
 						<input
 							autoFocus
@@ -2357,16 +2404,6 @@ function SectionView({
 					</p>
 				</div>
 				<div className='flex items-center gap-1.5'>
-					<IconButton
-						label={section.is_pinned ? 'Открепить раздел' : 'Закрепить раздел'}
-						active={Boolean(section.is_pinned)}
-						onClick={toggleSectionPin}
-					>
-						<Pin
-							size={15}
-							className={cn(section.is_pinned && 'fill-current')}
-						/>
-					</IconButton>
 					<IconButton
 						label='Переименовать раздел'
 						onClick={() => setIsRenamingSection(true)}
@@ -2469,40 +2506,33 @@ function SectionView({
 														)}
 													</span>
 												</button>
-												<div className='flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
-													<IconButton
-														label={
-															topic.is_pinned
-																? 'Открепить тему'
-																: 'Закрепить тему'
-														}
-														active={Boolean(topic.is_pinned)}
-														onClick={() => toggleTopicPin(topic)}
-													>
-														<Pin
-															size={13}
-															className={cn(topic.is_pinned && 'fill-current')}
-														/>
-													</IconButton>
-													<IconButton
-														label='Переименовать тему'
-														onClick={() => setRenamingTopicId(topic.id)}
-													>
-														<Pencil size={13} />
-													</IconButton>
-													<IconButton
-														label='Удалить тему'
-														danger
-														onClick={() =>
-															onDelete({
-																table: 'library_topic',
-																id: topic.id,
-																title: topic.title
-															})
-														}
-													>
-														<Trash2 size={13} />
-													</IconButton>
+												<div className='flex shrink-0 items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
+													<KebabMenu
+														label='Действия с темой'
+														items={[
+															{
+																label: topic.is_pinned ? 'Открепить' : 'Закрепить',
+																icon: <Pin size={14} />,
+																onClick: () => toggleTopicPin(topic)
+															},
+															{
+																label: 'Переименовать',
+																icon: <Pencil size={14} />,
+																onClick: () => setRenamingTopicId(topic.id)
+															},
+															{
+																label: 'Удалить',
+																icon: <Trash2 size={14} />,
+																danger: true,
+																onClick: () =>
+																	onDelete({
+																		table: 'library_topic',
+																		id: topic.id,
+																		title: topic.title
+																	})
+															}
+														]}
+													/>
 												</div>
 												<ChevronRight
 													size={16}
