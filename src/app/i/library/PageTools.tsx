@@ -489,6 +489,8 @@ export function ShareDialog({
 	const [token, setToken] = useState<string | null | undefined>(undefined)
 	const [busy, setBusy] = useState(false)
 	const [copied, setCopied] = useState(false)
+	// Что откроется по ссылке: лист или сразу его карточки
+	const [asCards, setAsCards] = useState(false)
 	const db = useMemo(() => createClient(), [])
 
 	useEffect(() => {
@@ -499,7 +501,9 @@ export function ShareDialog({
 			.then(({ data }) => setToken(data?.token ?? null))
 	}, [db, pageId])
 
-	const url = token ? `${window.location.origin}/share/${token}` : ''
+	const url = token
+		? `${window.location.origin}/share/${token}${asCards ? '?cards' : ''}`
+		: ''
 
 	const create = async () => {
 		setBusy(true)
@@ -582,6 +586,30 @@ export function ShareDialog({
 									{copied ? <Check size={14} /> : <Copy size={14} />}
 									{copied ? 'Готово' : 'Копировать'}
 								</button>
+							</div>
+							<div className='mt-3 grid grid-cols-2 border border-border p-1'>
+								{[
+									{ value: false, label: 'Открыть конспект' },
+									{ value: true, label: 'Открыть карточками' }
+								].map(option => (
+									<button
+										key={option.label}
+										type='button'
+										aria-pressed={asCards === option.value}
+										onClick={() => {
+											setAsCards(option.value)
+											setCopied(false)
+										}}
+										className={cn(
+											'h-8 text-xs transition-colors',
+											asCards === option.value
+												? 'bg-white/[0.08] font-medium text-fg'
+												: 'text-muted hover:text-fg'
+										)}
+									>
+										{option.label}
+									</button>
+								))}
 							</div>
 							<button
 								type='button'

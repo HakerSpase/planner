@@ -3,24 +3,29 @@
 import cn from 'clsx'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
-import { Eye, ListTree, Printer } from 'lucide-react'
+import { Eye, FileText, Layers, ListTree, Printer } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { extractFlashcards } from '@/components/editor/study'
+import { ErrorScreen } from '@/components/ui/ErrorScreen'
+
+import { SharedCards } from './SharedCards'
 import {
 	OutlineSheet,
 	PageOutline,
 	ReadingProgress,
 	useHeadings
 } from '@/app/i/library/PageTools'
-import { ErrorScreen } from '@/components/ui/ErrorScreen'
-
 import { createClient } from '@/lib/supabase/client'
 
 const RichEditor = dynamic(
 	() => import('@/components/editor/RichEditor').then(mod => mod.RichEditor),
-	{ ssr: false, loading: () => <div className='h-64 animate-pulse bg-white/[0.02]' /> }
+	{
+		ssr: false,
+		loading: () => <div className='h-64 animate-pulse bg-white/[0.02]' />
+	}
 )
 
 interface ISharedPage {
@@ -39,8 +44,33 @@ export function SharedPage({ token }: { token: string }) {
 	const [selfCheck, setSelfCheck] = useState(false)
 	const [showOutline, setShowOutline] = useState(true)
 	const [outlineOpen, setOutlineOpen] = useState(false)
+	// Лист или его карточки; ссылка с ?cards открывается сразу карточками
+	const [mode, setMode] = useState<'page' | 'cards'>('page')
 	const articleRef = useRef<HTMLElement>(null)
-	const headings = useHeadings(articleRef, Boolean(page))
+	const headings = useHeadings(articleRef, Boolean(page) && mode === 'page')
+	const cards = useMemo(
+		() => (page ? extractFlashcards(token, page.content || '') : []),
+		[page, token]
+	)
+	const showCards = mode === 'cards' && cards.length > 0
+
+	useEffect(() => {
+		if (new URLSearchParams(window.location.search).has('cards'))
+			setMode('cards')
+	}, [])
+
+	const switchMode = (next: 'page' | 'cards') => {
+		setMode(next)
+		const url = new URL(window.location.href)
+		if (next === 'cards') url.searchParams.set('cards', '')
+		else url.searchParams.delete('cards')
+		window.history.replaceState(
+			window.history.state,
+			'',
+			url.toString().replace('cards=', 'cards')
+		)
+		document.querySelector('[data-scroll-root]')?.scrollTo({ top: 0 })
+	}
 
 	useEffect(() => {
 		createClient()
@@ -76,117 +106,146 @@ export function SharedPage({ token }: { token: string }) {
 						>
 							Planner
 						</Link>
-						{page && (page.section || page.topic) && (
-							<>
-								<span className='hidden text-white/15 sm:inline'>/</span>
-								<span className='hidden truncate text-subtle sm:inline'>
-									{[page.section, page.topic].filter(Boolean).join(' / ')}
-								</span>
-							</>
-						)}
 					</div>
 					<div className='flex shrink-0 items-center gap-2'>
-						<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
-							Только чтение
-						</span>
-						<button
-							type='button'
-							onClick={() => setSelfCheck(value => !value)}
-							aria-pressed={selfCheck}
-							className={`flex h-9 items-center gap-1.5 border px-3 text-sm transition-colors ${selfCheck ? 'border-primary/60 text-fg' : 'border-border text-muted hover:text-fg'}`}
-						>
-							<Eye size={14} />
-							Проверка
-						</button>
-						{headings.length > 1 && (
+						{!showCards && (
 							<>
 								<button
 									type='button'
-									onClick={() => setShowOutline(value => !value)}
-									title={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
-									aria-label={showOutline ? 'Скрыть содержание' : 'Показать содержание'}
-									className={cn(
-										'hidden h-9 w-9 place-items-center border border-border transition-colors xl:grid',
-										showOutline ? 'bg-white/[0.06] text-fg' : 'text-subtle hover:text-fg'
-									)}
+									onClick={() => setSelfCheck(value => !value)}
+									aria-pressed={selfCheck}
+									className={`flex h-9 items-center gap-1.5 border px-3 text-sm transition-colors ${selfCheck ? 'border-primary/60 text-fg' : 'border-border text-muted hover:text-fg'}`}
 								>
-									<ListTree size={15} />
+									<Eye size={14} />
+									Проверка
 								</button>
+								{headings.length > 1 && (
+									<>
+										<button
+											type='button'
+											onClick={() => setShowOutline(value => !value)}
+											title={
+												showOutline
+													? 'Скрыть содержание'
+													: 'Показать содержание'
+											}
+											aria-label={
+												showOutline
+													? 'Скрыть содержание'
+													: 'Показать содержание'
+											}
+											className={cn(
+												'hidden h-9 w-9 place-items-center border border-border transition-colors xl:grid',
+												showOutline
+													? 'bg-white/[0.06] text-fg'
+													: 'text-subtle hover:text-fg'
+											)}
+										>
+											<ListTree size={15} />
+										</button>
+										<button
+											type='button'
+											onClick={() => setOutlineOpen(true)}
+											title='Содержание'
+											aria-label='Содержание'
+											className='grid h-9 w-9 place-items-center border border-border text-muted transition-colors hover:text-fg xl:hidden'
+										>
+											<ListTree size={15} />
+										</button>
+									</>
+								)}
 								<button
 									type='button'
-									onClick={() => setOutlineOpen(true)}
-									title='Содержание'
-									aria-label='Содержание'
-									className='grid h-9 w-9 place-items-center border border-border text-muted transition-colors hover:text-fg xl:hidden'
+									onClick={() => window.print()}
+									aria-label='Печать или PDF'
+									title='Печать или PDF'
+									className='grid h-9 w-9 place-items-center border border-border text-muted transition-colors hover:text-fg'
 								>
-									<ListTree size={15} />
+									<Printer size={15} />
 								</button>
 							</>
 						)}
-						<button
-							type='button'
-							onClick={() => window.print()}
-							aria-label='Печать или PDF'
-							title='Печать или PDF'
-							className='grid h-9 w-9 place-items-center border border-border text-muted transition-colors hover:text-fg'
-						>
-							<Printer size={15} />
-						</button>
 					</div>
 				</div>
 			</header>
 
-			<main
-				ref={articleRef}
-				className='library-article w-full px-4 pb-24 pt-10 sm:px-6 sm:pt-14 lg:px-8 xl:px-10'
-			>
-				{page === undefined ? (
-					<div className='space-y-4'>
-						<div className='h-9 w-2/3 animate-pulse bg-white/[0.05]' />
-						<div className='h-4 w-full animate-pulse bg-white/[0.04]' />
-						<div className='h-4 w-5/6 animate-pulse bg-white/[0.04]' />
+			{showCards ? (
+				<main className='w-full px-4 pb-16 pt-6 sm:px-6 sm:pt-10'>
+					<div className='mx-auto max-w-2xl'>
+						<h1 className='break-words text-2xl font-semibold leading-tight tracking-[-0.02em] sm:text-3xl'>
+							{page?.title || 'Без названия'}
+						</h1>
+						<ModeSwitch
+							mode={mode}
+							count={cards.length}
+							onChange={switchMode}
+						/>
 					</div>
-				) : (
-					<div
-						className={cn(
-							'grid w-full grid-cols-[minmax(0,1fr)] gap-10',
-							headings.length > 1 && showOutline && 'xl:grid-cols-[minmax(0,1fr)_13rem]'
-						)}
-					>
-						<div className='min-w-0'>
-							{(page.section || page.topic) && (
-								<p className='eyebrow sm:hidden'>
-									{[page.section, page.topic].filter(Boolean).join(' / ')}
-								</p>
-							)}
-							<h1 className='break-words text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl'>
-								{page.title || 'Без названия'}
-							</h1>
-							<p className='mb-8 mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
-								{dayjs(page.updated_at).locale('ru').format('D MMMM YYYY, HH:mm')}
-							</p>
-							<RichEditor
-								value={page.content}
-								onChange={noop}
-								editable={false}
-								selfCheck={selfCheck}
-								contentClassName='library-reading'
-							/>
+					<SharedCards cards={cards} />
+				</main>
+			) : (
+				<main
+					ref={articleRef}
+					className='library-article w-full px-4 pb-24 pt-10 sm:px-6 sm:pt-14 lg:px-8 xl:px-10'
+				>
+					{page === undefined ? (
+						<div className='space-y-4'>
+							<div className='h-9 w-2/3 animate-pulse bg-white/[0.05]' />
+							<div className='h-4 w-full animate-pulse bg-white/[0.04]' />
+							<div className='h-4 w-5/6 animate-pulse bg-white/[0.04]' />
 						</div>
+					) : (
+						<div
+							className={cn(
+								'grid w-full grid-cols-[minmax(0,1fr)] gap-10',
+								headings.length > 1 &&
+									showOutline &&
+									'xl:grid-cols-[minmax(0,1fr)_13rem]'
+							)}
+						>
+							<div className='min-w-0'>
+								<h1 className='break-words text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl'>
+									{page.title || 'Без названия'}
+								</h1>
+								<p className='mt-3 font-mono text-2xs uppercase tracking-wider text-subtle'>
+									{dayjs(page.updated_at)
+										.locale('ru')
+										.format('D MMMM YYYY, HH:mm')}
+								</p>
+								{cards.length > 0 ? (
+									<div className='mb-8 max-w-sm print:hidden'>
+										<ModeSwitch
+											mode={mode}
+											count={cards.length}
+											onChange={switchMode}
+										/>
+									</div>
+								) : (
+									<div className='mb-8' />
+								)}
+								<RichEditor
+									value={page.content}
+									onChange={noop}
+									editable={false}
+									selfCheck={selfCheck}
+									contentClassName='library-reading'
+								/>
+							</div>
 
-						{headings.length > 1 && showOutline && (
-							<aside className='hidden print:hidden xl:block'>
-								<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
-									<p className='eyebrow mb-3'>Содержание</p>
-									<PageOutline headings={headings} />
-								</div>
-							</aside>
-						)}
-					</div>
-				)}
-			</main>
+							{headings.length > 1 && showOutline && (
+								<aside className='hidden print:hidden xl:block'>
+									<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+										<p className='eyebrow mb-3'>Содержание</p>
+										<PageOutline headings={headings} />
+									</div>
+								</aside>
+							)}
+						</div>
+					)}
+				</main>
+			)}
 
-			{selfCheck && (
+			{selfCheck && !showCards && (
 				<p className='fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2 border border-primary/40 bg-elevated px-4 py-2 text-xs text-muted shadow-pop print:hidden'>
 					Режим проверки: нажмите на размытое, чтобы открыть
 				</p>
@@ -197,6 +256,46 @@ export function SharedPage({ token }: { token: string }) {
 					onClose={() => setOutlineOpen(false)}
 				/>
 			)}
+		</div>
+	)
+}
+
+function ModeSwitch({
+	mode,
+	count,
+	onChange
+}: {
+	mode: 'page' | 'cards'
+	count: number
+	onChange: (mode: 'page' | 'cards') => void
+}) {
+	const items = [
+		{ id: 'page' as const, label: 'Конспект', icon: FileText },
+		{ id: 'cards' as const, label: `Карточки · ${count}`, icon: Layers }
+	]
+	return (
+		<div
+			role='tablist'
+			className='mb-4 mt-4 grid grid-cols-2 border border-border bg-surface p-1 sm:mb-6'
+		>
+			{items.map(({ id, label, icon: Icon }) => (
+				<button
+					key={id}
+					type='button'
+					role='tab'
+					aria-selected={mode === id}
+					onClick={() => onChange(id)}
+					className={cn(
+						'flex h-10 items-center justify-center gap-2 text-sm transition-colors',
+						mode === id
+							? 'bg-white/[0.08] font-medium text-fg'
+							: 'text-muted hover:text-fg'
+					)}
+				>
+					<Icon size={15} />
+					{label}
+				</button>
+			))}
 		</div>
 	)
 }
