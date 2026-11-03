@@ -10,6 +10,7 @@ export interface ILibrarySection {
 	id: string
 	title: string
 	order: number
+	is_pinned?: boolean
 }
 
 export interface ILibraryTopic {
@@ -17,6 +18,7 @@ export interface ILibraryTopic {
 	section_id: string
 	title: string
 	order: number
+	is_pinned?: boolean
 }
 
 export interface ILibraryPageMeta {
@@ -24,6 +26,7 @@ export interface ILibraryPageMeta {
 	topic_id: string
 	title: string
 	order: number
+	is_pinned?: boolean
 	updated_at: string
 	excerpt: string
 }
@@ -109,12 +112,18 @@ const settled = async (id: string) => {
 export const libraryService = {
 	async getTree() {
 		const [sections, topics] = await Promise.all([
-			db().from('library_section').select('id,title,order').order('order').order('created_at'),
+			db()
+				.from('library_section')
+				.select('id,title,order,is_pinned')
+				.order('is_pinned', { ascending: false })
+				.order('order', { ascending: true })
+				.order('created_at', { ascending: true }),
 			db()
 				.from('library_topic')
-				.select('id,section_id,title,order')
-				.order('order')
-				.order('created_at')
+				.select('id,section_id,title,order,is_pinned')
+				.order('is_pinned', { ascending: false })
+				.order('order', { ascending: true })
+				.order('created_at', { ascending: true })
 		])
 		return {
 			sections: unwrap<ILibrarySection[]>(sections) || [],
@@ -127,10 +136,11 @@ export const libraryService = {
 		const rows = unwrap<(Omit<ILibraryPageMeta, 'excerpt'> & { content: string })[]>(
 			await db()
 				.from('library_page')
-				.select('id,topic_id,title,order,updated_at,content')
+				.select('id,topic_id,title,order,is_pinned,updated_at,content')
 				.eq('topic_id', topicId)
-				.order('order')
-				.order('created_at')
+				.order('is_pinned', { ascending: false })
+				.order('order', { ascending: true })
+				.order('created_at', { ascending: true })
 		)
 		return (rows || []).map(({ content, ...row }) => ({
 			...row,
@@ -151,7 +161,7 @@ export const libraryService = {
 		const row = unwrap<Omit<ILibraryPage, 'excerpt'>>(
 			await db()
 				.from('library_page')
-				.select('id,topic_id,title,order,updated_at,content')
+				.select('id,topic_id,title,order,is_pinned,updated_at,content')
 				.eq('id', id)
 				.single()
 		)
@@ -164,7 +174,7 @@ export const libraryService = {
 				await db()
 					.from('library_section')
 					.insert({ id, title, order })
-					.select('id,title,order')
+					.select('id,title,order,is_pinned')
 					.single()
 			)
 		)
@@ -177,7 +187,7 @@ export const libraryService = {
 				await db()
 					.from('library_topic')
 					.insert({ id, section_id: sectionId, title, order })
-					.select('id,section_id,title,order')
+					.select('id,section_id,title,order,is_pinned')
 					.single()
 			)
 		)
@@ -190,7 +200,7 @@ export const libraryService = {
 				await db()
 					.from('library_page')
 					.insert({ id, topic_id: topicId, title: '', content: '', order })
-					.select('id,topic_id,title,order,updated_at,content')
+					.select('id,topic_id,title,order,is_pinned,updated_at,content')
 					.single()
 			)
 		)
@@ -199,6 +209,39 @@ export const libraryService = {
 	async rename(table: 'library_section' | 'library_topic', id: string, title: string) {
 		await settled(id)
 		unwrap(await db().from(table).update({ title }).eq('id', id))
+	},
+
+	async setPinned(
+		table: 'library_section' | 'library_topic' | 'library_page',
+		id: string,
+		isPinned: boolean
+	) {
+		await settled(id)
+		unwrap(await db().from(table).update({ is_pinned: isPinned }).eq('id', id))
+	},
+
+	async reorder(
+		table: 'library_section' | 'library_topic' | 'library_page',
+		ids: string[]
+	) {
+		await Promise.all(ids.map(settled))
+		const results = await Promise.all(
+			ids.map((id, index) =>
+				db().from(table).update({ order: index }).eq('id', id)
+			)
+		)
+		const failed = results.find(result => result.error)
+		if (failed?.error) throw new Error(failed.error.message)
+	},
+
+	async moveTopic(id: string, sectionId: string, order: number) {
+		await Promise.all([settled(id), settled(sectionId)])
+		unwrap(
+			await db()
+				.from('library_topic')
+				.update({ section_id: sectionId, order })
+				.eq('id', id)
+		)
 	},
 
 	async updatePage(id: string, patch: { title?: string; content?: string }) {

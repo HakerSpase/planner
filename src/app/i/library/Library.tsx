@@ -1,5 +1,22 @@
 'use client'
 
+import {
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	closestCenter,
+	useSensor,
+	useSensors
+} from '@dnd-kit/core'
+import {
+	SortableContext,
+	arrayMove,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import cn from 'clsx'
 import dayjs from 'dayjs'
@@ -13,10 +30,12 @@ import {
 	FilePlus2,
 	FolderPlus,
 	FolderTree,
+	GripVertical,
 	ListTree,
 	Maximize2,
 	Minimize2,
 	Pencil,
+	Pin,
 	Plus,
 	Trash2,
 	Waypoints
@@ -88,7 +107,97 @@ const pageKey = (pageId: string) => ['library', 'page', pageId]
 
 type TypeTree = { sections: ILibrarySection[]; topics: ILibraryTopic[] }
 
-/** Создание и переименование без ожидания базы: дерево меняется сразу, запись идёт фоном */
+const sortByPinAndOrder = <T extends { is_pinned?: boolean; order: number }>(
+	items: T[]
+): T[] =>
+	[...items].sort(
+		(a, b) =>
+			Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)) ||
+			a.order - b.order
+	)
+
+const reorderWithinGroup = <
+	T extends { id: string; is_pinned?: boolean; order: number }
+>(
+	items: T[],
+	activeId: string,
+	overId: string
+): T[] | null => {
+	const sorted = sortByPinAndOrder(items)
+	const activeItem = sorted.find(item => item.id === activeId)
+	const overItem = sorted.find(item => item.id === overId)
+	if (!activeItem || !overItem || activeId === overId) return null
+
+	const isPinned = Boolean(activeItem.is_pinned)
+	const pinned = sorted.filter(item => Boolean(item.is_pinned))
+	const unpinned = sorted.filter(item => !item.is_pinned)
+	const group = isPinned ? pinned : unpinned
+
+	const oldIndex = group.findIndex(item => item.id === activeId)
+	if (oldIndex === -1) return null
+
+	let newIndex = group.findIndex(item => item.id === overId)
+	if (newIndex === -1) {
+		newIndex = isPinned ? group.length - 1 : 0
+	}
+	if (oldIndex === newIndex) return null
+
+	const movedGroup = arrayMove(group, oldIndex, newIndex)
+	const combined = isPinned
+		? [...movedGroup, ...unpinned]
+		: [...pinned, ...movedGroup]
+	return combined.map((item, index) => ({ ...item, order: index }))
+}
+
+function useLibraryDndSensors() {
+	return useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: { distance: 5 }
+		}),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates
+		})
+	)
+}
+
+type TypeDragHandleProps = {
+	attributes: ReturnType<typeof useSortable>['attributes']
+	listeners: ReturnType<typeof useSortable>['listeners']
+}
+
+function SortableItem({
+	id,
+	className,
+	children
+}: {
+	id: string
+	className?: string
+	children: (dragHandleProps: TypeDragHandleProps) => ReactNode
+}) {
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging
+	} = useSortable({ id })
+
+	return (
+		<div
+			ref={setNodeRef}
+			style={{
+				transform: CSS.Transform.toString(transform),
+				transition
+			}}
+			className={cn(className, isDragging && 'relative z-20 opacity-75')}
+		>
+			{children({ attributes, listeners })}
+		</div>
+	)
+}
+
+/** Создание, переименование, закрепление и сортировка без ожидания базы: дерево меняется сразу, запись идёт фоном */
 function useTreeActions() {
 	const queryClient = useQueryClient()
 	const patchTree = (update: (tree: TypeTree) => TypeTree) =>
@@ -105,7 +214,10 @@ function useTreeActions() {
 			const id = newLibraryId()
 			patchTree(tree => ({
 				...tree,
-				sections: [...tree.sections, { id, title, order }]
+				sections: sortByPinAndOrder([
+					...tree.sections,
+					{ id, title, order, is_pinned: false }
+				])
 			}))
 			libraryService
 				.createSection(id, title, order)
@@ -116,7 +228,10 @@ function useTreeActions() {
 			const id = newLibraryId()
 			patchTree(tree => ({
 				...tree,
-				topics: [...tree.topics, { id, section_id: sectionId, title, order }]
+				topics: sortByPinAndOrder([
+					...tree.topics,
+					{ id, section_id: sectionId, title, order, is_pinned: false }
+				])
 			}))
 			libraryService
 				.createTopic(id, sectionId, title, order)
@@ -138,6 +253,98 @@ function useTreeActions() {
 			libraryService
 				.rename(table, id, title)
 				.catch(() => resync('Не удалось переименовать'))
+		},
+		setPinned(
+			table: 'library_section' | 'library_topic',
+			id: string,
+			isPinned: boolean
+		) {
+			const key = table === 'library_section' ? 'sections' : 'topics'
+			patchTree(tree => ({
+				...tree,
+				[key]: sortByPinAndOrder(
+					tree[key].map(item =>
+						item.id === id ? { ...item, is_pinned: isPinned } : item
+					)
+				)
+			}))
+			libraryService
+				.setPinned(table, id, isPinned)
+				.catch(() => resync('Не удалось обновить закрепление'))
+		},
+		reorderSections(nextSections: ILibrarySection[]) {
+			patchTree(tree => ({
+				...tree,
+				sections: nextSections
+			}))
+			libraryService
+				.reorder(
+					'library_section',
+					nextSections.map(item => item.id)
+				)
+				.catch(() => resync('Не удалось изменить порядок разделов'))
+		},
+		reorderTopics(sectionId: string, nextSectionTopics: ILibraryTopic[]) {
+			const byId = new Map(nextSectionTopics.map(item => [item.id, item]))
+			patchTree(tree => ({
+				...tree,
+				topics: sortByPinAndOrder(
+					tree.topics.map(item =>
+						item.section_id === sectionId ? (byId.get(item.id) ?? item) : item
+					)
+				)
+			}))
+			libraryService
+				.reorder(
+					'library_topic',
+					nextSectionTopics.map(item => item.id)
+				)
+				.catch(() => resync('Не удалось изменить порядок тем'))
+		},
+		moveTopic(topicId: string, targetSectionId: string, targetOrder: number) {
+			patchTree(tree => ({
+				...tree,
+				topics: sortByPinAndOrder(
+					tree.topics.map(item =>
+						item.id === topicId
+							? { ...item, section_id: targetSectionId, order: targetOrder }
+							: item
+					)
+				)
+			}))
+			libraryService
+				.moveTopic(topicId, targetSectionId, targetOrder)
+				.catch(() => resync('Не удалось переместить тему'))
+		},
+		setPagePinned(topicId: string, pageId: string, isPinned: boolean) {
+			queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topicId), old =>
+				old
+					? sortByPinAndOrder(
+							old.map(item =>
+								item.id === pageId ? { ...item, is_pinned: isPinned } : item
+							)
+						)
+					: old
+			)
+			queryClient.setQueryData(pageKey(pageId), (old: any) =>
+				old ? { ...old, is_pinned: isPinned } : old
+			)
+			libraryService.setPinned('library_page', pageId, isPinned).catch(() => {
+				toast.error('Не удалось обновить закрепление')
+				queryClient.invalidateQueries({ queryKey: pagesKey(topicId) })
+			})
+		},
+		reorderPages(topicId: string, nextPages: ILibraryPageMeta[]) {
+			queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topicId), nextPages)
+			libraryService
+				.reorder(
+					'library_page',
+					nextPages.map(item => item.id)
+				)
+				.catch(() => {
+					toast.error('Не удалось изменить порядок листов')
+					queryClient.invalidateQueries({ queryKey: pagesKey(topicId) })
+				})
 		}
 	}
 }
@@ -146,6 +353,11 @@ type TypeDeleteTarget =
 	| { table: 'library_section'; id: string; title: string }
 	| { table: 'library_topic'; id: string; title: string }
 	| { table: 'library_page'; id: string; title: string }
+
+type TypeUnpinTarget =
+	| { table: 'library_section'; id: string; title: string }
+	| { table: 'library_topic'; id: string; title: string }
+	| { table: 'library_page'; id: string; topicId: string; title: string }
 
 export function Library() {
 	const router = useRouter()
@@ -175,6 +387,8 @@ export function Library() {
 		null
 	)
 	const [isDeleting, setIsDeleting] = useState(false)
+	const [unpinTarget, setUnpinTarget] = useState<TypeUnpinTarget | null>(null)
+	const actions = useTreeActions()
 
 	const navigate = useCallback(
 		(next: {
@@ -235,6 +449,16 @@ export function Library() {
 		}
 	}
 
+	const confirmUnpin = () => {
+		if (!unpinTarget) return
+		if (unpinTarget.table === 'library_page') {
+			actions.setPagePinned(unpinTarget.topicId, unpinTarget.id, false)
+		} else {
+			actions.setPinned(unpinTarget.table, unpinTarget.id, false)
+		}
+		setUnpinTarget(null)
+	}
+
 	const deleteDialog = deleteTarget && (
 		<ConfirmDialog
 			open
@@ -256,6 +480,29 @@ export function Library() {
 		/>
 	)
 
+	const unpinDialog = unpinTarget && (
+		<ConfirmDialog
+			open
+			title={
+				unpinTarget.table === 'library_section'
+					? 'Открепить раздел?'
+					: unpinTarget.table === 'library_topic'
+						? 'Открепить тему?'
+						: 'Открепить лист?'
+			}
+			description={
+				unpinTarget.table === 'library_section'
+					? `Раздел «${unpinTarget.title}» больше не будет закреплён в начале списка.`
+					: unpinTarget.table === 'library_topic'
+						? `Тема «${unpinTarget.title}» больше не будет закреплена в начале списка.`
+						: `Лист «${unpinTarget.title || 'Без названия'}» больше не будет закреплён в начале темы.`
+			}
+			confirmLabel='Открепить'
+			onConfirm={confirmUnpin}
+			onClose={() => setUnpinTarget(null)}
+		/>
+	)
+
 	// Открытый лист — как отдельная страница, без дерева и рамок
 	if (pageId && topic) {
 		return (
@@ -272,6 +519,7 @@ export function Library() {
 					onDelete={setDeleteTarget}
 				/>
 				{deleteDialog}
+				{unpinDialog}
 			</>
 		)
 	}
@@ -352,6 +600,7 @@ export function Library() {
 							onOpenSection={id => navigate({ section: id })}
 							activeSectionId={!topicId ? sectionId : null}
 							onDelete={setDeleteTarget}
+							onRequestUnpin={setUnpinTarget}
 						/>
 					</aside>
 
@@ -367,6 +616,8 @@ export function Library() {
 								topics={topics.filter(item => item.section_id === section.id)}
 								onBack={() => navigate({})}
 								onOpenTopic={id => navigate({ topic: id })}
+								onDelete={setDeleteTarget}
+								onRequestUnpin={setUnpinTarget}
 							/>
 						) : topic ? (
 							<TopicView
@@ -375,6 +626,7 @@ export function Library() {
 								onBack={() => navigate({})}
 								onOpenPage={id => navigate({ topic: topic.id, page: id })}
 								onDelete={setDeleteTarget}
+								onRequestUnpin={setUnpinTarget}
 							/>
 						) : (
 							<EmptyState hasSections={sections.length > 0} />
@@ -383,6 +635,7 @@ export function Library() {
 				</div>
 			)}
 			{deleteDialog}
+			{unpinDialog}
 		</div>
 	)
 }
@@ -424,7 +677,8 @@ function LibraryTree({
 	activeSectionId,
 	onOpenTopic,
 	onOpenSection,
-	onDelete
+	onDelete,
+	onRequestUnpin
 }: {
 	sections: ILibrarySection[]
 	topics: ILibraryTopic[]
@@ -434,6 +688,7 @@ function LibraryTree({
 	onOpenTopic: (id: string) => void
 	onOpenSection: (id: string) => void
 	onDelete: (target: TypeDeleteTarget) => void
+	onRequestUnpin: (target: TypeUnpinTarget) => void
 }) {
 	const [isAdding, setIsAdding] = useState(false)
 	const [addingTopicTo, setAddingTopicTo] = useState<string | null>(null)
@@ -445,6 +700,8 @@ function LibraryTree({
 	})
 
 	const actions = useTreeActions()
+	const sensors = useLibraryDndSensors()
+	const sortedSections = sortByPinAndOrder(sections)
 
 	const createSection = (title: string) => {
 		setIsAdding(false)
@@ -472,6 +729,73 @@ function LibraryTree({
 		if (title) actions.rename(table, id, title)
 	}
 
+	const togglePin = (
+		table: 'library_section' | 'library_topic',
+		item: { id: string; title: string; is_pinned?: boolean }
+	) => {
+		if (item.is_pinned) {
+			onRequestUnpin({ table, id: item.id, title: item.title })
+		} else {
+			actions.setPinned(table, item.id, true)
+		}
+	}
+
+	const handleDragEnd = (event: DragEndEvent) => {
+		const activeId = String(event.active.id)
+		const overId = event.over ? String(event.over.id) : null
+		if (!overId || activeId === overId) return
+
+		// 1. Перетаскивание разделов
+		if (sortedSections.some(item => item.id === activeId)) {
+			const overSectionId =
+				sortedSections.find(item => item.id === overId)?.id ??
+				topics.find(item => item.id === overId)?.section_id
+			if (!overSectionId || overSectionId === activeId) return
+			const reordered = reorderWithinGroup(
+				sortedSections,
+				activeId,
+				overSectionId
+			)
+			if (reordered) actions.reorderSections(reordered)
+			return
+		}
+
+		// 2. Перетаскивание тем (внутри раздела или между разделами)
+		const activeTopic = topics.find(item => item.id === activeId)
+		if (!activeTopic) return
+
+		const overTopic = topics.find(item => item.id === overId)
+		const overSection = sortedSections.find(item => item.id === overId)
+
+		if (overTopic && overTopic.section_id === activeTopic.section_id) {
+			const sectionTopics = sortByPinAndOrder(
+				topics.filter(item => item.section_id === activeTopic.section_id)
+			)
+			const reordered = reorderWithinGroup(
+				sectionTopics,
+				activeId,
+				overTopic.id
+			)
+			if (reordered) actions.reorderTopics(activeTopic.section_id, reordered)
+			return
+		}
+
+		const targetSectionId =
+			overTopic && overTopic.section_id !== activeTopic.section_id
+				? overTopic.section_id
+				: overSection && overSection.id !== activeTopic.section_id
+					? overSection.id
+					: null
+
+		if (targetSectionId) {
+			const targetTopics = topics.filter(
+				item => item.section_id === targetSectionId
+			)
+			setCollapsed(state => ({ ...state, [targetSectionId]: false }))
+			actions.moveTopic(activeTopic.id, targetSectionId, targetTopics.length)
+		}
+	}
+
 	return (
 		<div className='flex h-full flex-col'>
 			<header className='flex h-10 shrink-0 items-center justify-between'>
@@ -497,155 +821,253 @@ function LibraryTree({
 					</div>
 				)}
 
-				{sections.map(section => {
-					const sectionTopics = topics.filter(
-						item => item.section_id === section.id
-					)
-					const isCollapsed = collapsed[section.id]
-					return (
-						<div
-							key={section.id}
-							className='mb-1'
-						>
-							{renaming === section.id ? (
-								<InlineInput
-									initial={section.title}
-									onSubmit={title =>
-										rename('library_section', section.id, title)
-									}
-								/>
-							) : (
-								<Row
-									onClick={() => onOpenSection(section.id)}
-									active={section.id === activeSectionId}
-									leading={
-										<span
-											role='button'
-											tabIndex={0}
-											aria-label={
-												isCollapsed ? 'Развернуть раздел' : 'Свернуть раздел'
-											}
-											onClick={event => {
-												event.stopPropagation()
-												setCollapsed(state => ({
-													...state,
-													[section.id]: !isCollapsed
-												}))
-											}}
-											className='-m-1 grid h-6 w-6 shrink-0 place-items-center'
-										>
-											<ChevronRight
-												size={14}
-												className={cn(
-													'text-subtle transition-transform',
-													!isCollapsed && 'rotate-90'
-												)}
-											/>
-										</span>
-									}
-									title={section.title}
-									titleClassName='font-semibold text-fg'
-									actions={
-										<>
-											<IconButton
-												label='Новая тема'
-												onClick={() => {
-													setCollapsed(state => ({
-														...state,
-														[section.id]: false
-													}))
-													setAddingTopicTo(section.id)
-												}}
-											>
-												<Plus size={14} />
-											</IconButton>
-											<IconButton
-												label='Переименовать'
-												onClick={() => setRenaming(section.id)}
-											>
-												<Pencil size={13} />
-											</IconButton>
-											<IconButton
-												label='Удалить раздел'
-												danger
-												onClick={() =>
-													onDelete({
-														table: 'library_section',
-														id: section.id,
-														title: section.title
-													})
-												}
-											>
-												<Trash2 size={13} />
-											</IconButton>
-										</>
-									}
-								/>
-							)}
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+				>
+					<SortableContext
+						items={sortedSections.map(item => item.id)}
+						strategy={verticalListSortingStrategy}
+					>
+						{sortedSections.map((section, sectionIndex) => {
+							const sectionTopics = sortByPinAndOrder(
+								topics.filter(item => item.section_id === section.id)
+							)
+							const isCollapsed = collapsed[section.id]
+							const prevSection = sortedSections[sectionIndex - 1]
+							const showPinDivider =
+								Boolean(prevSection?.is_pinned) && !section.is_pinned
 
-							{!isCollapsed && (
-								<div className='ml-[1.4rem] border-l border-border'>
-									{sectionTopics.map(topic =>
-										renaming === topic.id ? (
-											<InlineInput
-												key={topic.id}
-												initial={topic.title}
-												onSubmit={title =>
-													rename('library_topic', topic.id, title)
-												}
-											/>
-										) : (
-											<Row
-												key={topic.id}
-												active={topic.id === activeTopicId}
-												onClick={() => onOpenTopic(topic.id)}
-												title={topic.title}
-												actions={
-													<>
-														<IconButton
-															label='Переименовать'
-															onClick={() => setRenaming(topic.id)}
-														>
-															<Pencil size={13} />
-														</IconButton>
-														<IconButton
-															label='Удалить тему'
-															danger
-															onClick={() =>
-																onDelete({
-																	table: 'library_topic',
-																	id: topic.id,
-																	title: topic.title
-																})
+							return (
+								<SortableItem
+									key={section.id}
+									id={section.id}
+									className='mb-1'
+								>
+									{dragHandleProps => (
+										<>
+											{showPinDivider && (
+												<div className='my-1.5 border-t border-border/60' />
+											)}
+											{renaming === section.id ? (
+												<InlineInput
+													initial={section.title}
+													onSubmit={title =>
+														rename('library_section', section.id, title)
+													}
+												/>
+											) : (
+												<Row
+													onClick={() => onOpenSection(section.id)}
+													active={section.id === activeSectionId}
+													pinned={Boolean(section.is_pinned)}
+													onUnpin={() =>
+														togglePin('library_section', section)
+													}
+													dragHandleProps={dragHandleProps}
+													leading={
+														<span
+															role='button'
+															tabIndex={0}
+															aria-label={
+																isCollapsed
+																	? 'Развернуть раздел'
+																	: 'Свернуть раздел'
 															}
+															onClick={event => {
+																event.stopPropagation()
+																setCollapsed(state => ({
+																	...state,
+																	[section.id]: !isCollapsed
+																}))
+															}}
+															className='-m-1 grid h-6 w-6 shrink-0 place-items-center'
 														>
-															<Trash2 size={13} />
-														</IconButton>
-													</>
-												}
-											/>
-										)
+															<ChevronRight
+																size={14}
+																className={cn(
+																	'text-subtle transition-transform',
+																	!isCollapsed && 'rotate-90'
+																)}
+															/>
+														</span>
+													}
+													title={section.title}
+													titleClassName='font-semibold text-fg'
+													actions={
+														<>
+															<IconButton
+																label={
+																	section.is_pinned
+																		? 'Открепить раздел'
+																		: 'Закрепить раздел'
+																}
+																active={Boolean(section.is_pinned)}
+																onClick={() =>
+																	togglePin('library_section', section)
+																}
+															>
+																<Pin
+																	size={13}
+																	className={cn(
+																		section.is_pinned && 'fill-current'
+																	)}
+																/>
+															</IconButton>
+															<IconButton
+																label='Новая тема'
+																onClick={() => {
+																	setCollapsed(state => ({
+																		...state,
+																		[section.id]: false
+																	}))
+																	setAddingTopicTo(section.id)
+																}}
+															>
+																<Plus size={14} />
+															</IconButton>
+															<IconButton
+																label='Переименовать'
+																onClick={() => setRenaming(section.id)}
+															>
+																<Pencil size={13} />
+															</IconButton>
+															<IconButton
+																label='Удалить раздел'
+																danger
+																onClick={() =>
+																	onDelete({
+																		table: 'library_section',
+																		id: section.id,
+																		title: section.title
+																	})
+																}
+															>
+																<Trash2 size={13} />
+															</IconButton>
+														</>
+													}
+												/>
+											)}
+
+											{!isCollapsed && (
+												<div className='ml-[1.4rem] border-l border-border'>
+													<SortableContext
+														items={sectionTopics.map(item => item.id)}
+														strategy={verticalListSortingStrategy}
+													>
+														{sectionTopics.map((topic, topicIndex) => {
+															const prevTopic = sectionTopics[topicIndex - 1]
+															const showTopicDivider =
+																Boolean(prevTopic?.is_pinned) &&
+																!topic.is_pinned
+
+															return renaming === topic.id ? (
+																<InlineInput
+																	key={topic.id}
+																	initial={topic.title}
+																	onSubmit={title =>
+																		rename('library_topic', topic.id, title)
+																	}
+																/>
+															) : (
+																<SortableItem
+																	key={topic.id}
+																	id={topic.id}
+																>
+																	{topicDragHandleProps => (
+																		<>
+																			{showTopicDivider && (
+																				<div className='my-1 border-t border-border/50' />
+																			)}
+																			<Row
+																				active={topic.id === activeTopicId}
+																				onClick={() => onOpenTopic(topic.id)}
+																				title={topic.title}
+																				pinned={Boolean(topic.is_pinned)}
+																				onUnpin={() =>
+																					togglePin('library_topic', topic)
+																				}
+																				dragHandleProps={topicDragHandleProps}
+																				actions={
+																					<>
+																						<IconButton
+																							label={
+																								topic.is_pinned
+																									? 'Открепить тему'
+																									: 'Закрепить тему'
+																							}
+																							active={Boolean(topic.is_pinned)}
+																							onClick={() =>
+																								togglePin(
+																									'library_topic',
+																									topic
+																								)
+																							}
+																						>
+																							<Pin
+																								size={13}
+																								className={cn(
+																									topic.is_pinned &&
+																										'fill-current'
+																								)}
+																							/>
+																						</IconButton>
+																						<IconButton
+																							label='Переименовать'
+																							onClick={() =>
+																								setRenaming(topic.id)
+																							}
+																						>
+																							<Pencil size={13} />
+																						</IconButton>
+																						<IconButton
+																							label='Удалить тему'
+																							danger
+																							onClick={() =>
+																								onDelete({
+																									table: 'library_topic',
+																									id: topic.id,
+																									title: topic.title
+																								})
+																							}
+																						>
+																							<Trash2 size={13} />
+																						</IconButton>
+																					</>
+																				}
+																			/>
+																		</>
+																	)}
+																</SortableItem>
+															)
+														})}
+													</SortableContext>
+													{addingTopicTo === section.id ? (
+														<InlineInput
+															placeholder='Название темы'
+															onSubmit={title => createTopic(section.id, title)}
+														/>
+													) : (
+														<button
+															type='button'
+															onClick={() => setAddingTopicTo(section.id)}
+															className='flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-subtle transition-colors hover:text-fg'
+														>
+															<Plus size={13} />
+															Тема
+														</button>
+													)}
+												</div>
+											)}
+										</>
 									)}
-									{addingTopicTo === section.id ? (
-										<InlineInput
-											placeholder='Название темы'
-											onSubmit={title => createTopic(section.id, title)}
-										/>
-									) : (
-										<button
-											type='button'
-											onClick={() => setAddingTopicTo(section.id)}
-											className='flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-subtle transition-colors hover:text-fg'
-										>
-											<Plus size={13} />
-											Тема
-										</button>
-									)}
-								</div>
-							)}
-						</div>
-					)
-				})}
+								</SortableItem>
+							)
+						})}
+					</SortableContext>
+				</DndContext>
 
 				{isAdding ? (
 					<InlineInput
@@ -675,6 +1097,9 @@ function Row({
 	leading,
 	actions,
 	active,
+	pinned,
+	onUnpin,
+	dragHandleProps,
 	onClick
 }: {
 	title: string
@@ -682,17 +1107,32 @@ function Row({
 	leading?: ReactNode
 	actions?: ReactNode
 	active?: boolean
+	pinned?: boolean
+	onUnpin?: () => void
+	dragHandleProps?: TypeDragHandleProps
 	onClick: () => void
 }) {
 	return (
 		<div
 			className={cn(
-				'group relative flex min-h-9 items-center gap-2 py-1 pl-2 pr-1 transition-colors',
+				'group relative flex min-h-9 items-center gap-1.5 py-1 pl-1.5 pr-1 transition-colors',
 				active
 					? 'bg-white/[0.06] before:absolute before:inset-y-0 before:-left-px before:w-0.5 before:bg-primary'
 					: 'hover:bg-white/[0.03]'
 			)}
 		>
+			{dragHandleProps && (
+				<button
+					type='button'
+					aria-label='Перетащить'
+					{...dragHandleProps.attributes}
+					{...dragHandleProps.listeners}
+					onClick={event => event.stopPropagation()}
+					className='-ml-0.5 -mr-0.5 grid h-6 w-4 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
+				>
+					<GripVertical size={13} />
+				</button>
+			)}
 			<button
 				type='button'
 				onClick={onClick}
@@ -711,6 +1151,23 @@ function Row({
 					{title}
 				</span>
 			</button>
+			{pinned && (
+				<button
+					type='button'
+					title='Открепить'
+					aria-label='Открепить'
+					onClick={event => {
+						event.stopPropagation()
+						onUnpin?.()
+					}}
+					className='grid h-6 w-6 shrink-0 place-items-center text-primary/75 transition-opacity hover:text-primary [@media(hover:hover)]:group-hover:opacity-0'
+				>
+					<Pin
+						size={12}
+						className='fill-current'
+					/>
+				</button>
+			)}
 			{/* На компьютере кнопки всплывают поверх строки и не отнимают место у названия */}
 			<span className='flex shrink-0 items-center opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:absolute [@media(hover:hover)]:inset-y-0 [@media(hover:hover)]:right-0 [@media(hover:hover)]:bg-gradient-to-l [@media(hover:hover)]:from-bg [@media(hover:hover)]:from-70% [@media(hover:hover)]:to-transparent [@media(hover:hover)]:pl-6 [@media(hover:hover)]:pr-1 [@media(hover:none)]:opacity-100'>
 				{actions}
@@ -758,11 +1215,13 @@ function IconButton({
 	label,
 	onClick,
 	danger,
+	active,
 	children
 }: {
 	label: string
 	onClick: () => void
 	danger?: boolean
+	active?: boolean
 	children: ReactNode
 }) {
 	return (
@@ -775,8 +1234,12 @@ function IconButton({
 				onClick()
 			}}
 			className={cn(
-				'grid h-7 w-7 place-items-center text-subtle transition-colors hover:bg-white/[0.06]',
-				danger ? 'hover:text-danger' : 'hover:text-fg'
+				'grid h-7 w-7 place-items-center transition-colors hover:bg-white/[0.06]',
+				danger
+					? 'text-subtle hover:text-danger'
+					: active
+						? 'text-primary hover:text-primary-hover'
+						: 'text-subtle hover:text-fg'
 			)}
 		>
 			{children}
@@ -793,13 +1256,15 @@ function TopicView({
 	section,
 	onBack,
 	onOpenPage,
-	onDelete
+	onDelete,
+	onRequestUnpin
 }: {
 	topic: ILibraryTopic
 	section?: ILibrarySection
 	onBack: () => void
 	onOpenPage: (id: string) => void
 	onDelete: (target: TypeDeleteTarget) => void
+	onRequestUnpin: (target: TypeUnpinTarget) => void
 }) {
 	const queryClient = useQueryClient()
 	const { data: pages, isLoading } = useQuery({
@@ -810,6 +1275,8 @@ function TopicView({
 	const [isRenaming, setIsRenaming] = useState(false)
 
 	const actions = useTreeActions()
+	const sensors = useLibraryDndSensors()
+	const sortedPages = sortByPinAndOrder(pages || [])
 
 	// Лист появляется и открывается сразу, в базу он уходит фоном
 	const createPage = () => {
@@ -821,19 +1288,52 @@ function TopicView({
 			title: '',
 			content: '',
 			order,
+			is_pinned: false,
 			updated_at: new Date().toISOString(),
 			excerpt: ''
 		}
 		queryClient.setQueryData(pageKey(id), page)
-		queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topic.id), old => [
-			...(old || []),
-			page
-		])
+		queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topic.id), old =>
+			sortByPinAndOrder([...(old || []), page])
+		)
 		onOpenPage(id)
 		libraryService.createPage(id, topic.id, order).catch(() => {
 			toast.error('Не удалось создать лист')
 			queryClient.invalidateQueries({ queryKey: pagesKey(topic.id) })
 		})
+	}
+
+	const toggleTopicPin = () => {
+		if (topic.is_pinned) {
+			onRequestUnpin({
+				table: 'library_topic',
+				id: topic.id,
+				title: topic.title
+			})
+		} else {
+			actions.setPinned('library_topic', topic.id, true)
+		}
+	}
+
+	const togglePagePin = (page: ILibraryPageMeta) => {
+		if (page.is_pinned) {
+			onRequestUnpin({
+				table: 'library_page',
+				id: page.id,
+				topicId: topic.id,
+				title: page.title
+			})
+		} else {
+			actions.setPagePinned(topic.id, page.id, true)
+		}
+	}
+
+	const handleDragEnd = (event: DragEndEvent) => {
+		const activeId = String(event.active.id)
+		const overId = event.over ? String(event.over.id) : null
+		if (!overId || activeId === overId) return
+		const reordered = reorderWithinGroup(sortedPages, activeId, overId)
+		if (reordered) actions.reorderPages(topic.id, reordered)
 	}
 
 	return (
@@ -849,7 +1349,16 @@ function TopicView({
 
 			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
 				<div className='min-w-0'>
-					{section && <p className='eyebrow'>{section.title}</p>}
+					{section && (
+						<p className='eyebrow flex items-center gap-1.5'>
+							<span>{section.title}</span>
+							{topic.is_pinned && (
+								<span className='inline-flex items-center gap-1 text-primary'>
+									· <Pin size={10} className='fill-current' /> Закреплена
+								</span>
+							)}
+						</p>
+					)}
 					{isRenaming ? (
 						<input
 							autoFocus
@@ -880,7 +1389,23 @@ function TopicView({
 							: ' '}
 					</p>
 				</div>
-				<div className='flex items-center gap-2'>
+				<div className='flex items-center gap-1.5'>
+					<IconButton
+						label={topic.is_pinned ? 'Открепить тему' : 'Закрепить тему'}
+						active={Boolean(topic.is_pinned)}
+						onClick={toggleTopicPin}
+					>
+						<Pin
+							size={15}
+							className={cn(topic.is_pinned && 'fill-current')}
+						/>
+					</IconButton>
+					<IconButton
+						label='Переименовать тему'
+						onClick={() => setIsRenaming(true)}
+					>
+						<Pencil size={15} />
+					</IconButton>
 					<IconButton
 						label='Удалить тему'
 						danger
@@ -897,7 +1422,7 @@ function TopicView({
 					<button
 						type='button'
 						onClick={createPage}
-						className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
+						className='ml-1 flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
 					>
 						<FilePlus2 size={15} />
 						Новый лист
@@ -914,17 +1439,43 @@ function TopicView({
 						/>
 					))}
 				</div>
-			) : pages?.length ? (
-				<div>
-					{pages.map((page, index) => (
-						<PageCard
-							key={page.id}
-							page={page}
-							index={index}
-							onOpen={() => onOpenPage(page.id)}
-						/>
-					))}
-				</div>
+			) : sortedPages.length ? (
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+				>
+					<SortableContext
+						items={sortedPages.map(item => item.id)}
+						strategy={verticalListSortingStrategy}
+					>
+						<div>
+							{sortedPages.map((page, index) => (
+								<SortableItem
+									key={page.id}
+									id={page.id}
+								>
+									{dragHandleProps => (
+										<PageCard
+											page={page}
+											index={index}
+											dragHandleProps={dragHandleProps}
+											onOpen={() => onOpenPage(page.id)}
+											onTogglePin={() => togglePagePin(page)}
+											onDelete={() =>
+												onDelete({
+													table: 'library_page',
+													id: page.id,
+													title: page.title
+												})
+											}
+										/>
+									)}
+								</SortableItem>
+							))}
+						</div>
+					</SortableContext>
+				</DndContext>
 			) : (
 				<div className='mt-16 text-center'>
 					<p className='text-sm text-muted'>В теме пока нет листов</p>
@@ -942,33 +1493,80 @@ function TopicView({
 function PageCard({
 	page,
 	index,
-	onOpen
+	dragHandleProps,
+	onOpen,
+	onTogglePin,
+	onDelete
 }: {
 	page: ILibraryPageMeta
 	index: number
+	dragHandleProps?: TypeDragHandleProps
 	onOpen: () => void
+	onTogglePin: () => void
+	onDelete: () => void
 }) {
 	return (
-		<button
-			type='button'
-			onClick={onOpen}
-			className='lazy-paint group grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 border-b border-border py-5 text-left transition-colors sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
-		>
-			<span className='pt-1 font-mono text-xs text-subtle'>
-				{String(index + 1).padStart(2, '0')}
-			</span>
-			<span className='min-w-0'>
-				<span className='block truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
-					{page.title || 'Без названия'}
+		<div className='lazy-paint group relative flex w-full items-start gap-2 border-b border-border py-5 transition-colors hover:bg-white/[0.015]'>
+			{dragHandleProps && (
+				<button
+					type='button'
+					aria-label='Перетащить лист'
+					{...dragHandleProps.attributes}
+					{...dragHandleProps.listeners}
+					onClick={event => event.stopPropagation()}
+					className='-ml-1 mt-1 grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
+				>
+					<GripVertical size={14} />
+				</button>
+			)}
+			<button
+				type='button'
+				onClick={onOpen}
+				className='grid min-w-0 flex-1 grid-cols-[2.2rem_minmax(0,1fr)] gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)_auto]'
+			>
+				<span className='pt-1 font-mono text-xs text-subtle'>
+					{String(index + 1).padStart(2, '0')}
 				</span>
-				<span className='mt-1 line-clamp-2 text-sm leading-6 text-subtle sm:line-clamp-3'>
-					{page.excerpt ? <MathExcerpt text={page.excerpt} /> : 'Пустой лист'}
+				<span className='min-w-0'>
+					<span className='flex items-center gap-2'>
+						<span className='truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
+							{page.title || 'Без названия'}
+						</span>
+						{page.is_pinned && (
+							<Pin
+								size={13}
+								className='shrink-0 fill-current text-primary/80'
+							/>
+						)}
+					</span>
+					<span className='mt-1 line-clamp-2 text-sm leading-6 text-subtle sm:line-clamp-3'>
+						{page.excerpt ? <MathExcerpt text={page.excerpt} /> : 'Пустой лист'}
+					</span>
 				</span>
-			</span>
-			<span className='col-start-2 mt-2 font-mono text-2xs uppercase tracking-wider text-subtle sm:col-start-3 sm:mt-1.5'>
-				{dayjs(page.updated_at).locale('ru').format('D MMM, HH:mm')}
-			</span>
-		</button>
+				<span className='col-start-2 mt-2 font-mono text-2xs uppercase tracking-wider text-subtle sm:col-start-3 sm:mt-1.5'>
+					{dayjs(page.updated_at).locale('ru').format('D MMM, HH:mm')}
+				</span>
+			</button>
+			<div className='mt-0.5 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
+				<IconButton
+					label={page.is_pinned ? 'Открепить лист' : 'Закрепить лист'}
+					active={Boolean(page.is_pinned)}
+					onClick={onTogglePin}
+				>
+					<Pin
+						size={13}
+						className={cn(page.is_pinned && 'fill-current')}
+					/>
+				</IconButton>
+				<IconButton
+					label='Удалить лист'
+					danger
+					onClick={onDelete}
+				>
+					<Trash2 size={13} />
+				</IconButton>
+			</div>
+		</div>
 	)
 }
 
@@ -1654,20 +2252,60 @@ function SectionView({
 	section,
 	topics,
 	onBack,
-	onOpenTopic
+	onOpenTopic,
+	onDelete,
+	onRequestUnpin
 }: {
 	section: ILibrarySection
 	topics: ILibraryTopic[]
 	onBack: () => void
 	onOpenTopic: (id: string) => void
+	onDelete: (target: TypeDeleteTarget) => void
+	onRequestUnpin: (target: TypeUnpinTarget) => void
 }) {
 	const [isAdding, setIsAdding] = useState(false)
+	const [isRenamingSection, setIsRenamingSection] = useState(false)
+	const [renamingTopicId, setRenamingTopicId] = useState<string | null>(null)
 
 	const actions = useTreeActions()
+	const sensors = useLibraryDndSensors()
+	const sortedTopics = sortByPinAndOrder(topics)
 
 	const createTopic = (title: string) => {
 		setIsAdding(false)
 		if (title) onOpenTopic(actions.addTopic(section.id, title, topics.length))
+	}
+
+	const toggleSectionPin = () => {
+		if (section.is_pinned) {
+			onRequestUnpin({
+				table: 'library_section',
+				id: section.id,
+				title: section.title
+			})
+		} else {
+			actions.setPinned('library_section', section.id, true)
+		}
+	}
+
+	const toggleTopicPin = (topic: ILibraryTopic) => {
+		if (topic.is_pinned) {
+			onRequestUnpin({
+				table: 'library_topic',
+				id: topic.id,
+				title: topic.title
+			})
+		} else {
+			actions.setPinned('library_topic', topic.id, true)
+		}
+	}
+
+	const handleDragEnd = (event: DragEndEvent) => {
+		const activeId = String(event.active.id)
+		const overId = event.over ? String(event.over.id) : null
+		if (!overId || activeId === overId) return
+		const reordered = reorderWithinGroup(sortedTopics, activeId, overId)
+		if (reordered) actions.reorderTopics(section.id, reordered)
 	}
 
 	return (
@@ -1682,22 +2320,81 @@ function SectionView({
 			</button>
 			<div className='flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5'>
 				<div className='min-w-0'>
-					<p className='eyebrow'>Раздел</p>
-					<h1 className='mt-2 break-words text-3xl font-semibold tracking-[-0.02em] text-fg'>
-						{section.title}
-					</h1>
+					<p className='eyebrow flex items-center gap-1.5'>
+						<span>Раздел</span>
+						{section.is_pinned && (
+							<span className='inline-flex items-center gap-1 text-primary'>
+								· <Pin size={10} className='fill-current' /> Закреплён
+							</span>
+						)}
+					</p>
+					{isRenamingSection ? (
+						<input
+							autoFocus
+							defaultValue={section.title}
+							maxLength={200}
+							onBlur={event => {
+								setIsRenamingSection(false)
+								const title = event.target.value.trim()
+								if (title && title !== section.title)
+									actions.rename('library_section', section.id, title)
+							}}
+							onKeyDown={event => {
+								if (event.key === 'Enter') event.currentTarget.blur()
+							}}
+							className='mt-2 w-full bg-transparent text-3xl font-semibold tracking-[-0.02em] text-fg outline-none'
+						/>
+					) : (
+						<h1
+							onDoubleClick={() => setIsRenamingSection(true)}
+							className='mt-2 break-words text-3xl font-semibold tracking-[-0.02em] text-fg'
+						>
+							{section.title}
+						</h1>
+					)}
 					<p className='mt-2 font-mono text-xs text-subtle'>
 						{topics.length} {plural(topics.length, 'тема', 'темы', 'тем')}
 					</p>
 				</div>
-				<button
-					type='button'
-					onClick={() => setIsAdding(true)}
-					className='flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
-				>
-					<Plus size={15} />
-					Новая тема
-				</button>
+				<div className='flex items-center gap-1.5'>
+					<IconButton
+						label={section.is_pinned ? 'Открепить раздел' : 'Закрепить раздел'}
+						active={Boolean(section.is_pinned)}
+						onClick={toggleSectionPin}
+					>
+						<Pin
+							size={15}
+							className={cn(section.is_pinned && 'fill-current')}
+						/>
+					</IconButton>
+					<IconButton
+						label='Переименовать раздел'
+						onClick={() => setIsRenamingSection(true)}
+					>
+						<Pencil size={15} />
+					</IconButton>
+					<IconButton
+						label='Удалить раздел'
+						danger
+						onClick={() =>
+							onDelete({
+								table: 'library_section',
+								id: section.id,
+								title: section.title
+							})
+						}
+					>
+						<Trash2 size={15} />
+					</IconButton>
+					<button
+						type='button'
+						onClick={() => setIsAdding(true)}
+						className='ml-1 flex h-10 items-center gap-2 bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
+					>
+						<Plus size={15} />
+						Новая тема
+					</button>
+				</div>
 			</div>
 
 			{isAdding && (
@@ -1709,26 +2406,116 @@ function SectionView({
 				</div>
 			)}
 
-			{topics.length ? (
-				topics.map((topic, index) => (
-					<button
-						key={topic.id}
-						type='button'
-						onClick={() => onOpenTopic(topic.id)}
-						className='group grid w-full grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border py-5 text-left sm:grid-cols-[3rem_minmax(0,1fr)_auto]'
+			{sortedTopics.length ? (
+				<DndContext
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+				>
+					<SortableContext
+						items={sortedTopics.map(item => item.id)}
+						strategy={verticalListSortingStrategy}
 					>
-						<span className='font-mono text-xs text-subtle'>
-							{String(index + 1).padStart(2, '0')}
-						</span>
-						<span className='truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
-							{topic.title}
-						</span>
-						<ChevronRight
-							size={16}
-							className='text-subtle transition-transform group-hover:translate-x-0.5'
-						/>
-					</button>
-				))
+						<div>
+							{sortedTopics.map((topic, index) =>
+								renamingTopicId === topic.id ? (
+									<div
+										key={topic.id}
+										className='border-b border-border py-3'
+									>
+										<InlineInput
+											initial={topic.title}
+											onSubmit={title => {
+												setRenamingTopicId(null)
+												if (title && title !== topic.title)
+													actions.rename('library_topic', topic.id, title)
+											}}
+										/>
+									</div>
+								) : (
+									<SortableItem
+										key={topic.id}
+										id={topic.id}
+									>
+										{dragHandleProps => (
+											<div className='group flex w-full items-center gap-2 border-b border-border py-4 transition-colors hover:bg-white/[0.015]'>
+												<button
+													type='button'
+													aria-label='Перетащить тему'
+													{...dragHandleProps.attributes}
+													{...dragHandleProps.listeners}
+													onClick={event => event.stopPropagation()}
+													className='-ml-1 grid h-6 w-5 shrink-0 touch-none place-items-center text-subtle opacity-0 transition-opacity cursor-grab active:cursor-grabbing group-hover:opacity-60 hover:!opacity-100 hover:text-fg [@media(hover:none)]:opacity-35'
+												>
+													<GripVertical size={14} />
+												</button>
+												<button
+													type='button'
+													onClick={() => onOpenTopic(topic.id)}
+													className='grid min-w-0 flex-1 grid-cols-[2.2rem_minmax(0,1fr)] items-center gap-x-2 text-left sm:grid-cols-[2.75rem_minmax(0,1fr)]'
+												>
+													<span className='font-mono text-xs text-subtle'>
+														{String(index + 1).padStart(2, '0')}
+													</span>
+													<span className='flex min-w-0 items-center gap-2'>
+														<span className='truncate text-lg font-medium text-fg transition-colors group-hover:text-primary'>
+															{topic.title}
+														</span>
+														{topic.is_pinned && (
+															<Pin
+																size={13}
+																className='shrink-0 fill-current text-primary/80'
+															/>
+														)}
+													</span>
+												</button>
+												<div className='flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100'>
+													<IconButton
+														label={
+															topic.is_pinned
+																? 'Открепить тему'
+																: 'Закрепить тему'
+														}
+														active={Boolean(topic.is_pinned)}
+														onClick={() => toggleTopicPin(topic)}
+													>
+														<Pin
+															size={13}
+															className={cn(topic.is_pinned && 'fill-current')}
+														/>
+													</IconButton>
+													<IconButton
+														label='Переименовать тему'
+														onClick={() => setRenamingTopicId(topic.id)}
+													>
+														<Pencil size={13} />
+													</IconButton>
+													<IconButton
+														label='Удалить тему'
+														danger
+														onClick={() =>
+															onDelete({
+																table: 'library_topic',
+																id: topic.id,
+																title: topic.title
+															})
+														}
+													>
+														<Trash2 size={13} />
+													</IconButton>
+												</div>
+												<ChevronRight
+													size={16}
+													className='shrink-0 text-subtle transition-transform group-hover:translate-x-0.5'
+												/>
+											</div>
+										)}
+									</SortableItem>
+								)
+							)}
+						</div>
+					</SortableContext>
+				</DndContext>
 			) : (
 				<p className='py-16 text-center text-sm text-subtle'>
 					В разделе пока нет тем
