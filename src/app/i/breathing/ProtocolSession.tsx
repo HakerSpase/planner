@@ -540,16 +540,12 @@ function Intro({
 	return (
 		<div className='flex flex-1 flex-col'>
 			<div className='flex-1 overflow-y-auto px-4 py-5 sm:px-6'>
-				<div className='flex items-start gap-4'>
-					<span
-						className='grid h-12 w-12 shrink-0 place-items-center rounded-full'
-						style={{
-							background: `${protocol.accent}22`,
-							color: protocol.accent
-						}}
-					>
-						<Icon size={22} />
-					</span>
+				<div className='grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-2'>
+					<Icon
+						size={16}
+						className='mt-1 shrink-0'
+						style={{ color: protocol.accent }}
+					/>
 					<div className='min-w-0'>
 						<p className='text-sm leading-6 text-muted'>{protocol.tagline}</p>
 						{previousBest > 0 && (
