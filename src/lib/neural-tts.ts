@@ -123,7 +123,7 @@ export function cancelNeural() {
 /** Озвучить фразу: вернёт ссылку на WAV для <audio> */
 export async function synthesizeNeural(
 	text: string,
-	options: { lang: string; voice: string; speed: number; steps: number }
+	options: { lang: string; voice: string; steps: number }
 ) {
 	const id = ++counter
 	const { wav, sampleRate } = await new Promise<{

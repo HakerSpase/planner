@@ -113,19 +113,33 @@ const MAX_AUDIO_CACHE = 40
 const audioCache = new Map<string, Promise<string>>()
 const resolvedBlobUrls = new Map<string, string>()
 
-function neuralOptions(text: string, rate: number) {
+function neuralOptions(text: string) {
 	const { ttsNeuralVoice, ttsSteps } = getPreferences()
 	return {
 		lang: langOf(text).slice(0, 2),
 		voice: isNeuralVoice(ttsNeuralVoice) ? ttsNeuralVoice : 'F1',
-		speed: rate,
 		steps: ttsSteps
 	}
 }
 
-function fetchAudioUrl(text: string, rate: number): Promise<string> {
-	const options = neuralOptions(text, rate)
-	const key = `${options.voice}|${options.steps}|${rate.toFixed(2)}|${text}`
+function cacheKeyFor(text: string) {
+	const options = neuralOptions(text)
+	return `${options.voice}|${options.steps}|${text}`
+}
+
+function applyAudioRate(
+	audio: HTMLAudioElement,
+	rate = getPreferences().ttsRate
+) {
+	const safeRate = Math.max(0.5, Math.min(2, Number.isFinite(rate) ? rate : 1))
+	audio.preservesPitch = true
+	audio.defaultPlaybackRate = safeRate
+	audio.playbackRate = safeRate
+}
+
+function fetchAudioUrl(text: string): Promise<string> {
+	const options = neuralOptions(text)
+	const key = cacheKeyFor(text)
 	const existing = audioCache.get(key)
 	if (existing) return existing
 
@@ -159,18 +173,16 @@ function prefetchChunk(index: number) {
 	// Две фразы вперёд: на телефоне синтез бывает медленнее речи
 	for (const next of [index, index + 1]) {
 		const text = chunks[next]
-		if (text) void fetchAudioUrl(text, getPreferences().ttsRate).catch(() => {})
+		if (text) void fetchAudioUrl(text).catch(() => {})
 	}
 }
 
 /** Нейроголос не готов — говорим об этом, а не подменяем голос молча */
 function neuralFailed(error: unknown) {
+	const msg = error instanceof Error ? error.message : String(error)
+	if (msg === 'cancelled') return
 	stopSpeech()
-	window.dispatchEvent(
-		new CustomEvent('planner:tts-error', {
-			detail: error instanceof Error ? error.message : String(error)
-		})
-	)
+	window.dispatchEvent(new CustomEvent('planner:tts-error', { detail: msg }))
 }
 
 /* ---------- Управление активным аудио ---------- */
@@ -366,18 +378,30 @@ function speakChunk(index: number) {
 		speakFallbackChunk(index, my)
 		return
 	}
+	// Если нужной фразы ещё нет в кэше (например, перемотали далеко вперёд),
+	// сбрасываем старую очередь воркера, чтобы не ждать синтеза пропущенных фраз
+	if (!audioCache.has(cacheKeyFor(text))) {
+		cancelNeural()
+	}
 	// Сначала текущая фраза, следом — следующие: нейросеть готовит их, пока звучит эта
-	const current = fetchAudioUrl(text, getPreferences().ttsRate)
+	const current = fetchAudioUrl(text)
 	prefetchChunk(index + 1)
 
 	current
 		.then(url => {
 			if (my !== generation || state.status !== 'playing') return
 			const audio = new Audio(url)
+			applyAudioRate(audio)
 			currentAudio = audio
+			audio.onloadedmetadata = () => {
+				if (my === generation) applyAudioRate(audio)
+			}
 			// Шкала пойдёт, когда звук действительно заиграет
 			audio.onplaying = () => {
-				if (my === generation) emit({ buffering: false })
+				if (my === generation) {
+					applyAudioRate(audio)
+					emit({ buffering: false })
+				}
 			}
 			audio.onended = () => {
 				if (my === generation && state.status === 'playing') {
@@ -433,6 +457,7 @@ export function resumeSpeech() {
 		const index = state.index
 		pausedAudio = null
 		pausedIndex = -1
+		applyAudioRate(audio)
 		currentAudio = audio
 		emit({ status: 'playing', buffering: false })
 		prefetchChunk(index + 1)
@@ -471,8 +496,13 @@ export function seekSpeech(delta: number) {
 	speakChunk(Math.max(0, Math.min(chunks.length - 1, state.index + delta)))
 }
 
-/** Скорость или голос поменяли на ходу — перечитываем текущую фразу с новыми настройками */
+/** Скорость или голос поменяли на ходу: для нейроголоса скорость меняем мгновенно без пересинтеза */
 export function restartCurrent() {
+	if (useNeural()) {
+		if (currentAudio) applyAudioRate(currentAudio)
+		if (pausedAudio) applyAudioRate(pausedAudio)
+		return
+	}
 	if (state.status === 'playing') speakChunk(state.index)
 }
 
@@ -512,10 +542,11 @@ export function sayCue(text: string) {
 	}
 
 	if (!useNeural()) return system()
-	fetchAudioUrl(text, rate)
+	fetchAudioUrl(text)
 		.then(url => {
 			if (my !== generation) return
 			const audio = new Audio(url)
+			applyAudioRate(audio, rate)
 			currentAudio = audio
 			audio.play().catch(() => {})
 		})

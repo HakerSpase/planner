@@ -160,9 +160,11 @@ function gaussian(size) {
 
 /* ---------- Синтез одной фразы ---------- */
 
-async function synthesize({ text, lang, voice, speed, steps }) {
+async function synthesize({ text, lang, voice, steps }, isCancelled) {
 	const { cfgs, indexer, sessions, sampleRate } = await load()
+	if (isCancelled?.()) throw new Error('cancelled')
 	const style = await loadStyle(voice)
+	if (isCancelled?.()) throw new Error('cancelled')
 	const code = LANGS.has(lang) ? lang : 'en'
 	const processed = preprocess(text, code)
 
@@ -179,7 +181,11 @@ async function synthesize({ text, lang, voice, speed, steps }) {
 		style_dp: style.dp,
 		text_mask: textMask
 	})
-	const seconds = duration.data[0] / (speed || 1)
+	// Всегда синтезируем с естественной длительностью (1×): vector_estimator не имеет
+	// входного параметра скорости, поэтому деление duration на speed урезало число
+	// латентных кадров (latentLength) и обрезало/проглатывало слова.
+	// Скорость речи регулируется на стороне <audio> (playbackRate + preservesPitch).
+	const seconds = duration.data[0]
 
 	const { text_emb: textEmb } = await sessions.text_encoder.run({
 		text_ids: textIds,
@@ -198,6 +204,7 @@ async function synthesize({ text, lang, voice, speed, steps }) {
 	const totalStep = new ort.Tensor('float32', new Float32Array([steps]), [1])
 
 	for (let step = 0; step < steps; step++) {
+		if (isCancelled?.()) throw new Error('cancelled')
 		const { denoised_latent: denoised } = await sessions.vector_estimator.run({
 			noisy_latent: new ort.Tensor('float32', latent, [1, latentDim, latentLength]),
 			text_emb: textEmb,
@@ -210,6 +217,7 @@ async function synthesize({ text, lang, voice, speed, steps }) {
 		latent = new Float32Array(await denoised.getData())
 	}
 
+	if (isCancelled?.()) throw new Error('cancelled')
 	const { wav_tts: wavTensor } = await sessions.vocoder.run({
 		latent: new ort.Tensor('float32', latent, [1, latentDim, latentLength])
 	})
@@ -238,8 +246,9 @@ self.onmessage = event => {
 	}
 	if (type === 'synthesize') {
 		const mine = epoch
+		const isCancelled = () => mine !== epoch
 		queue = queue.then(() =>
-			(mine !== epoch ? Promise.reject(new Error('cancelled')) : synthesize(event.data))
+			(isCancelled() ? Promise.reject(new Error('cancelled')) : synthesize(event.data, isCancelled))
 				.then(({ wav, sampleRate }) =>
 					self.postMessage({ type: 'audio', id, wav, sampleRate }, [wav.buffer])
 				)

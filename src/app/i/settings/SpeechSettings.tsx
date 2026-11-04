@@ -25,6 +25,7 @@ import {
 	getVoices,
 	isNativeSpeech,
 	onVoicesChanged,
+	restartCurrent,
 	sortVoices,
 	speak,
 	stopSpeech,
@@ -285,7 +286,10 @@ export function SpeechSettings() {
 				max={2}
 				step={0.05}
 				format={value => `${Number(value.toFixed(2))}×`}
-				onChange={value => setPreferences({ ttsRate: value })}
+				onChange={value => {
+					setPreferences({ ttsRate: value })
+					restartCurrent()
+				}}
 			/>
 			{!neural && (
 				<Slider
