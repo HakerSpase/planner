@@ -114,6 +114,24 @@ export function Settings() {
 	const [isDesktop, setIsDesktop] = useState(false)
 	useEffect(() => setIsDesktop(Boolean(window.plannerDesktop)), [])
 
+	// Переход из глобального поиска к конкретному разделу настроек (#music, #speech и т. п.)
+	useEffect(() => {
+		const scrollToHash = () => {
+			const id = window.location.hash.replace(/^#/, '')
+			if (!id) return
+			const target = document.getElementById(id)
+			if (!target) return
+			target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		}
+		scrollToHash()
+		window.addEventListener('hashchange', scrollToHash)
+		window.addEventListener('planner:flash-setting', scrollToHash)
+		return () => {
+			window.removeEventListener('hashchange', scrollToHash)
+			window.removeEventListener('planner:flash-setting', scrollToHash)
+		}
+	}, [])
+
 	const { isPending, mutate } = useUpdateSettings()
 	const timeZoneMenuRef = useRef<HTMLDivElement>(null)
 	const [timeZoneMenuOpen, setTimeZoneMenuOpen] = useState(false)
@@ -226,6 +244,7 @@ export function Settings() {
 		>
 			<div className='border border-border bg-surface'>
 				<Section
+					id='profile'
 					title='Профиль'
 					description='Имя видно в приветствии на главной.'
 				>
@@ -250,6 +269,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='timezone'
 					title='Часовой пояс'
 					description='От него зависят «сегодня» в задачах, календарь активности и дневные сессии Pomodoro.'
 				>
@@ -366,6 +386,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='background'
 					title='Фон'
 					description='Подложка под всеми разделами. Применяется сразу и запоминается на этом устройстве.'
 				>
@@ -422,6 +443,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='feel'
 					title='Ощущения'
 					description='Переходы, фоновая музыка и вибрация. Применяются сразу, на этом устройстве.'
 				>
@@ -429,6 +451,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='speech'
 					title='Озвучка'
 					description='Чтение конспектов вслух голосом системы — бесплатно, на телефоне и компьютере. Формулы и код пропускаются.'
 				>
@@ -436,6 +459,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='transcription'
 					title='Расшифровка аудио'
 					description='Голосовые и аудио превращаются в текст нейросетью Whisper — локально и бесплатно.'
 				>
@@ -443,6 +467,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='notifications'
 					title='Уведомления'
 					description='Напоминания о задачах приходят системными уведомлениями — на Windows и на Android, даже если планер закрыт.'
 				>
@@ -450,6 +475,7 @@ export function Settings() {
 				</Section>
 
 				<Section
+					id='ai-prompt'
 					title='Конспекты из нейросети'
 					description='Промпт, с которым ChatGPT и другие ИИ сразу оформляют ответ под Planner: формулы, цвет, разбор предложения и слова, графики и диаграммы.'
 				>
@@ -458,6 +484,7 @@ export function Settings() {
 
 				{isDesktop && (
 					<Section
+						id='desktop'
 						title='Приложение на компьютере'
 						description='Трей и автозапуск — работают только в настольной версии Planner.'
 					>
@@ -466,6 +493,7 @@ export function Settings() {
 				)}
 
 				<Section
+					id='pomodoro'
 					title='Pomodoro'
 					description='Длительность раундов и перерывов для таймера. Новая сессия начнётся с этими значениями.'
 				>
@@ -543,16 +571,21 @@ export function Settings() {
 }
 
 function Section({
+	id,
 	title,
 	description,
 	children
 }: {
+	id?: string
 	title: string
 	description: string
 	children: ReactNode
 }) {
 	return (
-		<section className='grid gap-4 border-b border-border px-4 py-6 last:border-b-0 sm:px-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10'>
+		<section
+			id={id}
+			className='scroll-mt-16 grid gap-4 border-b border-border px-4 py-6 last:border-b-0 sm:px-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10'
+		>
 			<div>
 				<h2 className='text-base font-semibold text-fg'>{title}</h2>
 				<p className='mt-1 text-sm leading-5 text-subtle'>{description}</p>

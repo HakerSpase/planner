@@ -3,13 +3,25 @@
 import { useQuery } from '@tanstack/react-query'
 import cn from 'clsx'
 import {
+	Bell,
+	Bot,
 	CheckSquare2,
 	CornerDownLeft,
 	FileText,
 	Folder,
+	Globe,
 	Hash,
+	Headphones,
 	type LucideIcon,
-	Search
+	Mic,
+	Monitor,
+	Palette,
+	Search,
+	Smartphone,
+	Sparkles,
+	Timer,
+	User,
+	Volume2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
@@ -63,10 +75,111 @@ function scoreText(tokens: string[], text: string) {
 
 const GROUP_ORDER = [
 	'Разделы приложения',
+	'Настройки',
 	'Дыхание',
 	'Задачи',
 	'Листы архива',
 	'Темы и разделы архива'
+]
+
+const SETTINGS_ITEMS: {
+	id: string
+	title: string
+	path: string
+	keywords: string
+	icon: LucideIcon
+}[] = [
+	{
+		id: 'profile',
+		title: 'Профиль и имя',
+		path: 'Настройки · Имя и почта Google',
+		keywords: 'профиль имя аккаунт почта google email приветствие',
+		icon: User
+	},
+	{
+		id: 'timezone',
+		title: 'Часовой пояс',
+		path: 'Настройки · Время, календарь и сегодня',
+		keywords: 'часовой пояс время utc город дата пояс',
+		icon: Globe
+	},
+	{
+		id: 'background',
+		title: 'Фон приложения и архива',
+		path: 'Настройки · Подложка под разделами и в конспектах',
+		keywords: 'фон тема обои оформление подложка архив тёмный',
+		icon: Palette
+	},
+	{
+		id: 'feel',
+		title: 'Переходы между разделами',
+		path: 'Настройки · Ощущения и плавность анимации',
+		keywords: 'переходы анимация плавность ощущения мягко плавно',
+		icon: Sparkles
+	},
+	{
+		id: 'feel',
+		title: 'Фоновая музыка и громкость',
+		path: 'Настройки · Лоу-фай, джаз, фортепиано, дождь, лес, космос, камин',
+		keywords:
+			'фоновая музыка звук громкость плеер лоу-фай lofi джаз фортепиано пианино эмбиент дождь лес космос камин трек',
+		icon: Headphones
+	},
+	{
+		id: 'feel',
+		title: 'Вибрация (телефон)',
+		path: 'Настройки · Тактильный отклик при нажатиях',
+		keywords: 'вибрация телефон отклик нажатия чек-листы haptics',
+		icon: Smartphone
+	},
+	{
+		id: 'speech',
+		title: 'Озвучка и нейроголос',
+		path: 'Настройки · Supertonic 3, системный голос, скорость и дыхание',
+		keywords:
+			'озвучка голос чтение вслух нейросеть нейроголос supertonic скорость высота голоса подсказки в дыхании',
+		icon: Volume2
+	},
+	{
+		id: 'transcription',
+		title: 'Расшифровка аудио (Whisper)',
+		path: 'Настройки · Перевод голосовых и аудио в текст',
+		keywords:
+			'расшифровка аудио голосовые в текст нейросеть whisper транскрибация микрофон запись',
+		icon: Mic
+	},
+	{
+		id: 'notifications',
+		title: 'Уведомления и напоминания',
+		path: 'Настройки · Push-уведомления на ПК и телефоне',
+		keywords:
+			'уведомления пуш push напоминания задачи windows android телефон проверить',
+		icon: Bell
+	},
+	{
+		id: 'ai-prompt',
+		title: 'Конспекты из нейросети (промпт ИИ)',
+		path: 'Настройки · Шаблон промпта для ChatGPT, формул и диаграмм',
+		keywords:
+			'конспекты из нейросети промпт ии chatgpt формулы графики диаграммы шаблон скопировать',
+		icon: Bot
+	},
+	{
+		id: 'desktop',
+		title: 'Приложение на компьютере (трей и автозапуск)',
+		path: 'Настройки · Сворачивание в трей и запуск с Windows',
+		keywords:
+			'приложение на компьютере трей автозапуск пк windows сворачивать',
+		icon: Monitor
+	},
+	{
+		id: 'pomodoro',
+		title: 'Настройки Pomodoro',
+		path: 'Настройки · Длительность работы, перерывов и число раундов',
+		keywords:
+			'помодоро pomodoro таймер работа перерыв раунды интервал длительность сессия',
+		icon: Timer
+	}
 ]
 
 export function CommandPalette() {
@@ -140,6 +253,23 @@ export function CommandPalette() {
 		if (!tokens.length) return menu
 
 		const out: IResult[] = menu.filter(item => item.score)
+
+		for (const item of SETTINGS_ITEMS) {
+			const score = scoreText(
+				tokens,
+				`${item.title} ${item.path} ${item.keywords} настройки`
+			)
+			if (score)
+				out.push({
+					key: `setting:${item.id}:${item.title}`,
+					group: 'Настройки',
+					icon: item.icon,
+					title: item.title,
+					path: item.path,
+					href: `${DASHBOARD_PAGES.SETTINGS}#${item.id}`,
+					score: score * 2
+				})
+		}
 
 		for (const protocol of PROTOCOLS) {
 			const score = scoreText(
@@ -264,6 +394,11 @@ export function CommandPalette() {
 					() => window.dispatchEvent(new Event('planner:flash-task')),
 					120
 				)
+			if (result.href.startsWith(`${DASHBOARD_PAGES.SETTINGS}#`))
+				setTimeout(
+					() => window.dispatchEvent(new Event('planner:flash-setting')),
+					120
+				)
 		}
 		// Закрываясь, поиск убирает свою запись из истории шагом «назад» —
 		// он отменил бы переход, поэтому переходим, когда этот шаг завершится
@@ -318,7 +453,7 @@ export function CommandPalette() {
 								setOpen(false)
 							}
 						}}
-						placeholder='Листы, задачи, разделы…'
+						placeholder='Листы, задачи, настройки, разделы…'
 						className='h-14 min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-subtle'
 					/>
 					<kbd className='key-hint hidden border border-border px-1.5 py-0.5 font-mono text-2xs text-subtle sm:block'>

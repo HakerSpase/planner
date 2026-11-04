@@ -59,16 +59,32 @@ export function MoodScale({ value, onChange, size = 'md' }: IMoodScale) {
 					)
 				})}
 			</div>
-			<div className='min-w-0 leading-tight'>
-				<p
-					className='text-sm font-medium'
-					style={{ color: selected?.color }}
+			<div className='inline-grid shrink-0 whitespace-nowrap leading-tight'>
+				{/* Невидимая распорка по самой длинной подписи — чтобы ширина виджета и положение столбиков не прыгали */}
+				<div
+					aria-hidden
+					className='invisible col-start-1 row-start-1 select-none pointer-events-none'
 				>
-					{selected ? selected.label : <span className='text-subtle'>Настроение</span>}
-				</p>
-				<p className='font-mono text-2xs uppercase tracking-wider text-subtle'>
-					{selected ? `${selected.value} из 5` : 'хуже ← → лучше'}
-				</p>
+					<p className='text-sm font-medium'>Настроение</p>
+					<p className='font-mono text-2xs uppercase tracking-wider'>
+						хуже ← → лучше
+					</p>
+				</div>
+				<div className='col-start-1 row-start-1'>
+					<p
+						className='text-sm font-medium'
+						style={{ color: selected?.color }}
+					>
+						{selected ? (
+							selected.label
+						) : (
+							<span className='text-subtle'>Настроение</span>
+						)}
+					</p>
+					<p className='font-mono text-2xs uppercase tracking-wider text-subtle'>
+						{selected ? `${selected.value} из 5` : 'хуже ← → лучше'}
+					</p>
+				</div>
 			</div>
 		</div>
 	)

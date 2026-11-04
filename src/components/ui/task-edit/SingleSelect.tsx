@@ -32,7 +32,7 @@ export function SingleSelect({
 
 	// Меню рисуем в портале с fixed-позицией: контейнеры с overflow (доска задач) его не обрезают.
 	// Если снизу мало места — открываем вверх.
-	const open = () => {
+	const updatePosition = () => {
 		const rect = ref.current?.getBoundingClientRect()
 		if (!rect) return
 		const height = Math.min(240, data.length * 40 + 10)
@@ -45,6 +45,10 @@ export function SingleSelect({
 				? { bottom: window.innerHeight - rect.top + 4 }
 				: { top: rect.bottom + 4 })
 		})
+	}
+
+	const open = () => {
+		updatePosition()
 		setIsShow(true)
 	}
 
@@ -55,13 +59,19 @@ export function SingleSelect({
 			if (!ref.current?.contains(target) && !menuRef.current?.contains(target))
 				setIsShow(false)
 		}
+		const onScroll = (event: Event) => {
+			const target = event.target as Node | null
+			// Прокрутка внутри самого выпадающего списка цветов не должна закрывать его
+			if (target && menuRef.current?.contains(target)) return
+			updatePosition()
+		}
 		const close = () => setIsShow(false)
 		document.addEventListener('pointerdown', onPointerDown)
-		window.addEventListener('scroll', close, true)
+		window.addEventListener('scroll', onScroll, true)
 		window.addEventListener('resize', close)
 		return () => {
 			document.removeEventListener('pointerdown', onPointerDown)
-			window.removeEventListener('scroll', close, true)
+			window.removeEventListener('scroll', onScroll, true)
 			window.removeEventListener('resize', close)
 		}
 	}, [isShow])

@@ -185,7 +185,10 @@ export function FeelSettings() {
 				</div>
 			</Row>
 
-			<Row title='Вибрация (телефон)'>
+			<Row
+				id='haptics'
+				title='Вибрация (телефон)'
+			>
 				<Segmented<TypeHapticLevel>
 					value={preferences.haptics}
 					onChange={haptics => {
