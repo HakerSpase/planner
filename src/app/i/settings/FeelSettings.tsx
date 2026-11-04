@@ -109,9 +109,20 @@ function Toggle({
 	)
 }
 
-function Row({ title, children }: { title: string; children: ReactNode }) {
+function Row({
+	id,
+	title,
+	children
+}: {
+	id?: string
+	title: string
+	children: ReactNode
+}) {
 	return (
-		<div className='border-b border-border py-4 first:pt-0 last:border-b-0 last:pb-0'>
+		<div
+			id={id}
+			className='scroll-mt-20 border-b border-border py-4 first:pt-0 last:border-b-0 last:pb-0'
+		>
 			<p className='eyebrow mb-3'>{title}</p>
 			{children}
 		</div>
@@ -124,7 +135,10 @@ export function FeelSettings() {
 
 	return (
 		<div>
-			<Row title='Переходы между разделами'>
+			<Row
+				id='transitions'
+				title='Переходы между разделами'
+			>
 				<Segmented<TypeTransition>
 					value={preferences.transition}
 					onChange={transition => setPreferences({ transition })}
@@ -136,7 +150,10 @@ export function FeelSettings() {
 				/>
 			</Row>
 
-			<Row title='Фоновая музыка'>
+			<Row
+				id='music'
+				title='Фоновая музыка'
+			>
 				<Toggle
 					checked={preferences.music}
 					onChange={music => setPreferences({ music })}
