@@ -148,3 +148,7 @@ grant execute on function public.get_shared_bundle_pages(text, uuid[]) to anon, 
 grant execute on function public.get_shared_page_allow_copy(text) to anon, authenticated;
 grant execute on function public.get_page_share_allow_copy(uuid) to authenticated;
 grant execute on function public.set_page_share_allow_copy(uuid, boolean) to authenticated;
+
+-- Настройки своей ссылки — только после входа
+revoke execute on function public.get_page_share_allow_copy(uuid) from anon;
+revoke execute on function public.set_page_share_allow_copy(uuid, boolean) from anon;
