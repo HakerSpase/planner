@@ -236,22 +236,22 @@ export function LibraryTabBar({
 	)
 }
 
-/** Панели занимают всю высоту окна под вкладками; прокручивается каждая сама */
-export function useFillHeight() {
+/** Панели занимают всё окно ниже вкладок; прокручивается каждая сама */
+export function useFillHeight(active: boolean) {
 	const ref = useRef<HTMLDivElement>(null)
 	const [height, setHeight] = useState<number>()
 	useEffect(() => {
+		const element = ref.current
+		if (!active || !element) return
+		const scroller = element.closest<HTMLElement>('main')
 		const update = () => {
-			const element = ref.current
-			if (!element) return
-			const scroller = element.closest<HTMLElement>('main')
-			const tabs = 40
-			const top = scroller?.getBoundingClientRect().top ?? 0
-			setHeight(window.innerHeight - top - tabs - 12)
+			// Страница за панелями не прокручивается: иначе низ панели уезжает за окно
+			if (scroller) scroller.scrollTop = 0
+			setHeight(window.innerHeight - element.getBoundingClientRect().top)
 		}
 		update()
 		window.addEventListener('resize', update)
 		return () => window.removeEventListener('resize', update)
-	}, [])
+	}, [active])
 	return { ref, height }
 }

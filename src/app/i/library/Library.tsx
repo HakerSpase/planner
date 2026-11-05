@@ -446,8 +446,8 @@ export function Library() {
 	// Несохранённые правки в панели: уйти можно только через вопрос (регистрирует сам лист)
 	const leftGuard = useRef<(action: () => void) => void>()
 	const rightGuard = useRef<(action: () => void) => void>()
-	const { ref: panesRef, height: panesHeight } = useFillHeight()
 	const showSplit = canSplit && Boolean(split) && Boolean(pageId && topic)
+	const { ref: panesRef, height: panesHeight } = useFillHeight(showSplit)
 	const rightId = showSplit ? split : null
 
 	const navigate = useCallback(
@@ -731,13 +731,13 @@ export function Library() {
 					<div
 						ref={panesRef}
 						style={{ height: panesHeight }}
-						className='-mx-4 grid grid-cols-2 divide-x divide-border sm:-mx-6 lg:-mx-8 xl:-mx-10 print:block'
+						className='-mx-4 -mb-16 grid grid-cols-2 divide-x divide-border sm:-mx-6 lg:-mx-8 xl:-mx-10 print:block'
 					>
 						<div
 							data-scroll-root
 							onMouseDownCapture={() => setFocusedRight(false)}
 							onFocusCapture={() => setFocusedRight(false)}
-							className='min-h-0 min-w-0 overflow-y-auto overscroll-contain px-5'
+							className='min-h-0 min-w-0 overflow-y-auto px-5'
 						>
 							{leftPage}
 						</div>
@@ -745,7 +745,7 @@ export function Library() {
 							data-scroll-root
 							onMouseDownCapture={() => setFocusedRight(true)}
 							onFocusCapture={() => setFocusedRight(true)}
-							className='min-h-0 min-w-0 overflow-y-auto overscroll-contain px-5 print:hidden'
+							className='min-h-0 min-w-0 overflow-y-auto px-5 print:hidden'
 						>
 							{rightTab && rightTopic ? (
 								<PageView
