@@ -17,10 +17,17 @@
 <body>
   <main>
     <div class="dot"></div>
-    <h1>Нет подключения</h1>
-    <p>Planner откроется, как только появится интернет.</p>
-    <button onclick="location.href='https://mplanner-dun.vercel.app/i'">Повторить</button>
+    <h1>Нет связи с сервером</h1>
+    <p>Проверьте интернет. Если сеть есть, сервер может быть недоступен у вашего провайдера — тогда поможет другая сеть.</p>
+    <button onclick="location.href='https://mplanner-dun.vercel.app/i'">Обновить</button>
   </main>
-  <script>addEventListener('online', function () { location.href = 'https://mplanner-dun.vercel.app/i' })</script>
+  <script>
+    var url = 'https://mplanner-dun.vercel.app/i'
+    addEventListener('online', function () { location.href = url })
+    // Связь вернулась — открываемся сами
+    setInterval(function () {
+      fetch(url, { mode: 'no-cors', cache: 'no-store' }).then(function () { location.href = url }).catch(function () {})
+    }, 6000)
+  </script>
 </body>
 </html>

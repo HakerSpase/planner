@@ -1225,3 +1225,51 @@ body {
 		display: none !important;
 	}
 }
+
+/* Ползунок громкости в панели музыки: заполненная часть — цветом, кружок-ручка */
+.music-volume {
+	appearance: none;
+	height: 18px;
+	background: transparent;
+	cursor: pointer;
+
+	&::-webkit-slider-runnable-track {
+		height: 4px;
+		border-radius: 999px;
+		background: linear-gradient(
+			to right,
+			rgb(var(--primary)) var(--value),
+			rgba(255, 255, 255, 0.14) var(--value)
+		);
+	}
+
+	&::-webkit-slider-thumb {
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		margin-top: -5px;
+		border-radius: 999px;
+		background: #fff;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+	}
+
+	&::-moz-range-track {
+		height: 4px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.14);
+	}
+
+	&::-moz-range-progress {
+		height: 4px;
+		border-radius: 999px;
+		background: rgb(var(--primary));
+	}
+
+	&::-moz-range-thumb {
+		width: 14px;
+		height: 14px;
+		border: 0;
+		border-radius: 999px;
+		background: #fff;
+	}
+}

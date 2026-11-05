@@ -3,7 +3,8 @@ import { useEffect, useRef } from 'react'
 import { type ITaskResponse } from '@/types/task.types'
 
 import { nativePlugin } from './native'
-import { SUPABASE_KEY, SUPABASE_URL, createClient } from './supabase/client'
+import { SUPABASE_KEY, createClient } from './supabase/client'
+import { supabaseBaseUrl } from './supabase/connection'
 import { flashcardsService, isDue } from '@/services/flashcards.service'
 
 /*
@@ -207,7 +208,7 @@ export function useWidgetSync(tasks: ITaskResponse[] | undefined) {
 				if (error || !data) return
 				await widget.setAuth({
 					token: data,
-					url: SUPABASE_URL,
+					url: supabaseBaseUrl(),
 					key: SUPABASE_KEY
 				})
 			})

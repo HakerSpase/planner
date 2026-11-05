@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { PropsWithChildren, useState } from 'react'
+import { PropsWithChildren, useEffect, useState } from 'react'
 
 export function Providers({ children }: PropsWithChildren) {
 	const [client] = useState(
@@ -21,6 +21,12 @@ export function Providers({ children }: PropsWithChildren) {
 			}
 		})
 	)
+
+	// Приложение ожило — запасной экран из layout больше не нужен
+	useEffect(() => {
+		;(window as any).__plannerBooted = true
+		document.getElementById('boot-fallback')?.remove()
+	}, [])
 
 	return (
 		<QueryClientProvider client={client}>

@@ -43,7 +43,14 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import {
+	type MutableRefObject,
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState
+} from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 
@@ -71,8 +78,18 @@ import {
 	type ILibraryTopic,
 	libraryService,
 	newLibraryId,
+	describeContents,
 	toExcerpt
 } from '@/services/library.service'
+
+import {
+	EMPTY_PANE,
+	type ILibraryTab,
+	LibraryTabBar,
+	useCanSplit,
+	useFillHeight,
+	useLibraryTabs
+} from './LibraryTabs'
 
 const LibraryGraph = dynamic(
 	() => import('./LibraryGraph').then(mod => mod.LibraryGraph),
@@ -105,6 +122,9 @@ const RichEditor = dynamic(
 const TREE_KEY = ['library', 'tree']
 const pagesKey = (topicId: string) => ['library', 'pages', topicId]
 const pageKey = (pageId: string) => ['library', 'page', pageId]
+
+// Где остановились в каждом листе — для возврата на вкладку
+const scrollPositions = new Map<string, number>()
 
 type TypeTree = { sections: ILibrarySection[]; topics: ILibraryTopic[] }
 
@@ -391,6 +411,25 @@ export function Library() {
 	const [unpinTarget, setUnpinTarget] = useState<TypeUnpinTarget | null>(null)
 	const actions = useTreeActions()
 
+	const tabsState = useLibraryTabs()
+	const {
+		tabs,
+		split,
+		loaded: tabsLoaded,
+		open: openTab,
+		remove: removeTabs,
+		setSplit,
+		setTitle: setTabTitle
+	} = tabsState
+	const canSplit = useCanSplit()
+	const [focusedRight, setFocusedRight] = useState(false)
+	// Несохранённые правки в панели: уйти можно только через вопрос (регистрирует сам лист)
+	const leftGuard = useRef<(action: () => void) => void>()
+	const rightGuard = useRef<(action: () => void) => void>()
+	const { ref: panesRef, height: panesHeight } = useFillHeight()
+	const showSplit = canSplit && Boolean(split) && Boolean(pageId && topic)
+	const rightId = showSplit ? split : null
+
 	const navigate = useCallback(
 		(next: {
 			topic?: string | null
@@ -412,6 +451,136 @@ export function Library() {
 	const refreshTree = () =>
 		queryClient.invalidateQueries({ queryKey: TREE_KEY })
 
+	// Открыли лист — у него появляется вкладка
+	useEffect(() => {
+		if (tabsLoaded && pageId && topicId) openTab(pageId, topicId)
+	}, [tabsLoaded, pageId, topicId, openTab])
+
+	// Тему удалили (в том числе на другом устройстве) — её вкладки больше некуда вести
+	useEffect(() => {
+		if (!tree || !tabsLoaded) return
+		const gone = tabs
+			.filter(tab => !tree.topics.some(item => item.id === tab.topicId))
+			.map(tab => tab.pageId)
+		if (gone.length) removeTabs(gone)
+	}, [tree, tabs, tabsLoaded, removeTabs])
+
+	const rightTab = tabs.find(tab => tab.pageId === split)
+	const rightTopic = topics.find(item => item.id === rightTab?.topicId)
+
+	useEffect(() => {
+		if (!showSplit) setFocusedRight(false)
+	}, [showSplit])
+
+	/** Лист — в правую панель. Он уже открыт слева — панели не дублируем */
+	const openBeside = (id: string, topic: string) => {
+		openTab(id, topic)
+		if (id === pageId) return
+		const apply = () => {
+			setSplit(id)
+			setFocusedRight(true)
+		}
+		if (rightId && rightId !== EMPTY_PANE && rightGuard.current)
+			rightGuard.current(apply)
+		else apply()
+	}
+
+	const selectTab = (tab: ILibraryTab) => {
+		if (tab.pageId === pageId) {
+			setFocusedRight(false)
+			return
+		}
+		if (tab.pageId === rightId) {
+			setFocusedRight(true)
+			return
+		}
+		if (showSplit && focusedRight) {
+			openBeside(tab.pageId, tab.topicId)
+			return
+		}
+		const go = () => navigate({ topic: tab.topicId, page: tab.pageId })
+		if (pageId && leftGuard.current) leftGuard.current(go)
+		else go()
+	}
+
+	const closeTab = (tab: ILibraryTab) => {
+		if (tab.pageId === rightId) {
+			const close = () => {
+				removeTabs([tab.pageId])
+				setFocusedRight(false)
+			}
+			if (rightGuard.current) rightGuard.current(close)
+			else close()
+			return
+		}
+		if (tab.pageId !== pageId) {
+			removeTabs([tab.pageId])
+			return
+		}
+		// Закрываем открытый лист — переходим на соседнюю вкладку или к его теме
+		const close = () => {
+			const index = tabs.findIndex(item => item.pageId === tab.pageId)
+			const rest = tabs.filter(
+				item => item.pageId !== tab.pageId && item.pageId !== rightId
+			)
+			const next = rest[Math.min(index, rest.length - 1)]
+			removeTabs([tab.pageId])
+			navigate(
+				next
+					? { topic: next.topicId, page: next.pageId }
+					: { topic: tab.topicId }
+			)
+		}
+		if (leftGuard.current) leftGuard.current(close)
+		else close()
+	}
+
+	const closeAllTabs = () => {
+		const close = () => {
+			const current = tabs.find(tab => tab.pageId === pageId)
+			removeTabs(tabs.map(tab => tab.pageId))
+			setSplit(null)
+			if (current) navigate({ topic: current.topicId })
+		}
+		const askRight = () =>
+			rightId && rightId !== EMPTY_PANE && rightGuard.current
+				? rightGuard.current(close)
+				: close()
+		if (pageId && leftGuard.current) leftGuard.current(askRight)
+		else askRight()
+	}
+
+	const toggleSplit = () => {
+		if (rightId) {
+			const close = () => {
+				setSplit(null)
+				setFocusedRight(false)
+			}
+			if (rightId !== EMPTY_PANE && rightGuard.current) rightGuard.current(close)
+			else close()
+			return
+		}
+		if (!pageId) return
+		const other = [...tabs].reverse().find(tab => tab.pageId !== pageId)
+		setSplit(other?.pageId ?? EMPTY_PANE)
+		setFocusedRight(true)
+	}
+
+	const tabBar = tabs.length > 0 && (
+		<LibraryTabBar
+			tabs={tabs}
+			activeId={pageId}
+			rightId={rightId === EMPTY_PANE ? null : rightId}
+			focusedRight={focusedRight}
+			canSplit={canSplit && Boolean(pageId)}
+			onSelect={selectTab}
+			onClose={closeTab}
+			onCloseAll={closeAllTabs}
+			onOpenBeside={tab => openBeside(tab.pageId, tab.topicId)}
+			onToggleSplit={toggleSplit}
+		/>
+	)
+
 	// Файл догрузился в закрытый лист — сбрасываем кэш, чтобы открыть уже с ним
 	useEffect(() => {
 		const onPatched = (event: Event) => {
@@ -431,7 +600,8 @@ export function Library() {
 			await libraryService.remove(deleteTarget.table, deleteTarget.id)
 			if (deleteTarget.table === 'library_page') {
 				queryClient.invalidateQueries({ queryKey: ['library', 'pages'] })
-				navigate({ topic: topicId })
+				removeTabs([deleteTarget.id])
+				if (deleteTarget.id === pageId) navigate({ topic: topicId })
 			} else {
 				await refreshTree()
 				if (
@@ -506,19 +676,84 @@ export function Library() {
 
 	// Открытый лист — как отдельная страница, без дерева и рамок
 	if (pageId && topic) {
+		const leftPage = (
+			<PageView
+				key={pageId}
+				pageId={pageId}
+				topic={topic}
+				section={section}
+				compact={showSplit}
+				withTabs={tabs.length > 0}
+				guardRef={leftGuard}
+				onTitle={setTabTitle}
+				onBack={() => navigate({ topic: topic.id })}
+				onOpenRoot={() => navigate({})}
+				onOpenSection={id => navigate({ section: id })}
+				onOpenPage={(topic, page) => navigate({ topic, page })}
+				onDelete={setDeleteTarget}
+			/>
+		)
 		return (
 			<>
-				<PageView
-					key={pageId}
-					pageId={pageId}
-					topic={topic}
-					section={section}
-					onBack={() => navigate({ topic: topic.id })}
-					onOpenRoot={() => navigate({})}
-					onOpenSection={id => navigate({ section: id })}
-					onOpenPage={(topic, page) => navigate({ topic, page })}
-					onDelete={setDeleteTarget}
-				/>
+				{tabBar}
+				{showSplit ? (
+					<div
+						ref={panesRef}
+						style={{ height: panesHeight }}
+						className='-mx-4 grid grid-cols-2 divide-x divide-border sm:-mx-6 lg:-mx-8 xl:-mx-10 print:block'
+					>
+						<div
+							data-scroll-root
+							onMouseDownCapture={() => setFocusedRight(false)}
+							onFocusCapture={() => setFocusedRight(false)}
+							className='min-h-0 min-w-0 overflow-y-auto overscroll-contain px-5'
+						>
+							{leftPage}
+						</div>
+						<div
+							data-scroll-root
+							onMouseDownCapture={() => setFocusedRight(true)}
+							onFocusCapture={() => setFocusedRight(true)}
+							className='min-h-0 min-w-0 overflow-y-auto overscroll-contain px-5 print:hidden'
+						>
+							{rightTab && rightTopic ? (
+								<PageView
+									key={rightTab.pageId}
+									pageId={rightTab.pageId}
+									topic={rightTopic}
+									section={sections.find(
+										item => item.id === rightTopic.section_id
+									)}
+									compact
+									withTabs
+									guardRef={rightGuard}
+									onTitle={setTabTitle}
+									onBack={() => {
+										setSplit(null)
+										setFocusedRight(false)
+									}}
+									onOpenRoot={() => navigate({})}
+									onOpenSection={id => navigate({ section: id })}
+									onOpenPage={(topic, page) => openBeside(page, topic)}
+									onDelete={setDeleteTarget}
+								/>
+							) : (
+								<SplitPicker
+									tabs={tabs.filter(tab => tab.pageId !== pageId)}
+									sections={sections}
+									topics={topics}
+									onPick={(topic, page) => openBeside(page, topic)}
+									onClose={() => {
+										setSplit(null)
+										setFocusedRight(false)
+									}}
+								/>
+							)}
+						</div>
+					</div>
+				) : (
+					leftPage
+				)}
 				{deleteDialog}
 				{unpinDialog}
 			</>
@@ -527,6 +762,7 @@ export function Library() {
 
 	return (
 		<div>
+			{tabBar}
 			<Heading
 				title='Архив'
 				description='Разделы, темы и конспекты — с формулами, таблицами и файлами'
@@ -637,6 +873,66 @@ export function Library() {
 			)}
 			{deleteDialog}
 			{unpinDialog}
+		</div>
+	)
+}
+
+/** Вторая панель, пока в ней нет листа: открытые вкладки и поиск по архиву */
+function SplitPicker({
+	tabs,
+	sections,
+	topics,
+	onPick,
+	onClose
+}: {
+	tabs: ILibraryTab[]
+	sections: ILibrarySection[]
+	topics: ILibraryTopic[]
+	onPick: (topicId: string, pageId: string) => void
+	onClose: () => void
+}) {
+	return (
+		<div className='mx-auto max-w-md py-10'>
+			<div className='flex items-center justify-between gap-3'>
+				<h2 className='text-base font-semibold text-fg'>Что открыть рядом?</h2>
+				<button
+					type='button'
+					onClick={onClose}
+					className='text-sm text-subtle transition-colors hover:text-fg'
+				>
+					Закрыть панель
+				</button>
+			</div>
+			<div className='mt-4'>
+				<LibrarySearch
+					sections={sections}
+					topics={topics}
+					onOpenPage={onPick}
+					onOpenTopic={() => {}}
+					onOpenSection={() => {}}
+				/>
+			</div>
+			{tabs.length > 0 && (
+				<>
+					<p className='eyebrow mb-2 mt-6'>Открытые вкладки</p>
+					<ul className='border border-border'>
+						{tabs.map(tab => (
+							<li
+								key={tab.pageId}
+								className='border-b border-border last:border-b-0'
+							>
+								<button
+									type='button'
+									onClick={() => onPick(tab.topicId, tab.pageId)}
+									className='w-full truncate px-3 py-2.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.04] hover:text-fg'
+								>
+									{tab.title || 'Без названия'}
+								</button>
+							</li>
+						))}
+					</ul>
+				</>
+			)}
 		</div>
 	)
 }
@@ -1376,7 +1672,8 @@ function TopicView({
 			order,
 			is_pinned: false,
 			updated_at: new Date().toISOString(),
-			excerpt: ''
+			excerpt: '',
+			contents: ''
 		}
 		queryClient.setQueryData(pageKey(id), page)
 		queryClient.setQueryData<ILibraryPageMeta[]>(pagesKey(topic.id), old =>
@@ -1607,7 +1904,11 @@ function PageCard({
 						)}
 					</span>
 					<span className='mt-1 line-clamp-2 text-sm leading-6 text-subtle sm:line-clamp-3'>
-						{page.excerpt ? <MathExcerpt text={page.excerpt} /> : 'Пустой лист'}
+						{page.excerpt ? (
+							<MathExcerpt text={page.excerpt} />
+						) : (
+							page.contents || 'Пустой лист'
+						)}
 					</span>
 				</span>
 				<span className='col-start-2 mt-2 font-mono text-2xs uppercase tracking-wider text-subtle sm:col-start-3 sm:mt-1.5'>
@@ -1719,11 +2020,21 @@ function PageView({
 	onOpenRoot,
 	onOpenSection,
 	onOpenPage,
-	onDelete
+	onDelete,
+	compact = false,
+	withTabs = false,
+	guardRef,
+	onTitle
 }: {
 	pageId: string
 	topic: ILibraryTopic
 	section?: ILibrarySection
+	/** В панели рядом с другим листом: узкая шапка, без оглавления сбоку */
+	compact?: boolean
+	/** Над листом закреплены вкладки — шапка прилипает под ними */
+	withTabs?: boolean
+	guardRef?: MutableRefObject<((action: () => void) => void) | undefined>
+	onTitle?: (pageId: string, title: string) => void
 	onBack: () => void
 	onOpenRoot: () => void
 	onOpenSection: (id: string) => void
@@ -1801,7 +2112,8 @@ function PageView({
 									...item,
 									...(patch.title !== undefined && { title: patch.title }),
 									...(patch.content !== undefined && {
-										excerpt: toExcerpt(patch.content.slice(0, 1500))
+										excerpt: toExcerpt(patch.content.slice(0, 1500)),
+										contents: describeContents(patch.content)
 									}),
 									updated_at: saved.updated_at
 								}
@@ -1816,8 +2128,15 @@ function PageView({
 	}, [pageId, queryClient, topic.id, draftKey])
 
 	const schedule = (patch: { title?: string; content?: string }) => {
-		dirty.current = { ...dirty.current, ...patch }
-		setIsDirty(true)
+		const saved = queryClient.getQueryData<{ title: string; content: string }>(
+			pageKey(pageId)
+		)
+		const next: typeof dirty.current = { ...dirty.current, ...patch }
+		// Вернули как было — правок больше нет
+		if (saved && next.title === saved.title) delete next.title
+		if (saved && next.content === saved.content) delete next.content
+		dirty.current = next
+		setIsDirty(Object.keys(next).length > 0)
 		setStatus('idle')
 	}
 
@@ -1843,6 +2162,23 @@ function PageView({
 		if (Object.keys(dirty.current).length) setPendingLeave(() => action)
 		else action()
 	}
+
+	// Вкладки над листом уходят через тот же вопрос
+	useEffect(() => {
+		if (!guardRef) return
+		guardRef.current = (action: () => void) => {
+			if (Object.keys(dirty.current).length) setPendingLeave(() => action)
+			else action()
+		}
+		return () => {
+			guardRef.current = undefined
+		}
+	}, [guardRef])
+
+	// Название — на вкладку
+	useEffect(() => {
+		if (loaded.current) onTitle?.(pageId, title)
+	}, [pageId, title, onTitle])
 
 	// Ушли без ответа (жест «назад», закрытие) — правки не теряем: черновик в браузере
 	useEffect(
@@ -1907,6 +2243,36 @@ function PageView({
 	})
 	const [shareOpen, setShareOpen] = useState(false)
 	const [isFocus, setIsFocus] = useState(false)
+
+	// Вернулись на вкладку — на то же место листа
+	const hasPage = Boolean(page)
+	useEffect(() => {
+		if (!hasPage) return
+		const scroller = articleRef.current?.closest<HTMLElement>(
+			'[data-scroll-root], main'
+		)
+		if (!scroller) return
+		const saved = scrollPositions.get(pageId) ?? 0
+		const restore = () => {
+			scroller.scrollTop = saved
+		}
+		restore()
+		// Текст дорисовывается не сразу — длинному листу нужна ещё попытка
+		const timers = [120, 400].map(delay => setTimeout(restore, delay))
+		// Человек сам начал листать — больше не возвращаем
+		const stopRestoring = () => timers.forEach(clearTimeout)
+		const remember = () => scrollPositions.set(pageId, scroller.scrollTop)
+		scroller.addEventListener('wheel', stopRestoring, { passive: true })
+		scroller.addEventListener('touchstart', stopRestoring, { passive: true })
+		scroller.addEventListener('scroll', remember, { passive: true })
+		return () => {
+			stopRestoring()
+			scroller.removeEventListener('wheel', stopRestoring)
+			scroller.removeEventListener('touchstart', stopRestoring)
+			scroller.removeEventListener('scroll', remember)
+		}
+	}, [hasPage, pageId])
+
 	const headings = useHeadings(
 		articleRef,
 		`${isEditing}:${Boolean(page)}:${isFocus}`
@@ -1954,10 +2320,15 @@ function PageView({
 		>
 			<header
 				className={cn(
-					'sticky z-20 -mx-4 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg px-4 print:hidden sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10',
-					isFocus
+					'sticky z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-bg print:hidden',
+					compact
+						? '-mx-5 px-5'
+						: '-mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10',
+					isFocus || compact
 						? 'top-0'
-						: 'top-[calc(-1*max(0.5rem,env(safe-area-inset-top)))] lg:-top-3'
+						: withTabs
+							? 'top-[calc(2.5rem-max(0.5rem,env(safe-area-inset-top)))] lg:top-7'
+							: 'top-[calc(-1*max(0.5rem,env(safe-area-inset-top)))] lg:-top-3'
 				)}
 			>
 				<ReadingProgress anchorRef={articleRef} />
@@ -1976,23 +2347,25 @@ function PageView({
 						size={15}
 						className='shrink-0'
 					/>
-					<span className='max-w-[40vw] truncate'>{topic.title}</span>
+					<span className='max-w-[26vw] truncate'>{topic.title}</span>
 				</button>
 				<nav
 					aria-label='Путь'
 					className='hidden min-w-0 items-center gap-2 text-sm text-subtle sm:flex'
 				>
-					<button
-						type='button'
-						onClick={async () => {
-							if (isFocus) exitFocus()
-							leave(onOpenRoot)
-						}}
-						className='shrink-0 transition-colors hover:text-fg'
-					>
-						Архив
-					</button>
-					{section && (
+					{!compact && (
+						<button
+							type='button'
+							onClick={async () => {
+								if (isFocus) exitFocus()
+								leave(onOpenRoot)
+							}}
+							className='shrink-0 transition-colors hover:text-fg'
+						>
+							Архив
+						</button>
+					)}
+					{section && !compact && (
 						<>
 							<span className='text-white/15'>/</span>
 							<button
@@ -2007,7 +2380,7 @@ function PageView({
 							</button>
 						</>
 					)}
-					<span className='text-white/15'>/</span>
+					{!compact && <span className='text-white/15'>/</span>}
 					<button
 						type='button'
 						onClick={async () => {
@@ -2020,7 +2393,12 @@ function PageView({
 					</button>
 				</nav>
 				<div className='flex shrink-0 items-center gap-2'>
-					<span className='hidden font-mono text-2xs uppercase tracking-wider text-subtle sm:inline'>
+					<span
+						className={cn(
+							'font-mono text-2xs uppercase tracking-wider text-subtle',
+							compact ? 'hidden 2xl:inline' : 'hidden sm:inline'
+						)}
+					>
 						{status === 'saving'
 							? 'Сохранение…'
 							: status === 'error'
@@ -2054,7 +2432,7 @@ function PageView({
 							Проверка
 						</button>
 					)}
-					{headings.length > 1 && (
+					{headings.length > 1 && !compact && (
 						<button
 							type='button'
 							onClick={() => setShowOutline(value => !value)}
@@ -2079,17 +2457,19 @@ function PageView({
 							setIsEditing(false)
 						}}
 						onOpenOutline={() => setOutlineOpen(true)}
-						showOutline={headings.length > 1 ? showOutline : undefined}
-						onToggleOutline={
-							headings.length > 1
-								? () => setShowOutline(value => !value)
+						showOutline={
+								headings.length > 1 && !compact ? showOutline : undefined
+							}
+							onToggleOutline={
+								headings.length > 1 && !compact
+									? () => setShowOutline(value => !value)
 								: undefined
 						}
 						onShare={() => setShareOpen(true)}
 						onSpeak={
 							isSpeechSupported()
 								? () => {
-										const content = document.querySelector(
+										const content = articleRef.current?.querySelector(
 											'.library-page .rich-editor-content'
 										)
 										const text = content ? speechFromNode(content) : ''
@@ -2111,8 +2491,12 @@ ${text}`,
 					<button
 						type='button'
 						onClick={async () => {
-							if (isDirty) await flush()
-							setIsEditing(isDirty ? false : !isEditing)
+							if (isDirty) {
+								await flush()
+								// Не сохранилось — остаёмся в правке, текст не теряем
+								if (Object.keys(dirty.current).length) return
+								setIsEditing(false)
+							} else setIsEditing(!isEditing)
 							setSelfCheck(false)
 						}}
 						title={isDirty ? 'Сохранить (Ctrl+S)' : undefined}
@@ -2155,6 +2539,7 @@ ${text}`,
 					'grid w-full grid-cols-[minmax(0,1fr)] gap-10 pb-24 pt-10 sm:pt-14',
 					headings.length > 1 &&
 						showOutline &&
+						!compact &&
 						'xl:grid-cols-[minmax(0,1fr)_13rem]'
 				)}
 			>
@@ -2252,7 +2637,7 @@ ${text}`,
 				</div>
 
 				{/* Оглавление сбоку — на широком экране, скрывается по желанию */}
-				{headings.length > 1 && showOutline && (
+				{headings.length > 1 && showOutline && !compact && (
 					<aside className='hidden print:hidden xl:block'>
 						<div className='sticky top-20 max-h-[calc(100dvh-7rem)] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
 							<p className='eyebrow mb-3'>Содержание</p>
@@ -2276,6 +2661,7 @@ ${text}`,
 			{shareOpen && (
 				<ShareDialog
 					pageId={pageId}
+					title={title}
 					onClose={() => setShareOpen(false)}
 				/>
 			)}

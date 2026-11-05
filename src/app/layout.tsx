@@ -49,6 +49,13 @@ export const viewport: Viewport = {
 	colorScheme: 'dark'
 }
 
+const BOOT_FALLBACK = `setTimeout(function(){
+if(window.__plannerBooted)return;
+var d=document.createElement('div');d.id='boot-fallback';
+d.style.cssText='position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#09090b;color:#e8e8ee;font:15px/1.6 system-ui,sans-serif;text-align:center;padding:24px';
+d.innerHTML='<div style="max-width:340px"><h1 style="font-size:20px;font-weight:600;margin:0 0 8px">Planner долго загружается</h1><p style="margin:0 0 20px;color:#9a9aa8">Похоже, неполадки с сетью. Проверьте интернет и обновите страницу.</p><button onclick="location.reload()" style="height:48px;width:100%;border:0;background:#7c5cff;color:#fff;font:inherit;font-weight:500;cursor:pointer">Обновить</button></div>';
+document.documentElement.appendChild(d)},15000)`
+
 export default function RootLayout({
 	children
 }: Readonly<{
@@ -60,6 +67,8 @@ export default function RootLayout({
 			className={`${sans.variable} ${mono.variable} ${display.variable}`}
 		>
 			<body className='font-sans'>
+				{/* Скрипты страницы не загрузились — вместо чёрного экрана кнопка «Обновить» */}
+				<script dangerouslySetInnerHTML={{ __html: BOOT_FALLBACK }} />
 				<Providers>
 					{children}
 

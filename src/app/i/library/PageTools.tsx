@@ -11,6 +11,7 @@ import {
 	ListTree,
 	MoreHorizontal,
 	Printer,
+	Share2,
 	Trash2,
 	Unlink,
 	X
@@ -24,6 +25,7 @@ import { normalizeTitle } from '@/components/editor/wiki-links'
 
 import { useBackClose } from '@/hooks/useBackClose'
 
+import { shareLink } from '@/lib/share'
 import { createClient } from '@/lib/supabase/client'
 import { libraryService, toExcerpt } from '@/services/library.service'
 
@@ -480,9 +482,11 @@ export function OutlineSheet({
 
 export function ShareDialog({
 	pageId,
+	title,
 	onClose
 }: {
 	pageId: string
+	title?: string
 	onClose: () => void
 }) {
 	useBackClose(true, onClose)
@@ -539,6 +543,15 @@ export function ShareDialog({
 		}
 	}
 
+	const share = async () => {
+		try {
+			const result = await shareLink({ title: title || 'Конспект', url })
+			if (result === 'copied') toast.success('Ссылка скопирована')
+		} catch {
+			toast.error('Не получилось поделиться')
+		}
+	}
+
 	if (typeof document === 'undefined') return null
 	return createPortal(
 		<div
@@ -584,7 +597,18 @@ export function ShareDialog({
 									className='flex h-10 shrink-0 items-center gap-1.5 bg-primary px-3 text-sm font-medium text-white hover:bg-primary-hover'
 								>
 									{copied ? <Check size={14} /> : <Copy size={14} />}
-									{copied ? 'Готово' : 'Копировать'}
+									<span className='sm-max:hidden'>
+										{copied ? 'Готово' : 'Копировать'}
+									</span>
+								</button>
+								<button
+									type='button'
+									onClick={share}
+									title='Поделиться'
+									aria-label='Поделиться'
+									className='grid h-10 w-11 shrink-0 place-items-center border-l border-white/20 bg-primary text-white hover:bg-primary-hover'
+								>
+									<Share2 size={15} />
 								</button>
 							</div>
 							<div className='mt-3 grid grid-cols-2 border border-border p-1'>

@@ -29,6 +29,8 @@ export interface ILibraryPageMeta {
 	is_pinned?: boolean
 	updated_at: string
 	excerpt: string
+	/** Что в листе, если текста нет: «PDF, презентация» */
+	contents: string
 }
 
 export interface ILibraryPage extends ILibraryPageMeta {
@@ -48,6 +50,50 @@ const FORMULA =
 	/\$\$([\s\S]+?)\$\$|\\\\\[([\s\S]+?)\\\\\]|\\\\\(([\s\S]+?)\\\\\)|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/g
 
 const unescapeMarkdown = (value: string) => value.replace(/\\([!-\/:-@\[-`{-~])/g, '$1')
+
+const FILE_KINDS: [RegExp, string][] = [
+	[/^pdf$/, 'PDF'],
+	[/^(ppt|pptx|odp|key)$/, 'презентация'],
+	[/^(doc|docx|rtf|odt)$/, 'документ'],
+	[/^(xls|xlsx|csv|ods)$/, 'таблица'],
+	[/^(txt|md)$/, 'текстовый файл'],
+	[/^(zip|rar|7z|tar|gz)$/, 'архив'],
+	[/^(png|jpe?g|gif|webp|svg|heic|bmp)$/, 'изображение'],
+	[/^(mp3|wav|ogg|m4a|aac|flac|opus)$/, 'аудио'],
+	[/^(mp4|mov|avi|mkv|webm)$/, 'видео']
+]
+
+function fileKind(tag: string) {
+	const name = /data-name="([^"]*)"/.exec(tag)?.[1] || ''
+	const mime = /data-mime="([^"]*)"/.exec(tag)?.[1] || ''
+	const extension = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() || ''
+	const known = FILE_KINDS.find(([pattern]) => pattern.test(extension))
+	if (known) return known[1]
+	if (mime === 'application/pdf') return 'PDF'
+	if (mime.startsWith('image/')) return 'изображение'
+	if (mime.startsWith('audio/')) return 'аудио'
+	if (mime.startsWith('video/')) return 'видео'
+	return extension ? extension.toUpperCase() : 'файл'
+}
+
+/** Подпись для листа без текста: что в нём лежит. Пустая строка — лист правда пуст */
+export function describeContents(markdown: string) {
+	if (!markdown.trim()) return ''
+	const counts = new Map<string, number>()
+	const add = (label: string) => counts.set(label, (counts.get(label) || 0) + 1)
+	for (const [tag] of Array.from(markdown.matchAll(/<div\s[^>]*data-planner-file\b[^>]*>/g)))
+		add(fileKind(tag))
+	for (const _ of Array.from(markdown.matchAll(/<div\s[^>]*data-planner-audio\b[^>]*>/g)))
+		add('голосовое')
+	for (const _ of Array.from(markdown.matchAll(/!\[[^\]]*]\([^)]*\)|<img\b/g)))
+		add('изображение')
+	for (const _ of Array.from(markdown.matchAll(/^```[\s\S]*?^```/gm))) add('схема или код')
+	const labels = Array.from(counts, ([label, count]) =>
+		count > 1 ? `${label} × ${count}` : label
+	).join(', ')
+	const text = labels || 'лист без текста'
+	return text[0].toUpperCase() + text.slice(1)
+}
 
 // Короткий текст для превью: без разметки и вложений. Формулы остаются как $…$ —
 // превью рисует их KaTeX'ом (MathExcerpt)
@@ -133,7 +179,7 @@ export const libraryService = {
 
 	async getPages(topicId: string): Promise<ILibraryPageMeta[]> {
 		// Контент целиком не тянем — только начало для превью
-		const rows = unwrap<(Omit<ILibraryPageMeta, 'excerpt'> & { content: string })[]>(
+		const rows = unwrap<(Omit<ILibraryPageMeta, 'excerpt' | 'contents'> & { content: string })[]>(
 			await db()
 				.from('library_page')
 				.select('id,topic_id,title,order,is_pinned,updated_at,content')
@@ -144,7 +190,8 @@ export const libraryService = {
 		)
 		return (rows || []).map(({ content, ...row }) => ({
 			...row,
-			excerpt: toExcerpt(content.slice(0, 1500))
+			excerpt: toExcerpt(content.slice(0, 1500)),
+			contents: describeContents(content)
 		}))
 	},
 
@@ -158,14 +205,18 @@ export const libraryService = {
 	},
 
 	async getPage(id: string): Promise<ILibraryPage> {
-		const row = unwrap<Omit<ILibraryPage, 'excerpt'>>(
+		const row = unwrap<Omit<ILibraryPage, 'excerpt' | 'contents'>>(
 			await db()
 				.from('library_page')
 				.select('id,topic_id,title,order,is_pinned,updated_at,content')
 				.eq('id', id)
 				.single()
 		)
-		return { ...row, excerpt: toExcerpt(row.content.slice(0, 1500)) }
+		return {
+			...row,
+			excerpt: toExcerpt(row.content.slice(0, 1500)),
+			contents: describeContents(row.content)
+		}
 	},
 
 	async createSection(id: string, title: string, order: number) {

@@ -44,13 +44,13 @@ const LAYOUTS: [TypeLayout, string, string][] = [
 	['web', 'Сеть', 'Всё вместе: разделы, темы, листы и ссылки'],
 	['links', 'Ссылки', 'Только листы и связи [[…]] между ними'],
 	['clusters', 'Кластеры', 'Листы собираются вокруг своих разделов'],
-	['tree', 'Дерево', 'Разделы → темы → листы по кругу']
+	['tree', 'Дерево', 'Разделы → темы → листы, по порядку слева направо']
 ]
 
 const SECTION_COLORS = ['#8b7bff', '#38bdf8', '#f472b6', '#4ade80', '#a3e635', '#fb7185', '#2dd4bf', '#c084fc']
 
 const radiusOf = (node: INode) =>
-	node.kind === 'section' ? 15 : node.kind === 'topic' ? 9 : 4 + Math.min(7, Math.sqrt(node.degree) * 1.8)
+	node.kind === 'section' ? 16 : node.kind === 'topic' ? 9 : 4 + Math.min(7, Math.sqrt(node.degree) * 1.8)
 
 const rgba = (hex: string, alpha: number) => {
 	const value = parseInt(hex.slice(1), 16)
@@ -194,49 +194,53 @@ export function LibraryGraph({
 		return map
 	}, [graph])
 
-	/* ---------- Раскладка «дерево»: круги разделов, тем и листов ---------- */
+	/* ---------- Раскладка «дерево»: слева направо, у каждого листа своя строка ---------- */
 
 	useEffect(() => {
 		if (layout !== 'tree') return
-		const sectionNodes = graph.nodes.filter(node => node.kind === 'section')
-		const leaves: INode[] = []
-		sectionNodes.forEach(section => {
-			graph.nodes
-				.filter(node => node.kind === 'topic' && graph.edges.some(edge => edge.source === node && edge.target === section))
-				.forEach(topic => {
-					const topicPages = graph.edges.filter(edge => edge.target === topic && edge.source.kind === 'page').map(edge => edge.source)
-					leaves.push(...(topicPages.length ? topicPages : [topic]))
+		const ROW = 34
+		const TOPIC_GAP = 14
+		const SECTION_GAP = 40
+		const COLUMNS: Record<TypeKind, number> = { section: 0, topic: 300, page: 640 }
+		let y = 0
+		const place = (node: INode, row: number) => {
+			node.tx = COLUMNS[node.kind]
+			node.ty = row
+		}
+		const childrenOf = (parent: INode) =>
+			graph.edges
+				.filter(edge => edge.kind === 'tree' && edge.target === parent)
+				.map(edge => edge.source)
+
+		graph.nodes
+			.filter(node => node.kind === 'section')
+			.forEach(section => {
+				const start = y
+				const sectionTopics = childrenOf(section)
+				sectionTopics.forEach(topic => {
+					const topicStart = y
+					const topicPages = childrenOf(topic)
+					topicPages.forEach(page => {
+						place(page, y)
+						y += ROW
+					})
+					if (!topicPages.length) y += ROW
+					place(topic, (topicStart + y - ROW) / 2)
+					y += TOPIC_GAP
 				})
-		})
-		const ringPages = Math.max(220, leaves.length * 9)
-		leaves.forEach((leaf, index) => {
-			const angle = (index / Math.max(1, leaves.length)) * Math.PI * 2
-			const r = leaf.kind === 'page' ? ringPages : ringPages * 0.62
-			leaf.tx = Math.cos(angle) * r
-			leaf.ty = Math.sin(angle) * r
-		})
-		// Темы и разделы — в середине «своих» листьев
-		const place = (kind: TypeKind, radius: number) =>
-			graph.nodes
-				.filter(node => node.kind === kind)
-				.forEach(node => {
-					const children = graph.edges.filter(edge => edge.target === node).map(edge => edge.source)
-					const placed = children.filter(child => child.tx !== undefined)
-					if (!placed.length) return
-					const angle = Math.atan2(
-						placed.reduce((sum, child) => sum + child.ty!, 0),
-						placed.reduce((sum, child) => sum + child.tx!, 0)
-					)
-					node.tx = Math.cos(angle) * radius
-					node.ty = Math.sin(angle) * radius
-				})
-		place('topic', ringPages * 0.62)
-		place('section', ringPages * 0.28)
+				if (!sectionTopics.length) y += ROW
+				place(section, (start + y - ROW - (sectionTopics.length ? TOPIC_GAP : 0)) / 2)
+				y += SECTION_GAP
+			})
+		// Листы без темы (её могли удалить) — отдельным столбиком внизу
 		graph.nodes.forEach(node => {
-			if (node.tx === undefined) {
-				node.tx = 0
-				node.ty = 0
-			}
+			if (node.tx !== undefined) return
+			place(node, y)
+			y += ROW
+		})
+		// По центру холста по вертикали
+		graph.nodes.forEach(node => {
+			node.ty = node.ty! - y / 2
 		})
 	}, [graph, layout])
 
@@ -367,8 +371,12 @@ export function LibraryGraph({
 			const dim = (focus && !active) || (queryKey && !(lit(source) || lit(target)))
 			ctx.beginPath()
 			ctx.moveTo(source.x, source.y)
-			if (kind === 'link' && stateRef.current.layout === 'tree') {
-				ctx.quadraticCurveTo(0, 0, target.x, target.y)
+			if (stateRef.current.layout === 'tree' && kind === 'tree') {
+				const middle = (source.x + target.x) / 2
+				ctx.bezierCurveTo(middle, source.y, middle, target.y, target.x, target.y)
+			} else if (kind === 'link' && stateRef.current.layout === 'tree') {
+				const bend = Math.max(source.x, target.x) + 90
+				ctx.bezierCurveTo(bend, source.y, bend, target.y, target.x, target.y)
 			} else ctx.lineTo(target.x, target.y)
 			ctx.strokeStyle =
 				kind === 'link'
@@ -390,34 +398,23 @@ export function LibraryGraph({
 				ctx.fillStyle = node === focus ? '#ffffff' : color
 				ctx.fill()
 			} else if (node.kind === 'section') {
-				// Раздел: свечение, внешнее кольцо и объёмный шар цвета раздела
-				const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.8, node.x, node.y, radius * 3)
-				glow.addColorStop(0, rgba(color, 0.32))
+				// Раздел — один цельный круг цвета раздела с мягким светом вокруг
+				const glow = ctx.createRadialGradient(node.x, node.y, radius, node.x, node.y, radius * 2.4)
+				glow.addColorStop(0, rgba(color, node === focus ? 0.3 : 0.16))
 				glow.addColorStop(1, rgba(color, 0))
 				ctx.fillStyle = glow
 				ctx.beginPath()
-				ctx.arc(node.x, node.y, radius * 3, 0, Math.PI * 2)
+				ctx.arc(node.x, node.y, radius * 2.4, 0, Math.PI * 2)
 				ctx.fill()
-				ctx.beginPath()
-				ctx.arc(node.x, node.y, radius + 5, 0, Math.PI * 2)
-				ctx.lineWidth = 1.5
-				ctx.strokeStyle = rgba(color, node === focus ? 0.9 : 0.45)
-				ctx.stroke()
-				const ball = ctx.createRadialGradient(
-					node.x - radius * 0.35,
-					node.y - radius * 0.35,
-					radius * 0.1,
-					node.x,
-					node.y,
-					radius
-				)
-				ball.addColorStop(0, node === focus ? '#ffffff' : rgba('#ffffff', 0.85))
-				ball.addColorStop(0.35, color)
-				ball.addColorStop(1, rgba(color, 0.75))
 				ctx.beginPath()
 				ctx.arc(node.x, node.y, radius, 0, Math.PI * 2)
-				ctx.fillStyle = ball
+				ctx.fillStyle = color
 				ctx.fill()
+				if (node === focus) {
+					ctx.lineWidth = 2
+					ctx.strokeStyle = '#ffffff'
+					ctx.stroke()
+				}
 			} else {
 				// Тема: тёмный диск, кольцо и точка в центре
 				ctx.fillStyle = '#121216'
@@ -433,10 +430,26 @@ export function LibraryGraph({
 			ctx.globalAlpha = 1
 		})
 
-		// Подписи: разделы и темы всегда, листы — при приближении или наведении
-		ctx.textAlign = 'center'
-		ctx.textBaseline = 'top'
-		graph.nodes.forEach(node => {
+		// Подписи: важные первыми; та, что наехала бы на уже нарисованную, не рисуется
+		const isTree = stateRef.current.layout === 'tree'
+		const rank = (node: INode) =>
+			node === focus ? 0 : near?.has(node.id) ? 1 : node.kind === 'section' ? 2 : node.kind === 'topic' ? 3 : 4
+		const taken: { x: number; y: number; width: number; height: number }[] = []
+		const place = (x: number, y: number, width: number, height: number) => {
+			const hit = taken.some(
+				box =>
+					x < box.x + box.width &&
+					x + width > box.x &&
+					y < box.y + box.height &&
+					y + height > box.y
+			)
+			if (hit) return false
+			taken.push({ x, y, width, height })
+			return true
+		}
+		const ordered = [...graph.nodes].sort((a, b) => rank(a) - rank(b))
+		ctx.textBaseline = 'middle'
+		ordered.forEach(node => {
 			const on = lit(node)
 			const important = node.kind !== 'page' || node === focus || near?.has(node.id) || (queryKey && on)
 			if (!on && !important) return
@@ -446,32 +459,35 @@ export function LibraryGraph({
 			const size = (node.kind === 'section' ? 13 : node.kind === 'topic' ? 12 : 11) / zoom
 			ctx.font = `${node.kind === 'page' ? 400 : 600} ${size}px Inter, system-ui, sans-serif`
 			const label = node.title.length > 32 ? `${node.title.slice(0, 30)}…` : node.title
-			const y = node.y + radiusOf(node) + (node.kind === 'section' ? 9 : 5) / zoom
+			const color = SECTION_COLORS[node.sectionIndex % SECTION_COLORS.length]
+			const pad = node.kind === 'page' ? 0 : (node.kind === 'section' ? 9 : 7) / zoom
+			const height = node.kind === 'page' ? size * 1.3 : size + pad
+			const width = ctx.measureText(label).width + pad * 2
+			// В дереве подпись справа от узла, в остальных раскладках — под ним
+			const gap = (node.kind === 'section' ? 9 : 5) / zoom
+			const left = isTree ? node.x + radiusOf(node) + gap : node.x - width / 2
+			const top = isTree ? node.y - height / 2 : node.y + radiusOf(node) + gap
+			if (!place(left, top, width, height)) return
+			ctx.textAlign = 'left'
 			if (node.kind !== 'page') {
 				// Разделы и темы — подпись на плашке цвета раздела
-				const color = SECTION_COLORS[node.sectionIndex % SECTION_COLORS.length]
-				const padX = (node.kind === 'section' ? 9 : 7) / zoom
-				const height = size + (node.kind === 'section' ? 9 : 7) / zoom
-				const width = ctx.measureText(label).width + padX * 2
 				ctx.globalAlpha = on ? 1 : 0.3
-				pill(ctx, node.x - width / 2, y, width, height)
+				pill(ctx, left, top, width, height)
 				ctx.fillStyle = node.kind === 'section' ? rgba(color, 0.9) : 'rgba(18, 18, 22, 0.92)'
 				ctx.fill()
 				ctx.lineWidth = 1 / zoom
 				ctx.strokeStyle = rgba(color, node.kind === 'section' ? 1 : 0.7)
 				ctx.stroke()
-				ctx.textBaseline = 'middle'
 				ctx.fillStyle = node.kind === 'section' ? '#0b0b0f' : '#ececf0'
-				ctx.fillText(label, node.x, y + height / 2 + 0.5 / zoom)
-				ctx.textBaseline = 'top'
+				ctx.fillText(label, left + pad, top + height / 2 + 0.5 / zoom)
 				ctx.globalAlpha = 1
 				return
 			}
 			ctx.lineWidth = 3 / scale
 			ctx.strokeStyle = 'rgba(9, 9, 11, 0.9)'
-			ctx.strokeText(label, node.x, y)
+			ctx.strokeText(label, left, top + height / 2)
 			ctx.fillStyle = on ? 'rgba(236, 236, 240, 0.85)' : 'rgba(236,236,240,0.25)'
-			ctx.fillText(label, node.x, y)
+			ctx.fillText(label, left, top + height / 2)
 		})
 	}
 
@@ -481,7 +497,7 @@ export function LibraryGraph({
 		// Граф почти улёгся — один раз подгоняем вид, чтобы он целиком влез в окно
 		if (autoFit.current && alpha.current < 0.12) {
 			autoFit.current = false
-			fit()
+			fitInitial()
 		}
 		draw()
 		if (alpha.current > 0.004 || drag.current) frame.current = requestAnimationFrame(tick)
@@ -495,7 +511,7 @@ export function LibraryGraph({
 		alpha.current = 1
 		const warmup = graph.nodes.length < 150 ? 220 : graph.nodes.length < 400 ? 90 : 30
 		for (let i = 0; i < warmup; i++) step()
-		fit()
+		fitInitial()
 		kick(Math.max(alpha.current, 0.15))
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [graph, layout])
@@ -564,13 +580,32 @@ export function LibraryGraph({
 		if (!nodes.length || !canvas) return
 		const xs = nodes.map(node => node.x)
 		const ys = nodes.map(node => node.y)
-		const w = Math.max(...xs) - Math.min(...xs) + 120
+		const w = Math.max(...xs) - Math.min(...xs) + (stateRef.current.layout === 'tree' ? 320 : 120)
 		const h = Math.max(...ys) - Math.min(...ys) + 120
 		const scale = Math.min(1.6, Math.max(0.15, Math.min(canvas.clientWidth / w, canvas.clientHeight / h)))
 		camera.current = {
 			scale,
-			x: (-(Math.max(...xs) + Math.min(...xs)) / 2) * scale,
+			x: (-(Math.max(...xs) + Math.min(...xs) + (stateRef.current.layout === 'tree' ? 200 : 0)) / 2) * scale,
 			y: (-(Math.max(...ys) + Math.min(...ys)) / 2) * scale
+		}
+		kick(0.01)
+	}
+
+	// Дерево длинное: открываем в читаемом масштабе от его начала и дальше листаем.
+	// Остальные раскладки подгоняем под окно целиком
+	const fitInitial = () => {
+		const nodes = stateRef.current.graph.nodes
+		const canvas = canvasRef.current
+		if (stateRef.current.layout !== 'tree' || !nodes.length || !canvas) return fit()
+		const xs = nodes.map(node => node.x)
+		const top = Math.min(...nodes.map(node => node.y))
+		const left = Math.min(...xs)
+		const width = Math.max(...xs) - left + 320
+		const scale = Math.min(1, Math.max(0.5, canvas.clientWidth / width))
+		camera.current = {
+			scale,
+			x: Math.max(16, (canvas.clientWidth - width * scale) / 2) - canvas.clientWidth / 2 - left * scale + 30 * scale,
+			y: 48 - canvas.clientHeight / 2 - top * scale
 		}
 		kick(0.01)
 	}
@@ -583,6 +618,13 @@ export function LibraryGraph({
 		if (!canvas) return
 		const onWheel = (event: WheelEvent) => {
 			event.preventDefault()
+			// В дереве колёсико листает, а с Ctrl — приближает
+			if (stateRef.current.layout === 'tree' && !event.ctrlKey) {
+				camera.current.y -= event.deltaY
+				camera.current.x -= event.deltaX
+				zoomRef.current(1)
+				return
+			}
 			zoomRef.current(event.deltaY > 0 ? 0.88 : 1 / 0.88, event.clientX, event.clientY)
 		}
 		canvas.addEventListener('wheel', onWheel, { passive: false })
@@ -772,7 +814,7 @@ export function LibraryGraph({
 						onClick={() => {
 							setFullscreen(value => !value)
 							autoFit.current = true
-							requestAnimationFrame(() => requestAnimationFrame(fit))
+							requestAnimationFrame(() => requestAnimationFrame(fitInitial))
 						}}
 					>
 						{fullscreen ? <Shrink size={13} /> : <Expand size={13} />}
@@ -783,8 +825,7 @@ export function LibraryGraph({
 					<div className='flex max-w-full flex-wrap gap-x-3 gap-y-1 bg-bg/70 px-2 py-1 text-[11px] text-muted'>
 						<span className='flex items-center gap-1.5'>
 							<span
-								className='h-2.5 w-2.5 rounded-full bg-muted'
-								style={{ boxShadow: '0 0 0 2px rgba(161,161,170,0.35), 0 0 8px rgba(161,161,170,0.6)' }}
+								className='h-3 w-3 rounded-full bg-muted'
 							/>
 							Раздел
 						</span>
@@ -831,7 +872,7 @@ export function LibraryGraph({
 			<p className={cn('border-t border-border px-3 py-2 text-xs leading-5 text-subtle', fullscreen && 'hidden')}>
 				Связи появляются из ссылок <span className='font-mono text-muted'>[[Название листа]]</span> в тексте — начните
 				печатать <span className='font-mono text-muted'>[[</span> в редакторе, и появится подсказка. Узлы можно
-				перетаскивать, колёсико или два пальца — масштаб.
+				перетаскивать, колёсико или два пальца — масштаб (в дереве колёсико листает, Ctrl + колёсико — масштаб).
 			</p>
 		</div>
 	)

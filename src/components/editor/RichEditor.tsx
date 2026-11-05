@@ -392,7 +392,8 @@ export function RichEditor({
 		if (!editable) {
 			editor.commands.setContent(getMarkdown(editor), false)
 		}
-		editor.setEditable(editable)
+		// false — иначе само переключение считается правкой текста
+		editor.setEditable(editable, false)
 		// формулы в режиме чтения и правки рисуются по-разному
 		editor.view.dispatch(editor.state.tr.setMeta('mathRefresh', true))
 	}, [editor, editable, contentClassName])

@@ -2,13 +2,22 @@
 
 import cn from 'clsx'
 import {
-	ChevronLeft,
-	ChevronRight,
+	CloudRain,
+	Disc3,
+	Flame,
 	Headphones,
+	KeyboardMusic,
+	type LucideIcon,
+	Music2,
 	Pause,
 	Play,
+	SkipBack,
+	SkipForward,
+	Sparkles,
+	Trees,
 	Volume2,
-	VolumeX
+	VolumeX,
+	Waves
 } from 'lucide-react'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -16,15 +25,19 @@ import { createPortal } from 'react-dom'
 import { ambientMusic } from '@/lib/ambient-music'
 import { type TypeMusicStyle, usePreferences } from '@/lib/preferences'
 
-export const MUSIC_TRACKS: { id: TypeMusicStyle; label: string }[] = [
-	{ id: 'lofi', label: 'Лоу-фай' },
-	{ id: 'jazz', label: 'Ночной джаз' },
-	{ id: 'piano', label: 'Фортепиано' },
-	{ id: 'ambient', label: 'Эмбиент' },
-	{ id: 'rain', label: 'Дождь' },
-	{ id: 'forest', label: 'Лес' },
-	{ id: 'space', label: 'Космос' },
-	{ id: 'fire', label: 'Камин' }
+export const MUSIC_TRACKS: {
+	id: TypeMusicStyle
+	label: string
+	icon: LucideIcon
+}[] = [
+	{ id: 'lofi', label: 'Лоу-фай', icon: Disc3 },
+	{ id: 'jazz', label: 'Ночной джаз', icon: Music2 },
+	{ id: 'piano', label: 'Фортепиано', icon: KeyboardMusic },
+	{ id: 'ambient', label: 'Эмбиент', icon: Waves },
+	{ id: 'rain', label: 'Дождь', icon: CloudRain },
+	{ id: 'forest', label: 'Лес', icon: Trees },
+	{ id: 'space', label: 'Космос', icon: Sparkles },
+	{ id: 'fire', label: 'Камин', icon: Flame }
 ]
 
 /** Держит фоновую музыку в соответствии с настройками и глушит её на время дыхания */
@@ -49,7 +62,7 @@ export function MusicController() {
 	return null
 }
 
-/** Кнопка в шапке: ЛКМ — включить/выключить, ПКМ — минималистичное меню (пауза, трек, громкость) */
+/** Кнопка в шапке: нажатие открывает панель музыки (пауза, трек, громкость), средняя кнопка — сразу пауза */
 export function MusicToggle() {
 	const [preferences, setPreferences] = usePreferences()
 	const [menuOpen, setMenuOpen] = useState(false)
@@ -66,7 +79,7 @@ export function MusicToggle() {
 	const openMenu = () => {
 		const rect = buttonRef.current?.getBoundingClientRect()
 		if (!rect) return
-		const width = 224
+		const width = Math.min(328, window.innerWidth - 16)
 		setMenuStyle({
 			position: 'fixed',
 			top: rect.bottom + 6,
@@ -115,7 +128,12 @@ export function MusicToggle() {
 			<button
 				ref={buttonRef}
 				type='button'
-				onClick={() => setPreferences({ music: !preferences.music })}
+				onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+				onAuxClick={event => {
+					if (event.button !== 1) return
+					event.preventDefault()
+					setPreferences({ music: !preferences.music })
+				}}
 				onContextMenu={event => {
 					event.preventDefault()
 					if (menuOpen) setMenuOpen(false)
@@ -123,18 +141,15 @@ export function MusicToggle() {
 				}}
 				title={
 					preferences.music
-						? `${currentTrack.label} · ЛКМ — пауза, ПКМ — управление`
-						: 'Включить фоновую музыку (ПКМ — настройки)'
+						? `Играет: ${currentTrack.label}`
+						: 'Фоновая музыка'
 				}
-				aria-label={
-					preferences.music
-						? 'Выключить фоновую музыку'
-						: 'Включить фоновую музыку'
-				}
-				aria-pressed={preferences.music}
+				aria-label='Фоновая музыка'
+				aria-haspopup='dialog'
 				aria-expanded={menuOpen}
 				className={cn(
 					'grid h-9 w-9 shrink-0 place-items-center transition-colors hover:bg-white/[0.06]',
+					menuOpen && 'bg-white/[0.06]',
 					preferences.music ? 'text-primary' : 'text-subtle hover:text-fg'
 				)}
 			>
@@ -166,61 +181,83 @@ export function MusicToggle() {
 						aria-label='Управление музыкой'
 						style={menuStyle}
 						onContextMenu={event => event.preventDefault()}
-						className='z-[140] animate-pop-in select-none border border-border bg-elevated p-3 shadow-pop'
+						className='z-[140] animate-pop-in select-none border border-border bg-elevated shadow-pop'
 					>
-						{/* Пауза / пуск и переключение трека */}
-						<div className='flex items-center justify-between gap-1'>
+						{/* Сейчас играет */}
+						<div className='flex items-center gap-3 p-3'>
 							<button
 								type='button'
 								onClick={() => setPreferences({ music: !preferences.music })}
-								className='flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-xs font-medium text-fg transition-colors hover:text-primary'
+								aria-label={preferences.music ? 'Пауза' : 'Включить'}
+								className='grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white transition-transform hover:scale-105 active:scale-95'
 							>
-								<span className='grid h-6 w-6 shrink-0 place-items-center border border-border bg-surface text-fg'>
-									{preferences.music ? (
-										<Pause
-											size={11}
-											fill='currentColor'
-										/>
-									) : (
-										<Play
-											size={11}
-											fill='currentColor'
-											className='translate-x-px'
-										/>
-									)}
-								</span>
-								<span className='truncate'>{currentTrack.label}</span>
+								{preferences.music ? (
+									<Pause
+										size={17}
+										fill='currentColor'
+									/>
+								) : (
+									<Play
+										size={17}
+										fill='currentColor'
+										className='translate-x-px'
+									/>
+								)}
 							</button>
+							<div className='min-w-0 flex-1'>
+								<p className='truncate text-sm font-medium text-fg'>
+									{currentTrack.label}
+								</p>
+								<p className='mt-0.5 flex h-4 items-center gap-1.5 text-xs text-subtle'>
+									{preferences.music && (
+										<span
+											aria-hidden
+											className='flex h-2.5 items-end gap-[2px] text-primary'
+										>
+											{[0, 1, 2].map(bar => (
+												<span
+													key={bar}
+													className='music-bar w-[2px] bg-current'
+													style={{ animationDelay: `${bar * -0.27}s` }}
+												/>
+											))}
+										</span>
+									)}
+									{preferences.music ? 'Играет' : 'На паузе'}
+								</p>
+							</div>
 							<div className='flex shrink-0 items-center'>
 								<button
 									type='button'
 									onClick={() => stepTrack(-1)}
 									title='Предыдущий трек'
 									aria-label='Предыдущий трек'
-									className='grid h-6 w-6 place-items-center text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+									className='grid h-9 w-9 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								>
-									<ChevronLeft size={14} />
+									<SkipBack size={15} />
 								</button>
 								<button
 									type='button'
 									onClick={() => stepTrack(1)}
 									title='Следующий трек'
 									aria-label='Следующий трек'
-									className='grid h-6 w-6 place-items-center text-subtle transition-colors hover:bg-white/[0.06] hover:text-fg'
+									className='grid h-9 w-9 place-items-center text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 								>
-									<ChevronRight size={14} />
+									<SkipForward size={15} />
 								</button>
 							</div>
 						</div>
 
-						{/* Быстрый выбор трека */}
-						<div className='mt-2.5 grid grid-cols-2 gap-1 border-t border-border pt-2.5'>
+						{/* Выбор трека */}
+						<div className='grid grid-cols-4 gap-px border-y border-border bg-border'>
 							{MUSIC_TRACKS.map(track => {
 								const active = preferences.musicStyle === track.id
+								const Icon = track.icon
 								return (
 									<button
 										key={track.id}
 										type='button'
+										aria-pressed={active}
 										onClick={() =>
 											setPreferences({
 												musicStyle: track.id,
@@ -228,20 +265,26 @@ export function MusicToggle() {
 											})
 										}
 										className={cn(
-											'truncate px-2 py-1 text-left text-xs transition-colors',
+											'flex h-[4.25rem] min-w-0 flex-col items-center justify-center gap-1.5 px-1 transition-colors',
 											active
-												? 'bg-primary/15 font-medium text-fg'
-												: 'text-muted hover:bg-white/[0.04] hover:text-fg'
+												? 'bg-[#1d1a2e] text-fg'
+												: 'bg-elevated text-muted hover:bg-[#1c1c21] hover:text-fg'
 										)}
 									>
-										{track.label}
+										<Icon
+											size={17}
+											className={active ? 'text-primary' : undefined}
+										/>
+										<span className='w-full truncate text-center text-[11px] leading-tight'>
+											{track.label}
+										</span>
 									</button>
 								)
 							})}
 						</div>
 
 						{/* Громкость */}
-						<div className='mt-2.5 flex items-center gap-2 border-t border-border pt-2.5'>
+						<div className='flex items-center gap-3 px-3 py-3'>
 							<button
 								type='button'
 								onClick={() =>
@@ -254,12 +297,12 @@ export function MusicToggle() {
 										? 'Выключить звук'
 										: 'Включить звук'
 								}
-								className='text-subtle transition-colors hover:text-fg'
+								className='shrink-0 text-subtle transition-colors hover:text-fg'
 							>
 								{preferences.musicVolume === 0 ? (
-									<VolumeX size={14} />
+									<VolumeX size={16} />
 								) : (
-									<Volume2 size={14} />
+									<Volume2 size={16} />
 								)}
 							</button>
 							<input
@@ -273,9 +316,10 @@ export function MusicToggle() {
 									})
 								}
 								aria-label='Громкость фоновой музыки'
-								className='h-1 flex-1 cursor-pointer appearance-none bg-white/15 accent-primary'
+								className='music-volume min-w-0 flex-1'
+								style={{ '--value': `${preferences.musicVolume}%` } as CSSProperties}
 							/>
-							<span className='w-8 text-right font-mono text-2xs tabular-nums text-subtle'>
+							<span className='w-8 shrink-0 text-right font-mono text-2xs tabular-nums text-subtle'>
 								{preferences.musicVolume}%
 							</span>
 						</div>

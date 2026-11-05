@@ -36,6 +36,20 @@ public class MainActivity extends BridgeActivity {
         handleIntent(getIntent());
         // Фоновое обновление виджетов и напоминаний (если токен уже выдан)
         SyncWorker.schedule(this);
+        watchLoading();
+    }
+
+    /* ---------- Сайт долго молчит — экран с кнопкой вместо чёрного окна ---------- */
+
+    private static final long LOAD_TIMEOUT_MS = 20000;
+
+    private void watchLoading() {
+        android.webkit.WebView webView = getBridge().getWebView();
+        webView.postDelayed(() -> {
+            if (webView.getProgress() >= 100 || webView.getUrl() != null && webView.getUrl().contains("offline")) return;
+            webView.stopLoading();
+            webView.loadUrl(getBridge().getErrorUrl());
+        }, LOAD_TIMEOUT_MS);
     }
 
     /* ---------- Системная плашка выделения ---------- */

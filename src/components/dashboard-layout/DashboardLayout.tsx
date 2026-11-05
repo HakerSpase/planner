@@ -7,6 +7,7 @@ import { type PropsWithChildren, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { CommandPalette } from '@/components/search/CommandPalette'
+import { ConnectionGuard } from '@/components/ui/ConnectionGuard'
 import { SpeechPlayer } from '@/components/speech/SpeechPlayer'
 
 import { useBackClose } from '@/hooks/useBackClose'
@@ -187,6 +188,7 @@ export default function DashboardLayout({
 			<MusicController />
 			<SpeechPlayer />
 			<CommandPalette />
+			<ConnectionGuard />
 		</div>
 	)
 }

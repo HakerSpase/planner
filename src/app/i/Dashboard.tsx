@@ -145,43 +145,50 @@ export function Dashboard() {
 				{/* Небольшой график: выполнено по дням */}
 				<section className='flex flex-col border border-border bg-surface px-4 py-4 sm:px-5 sm:py-5'>
 					<div className='flex items-baseline justify-between gap-3'>
-						<p className='eyebrow'>Выполнено · 14 дней</p>
-						<p className='font-mono text-xs tabular-nums text-muted'>{totalDone}</p>
+						<p className='eyebrow'>Выполнено за 14 дней</p>
+						<p className='font-mono text-xs tabular-nums text-muted'>{tasks ? totalDone : '–'}</p>
 					</div>
-					<div className='mt-5 flex min-h-[8rem] flex-1 items-end gap-1.5'>
+					{/* Высота задана явно: столбики считаются в процентах от неё */}
+					<div className='mt-5 flex h-36 items-end gap-1 pt-4 sm:gap-1.5'>
 						{days.map(({ day, count }, index) => {
 							const isToday = index === days.length - 1
 							return (
 								<div
 									key={day.valueOf()}
 									title={`${day.locale('ru').format('D MMMM')}: ${count}`}
-									className='group flex h-full flex-1 flex-col justify-end'
+									className='group relative flex h-full min-w-0 flex-1 items-end'
 								>
-									{count > 0 && (
-										<span className='mb-1 text-center font-mono text-[10px] text-subtle opacity-0 transition-opacity group-hover:opacity-100'>
-											{count}
-										</span>
-									)}
 									<div
 										className={cn(
-											'w-full transition-colors',
+											'relative w-full transition-colors',
 											count === 0
 												? 'h-px bg-white/15'
 												: isToday
 													? 'bg-primary'
-													: 'bg-white/20 group-hover:bg-white/35'
+													: 'bg-white/25 group-hover:bg-white/40'
 										)}
 										style={count ? { height: `${Math.max(8, (count / maxCount) * 100)}%` } : undefined}
-									/>
+									>
+										{count > 0 && (
+											<span
+												className={cn(
+													'absolute inset-x-0 bottom-full mb-0.5 text-center font-mono text-[10px] tabular-nums',
+													isToday ? 'text-fg' : 'text-subtle'
+												)}
+											>
+												{count}
+											</span>
+										)}
+									</div>
 								</div>
 							)
 						})}
 					</div>
-					<div className='mt-2 flex gap-1.5 font-mono text-[9px] uppercase text-subtle'>
+					<div className='mt-2 flex gap-1 font-mono text-[9px] uppercase text-subtle sm:gap-1.5'>
 						{days.map(({ day }, index) => (
 							<span
 								key={day.valueOf()}
-								className={cn('flex-1 text-center', index === days.length - 1 && 'text-fg')}
+								className={cn('min-w-0 flex-1 text-center', index === days.length - 1 && 'text-fg')}
 							>
 								{day.locale('ru').format('dd')}
 							</span>
