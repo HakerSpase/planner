@@ -36,6 +36,7 @@ import {
 	MoreHorizontal,
 	Minimize2,
 	Pencil,
+	Share2,
 	Pin,
 	Plus,
 	Trash2,
@@ -82,6 +83,9 @@ import {
 	toExcerpt
 } from '@/services/library.service'
 
+import { BundleShareDialog } from './BundleShareDialog'
+import type { TypeBundleKind } from '@/services/library-share.service'
+
 import {
 	EMPTY_PANE,
 	type ILibraryTab,
@@ -122,6 +126,15 @@ const RichEditor = dynamic(
 const TREE_KEY = ['library', 'tree']
 const pagesKey = (topicId: string) => ['library', 'pages', topicId]
 const pageKey = (pageId: string) => ['library', 'page', pageId]
+
+// Поделиться разделом или подразделом — из любого меню архива
+interface IShareBundleTarget {
+	kind: TypeBundleKind
+	sectionId: string
+	topicId?: string
+}
+const shareBundle = (detail: IShareBundleTarget) =>
+	window.dispatchEvent(new CustomEvent('planner:share-bundle', { detail }))
 
 // Где остановились в каждом листе — для возврата на вкладку
 const scrollPositions = new Map<string, number>()
@@ -423,6 +436,13 @@ export function Library() {
 	} = tabsState
 	const canSplit = useCanSplit()
 	const [focusedRight, setFocusedRight] = useState(false)
+	const [shareTarget, setShareTarget] = useState<IShareBundleTarget | null>(null)
+	useEffect(() => {
+		const onShare = (event: Event) =>
+			setShareTarget((event as CustomEvent).detail)
+		window.addEventListener('planner:share-bundle', onShare)
+		return () => window.removeEventListener('planner:share-bundle', onShare)
+	}, [])
 	// Несохранённые правки в панели: уйти можно только через вопрос (регистрирует сам лист)
 	const leftGuard = useRef<(action: () => void) => void>()
 	const rightGuard = useRef<(action: () => void) => void>()
@@ -651,6 +671,17 @@ export function Library() {
 		/>
 	)
 
+	const shareSection = sections.find(item => item.id === shareTarget?.sectionId)
+	const shareDialog = shareTarget && shareSection && (
+		<BundleShareDialog
+			kind={shareTarget.kind}
+			section={shareSection}
+			topics={topics.filter(item => item.section_id === shareSection.id)}
+			topicId={shareTarget.topicId}
+			onClose={() => setShareTarget(null)}
+		/>
+	)
+
 	const unpinDialog = unpinTarget && (
 		<ConfirmDialog
 			open
@@ -756,6 +787,7 @@ export function Library() {
 				)}
 				{deleteDialog}
 				{unpinDialog}
+{shareDialog}
 			</>
 		)
 	}
@@ -873,6 +905,7 @@ export function Library() {
 			)}
 			{deleteDialog}
 			{unpinDialog}
+{shareDialog}
 		</div>
 	)
 }
@@ -1210,6 +1243,11 @@ function LibraryTree({
 																label='Действия с разделом'
 																items={[
 																	{
+																		label: 'Поделиться',
+																		icon: <Share2 size={14} />,
+																		onClick: () => shareBundle({ kind: 'section', sectionId: section.id })
+																	},
+																	{
 																		label: section.is_pinned
 																			? 'Открепить'
 																			: 'Закрепить',
@@ -1283,6 +1321,11 @@ function LibraryTree({
 																					<KebabMenu
 																						label='Действия с темой'
 																						items={[
+														{
+															label: 'Поделиться',
+															icon: <Share2 size={14} />,
+															onClick: () => shareBundle({ kind: 'topics', sectionId: topic.section_id, topicId: topic.id })
+														},
 																							{
 																								label: topic.is_pinned
 																									? 'Открепить'
@@ -1764,6 +1807,18 @@ function TopicView({
 					</p>
 				</div>
 				<div className='flex items-center gap-1.5'>
+					<IconButton
+						label='Поделиться подразделом'
+						onClick={() =>
+							shareBundle({
+								kind: 'topics',
+								sectionId: topic.section_id,
+								topicId: topic.id
+							})
+						}
+					>
+						<Share2 size={15} />
+					</IconButton>
 					<IconButton
 						label='Переименовать тему'
 						onClick={() => setIsRenaming(true)}
@@ -2791,6 +2846,14 @@ function SectionView({
 				</div>
 				<div className='flex items-center gap-1.5'>
 					<IconButton
+						label='Поделиться разделом'
+						onClick={() =>
+							shareBundle({ kind: 'section', sectionId: section.id })
+						}
+					>
+						<Share2 size={15} />
+					</IconButton>
+					<IconButton
 						label='Переименовать раздел'
 						onClick={() => setIsRenamingSection(true)}
 					>
@@ -2896,6 +2959,11 @@ function SectionView({
 													<KebabMenu
 														label='Действия с темой'
 														items={[
+														{
+															label: 'Поделиться',
+															icon: <Share2 size={14} />,
+															onClick: () => shareBundle({ kind: 'topics', sectionId: topic.section_id, topicId: topic.id })
+														},
 															{
 																label: topic.is_pinned ? 'Открепить' : 'Закрепить',
 																icon: <Pin size={14} />,

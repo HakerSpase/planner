@@ -60,6 +60,22 @@ export default function DashboardLayout({
 	tasksRef.current = tasks?.data
 	// Android-приложение: сводка для виджетов «Серия» и «Сегодня»
 	useWidgetSync(tasks?.data)
+	// Вошли ради «Добавить к себе» по чужой ссылке — возвращаем на неё (свежая просьба, не старше часа)
+	useEffect(() => {
+		try {
+			const raw = localStorage.getItem('planner:after-login')
+			if (!raw) return
+			localStorage.removeItem('planner:after-login')
+			const { href, at } = JSON.parse(raw)
+			const target = new URL(href)
+			if (
+				Date.now() - at < 3_600_000 &&
+				target.origin === window.location.origin &&
+				target.pathname.startsWith('/share/')
+			)
+				window.location.href = target.href
+		} catch {}
+	}, [])
 	// Настройки (звук, голос, фон, дыхание) — одни на всех устройствах аккаунта
 	useEffect(() => startSettingsSync(), [])
 	// Настольному приложению — расписание целиком: оно покажет напоминания даже из трея

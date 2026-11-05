@@ -27,6 +27,7 @@ import { useBackClose } from '@/hooks/useBackClose'
 
 import { shareLink } from '@/lib/share'
 import { createClient } from '@/lib/supabase/client'
+import { libraryShareService } from '@/services/library-share.service'
 import { libraryService, toExcerpt } from '@/services/library.service'
 
 /* ------------------------------------------------------------------ */
@@ -495,6 +496,7 @@ export function ShareDialog({
 	const [copied, setCopied] = useState(false)
 	// Что откроется по ссылке: лист или сразу его карточки
 	const [asCards, setAsCards] = useState(false)
+	const [allowCopy, setAllowCopy] = useState(false)
 	const db = useMemo(() => createClient(), [])
 
 	useEffect(() => {
@@ -519,6 +521,24 @@ export function ShareDialog({
 		setBusy(false)
 		if (error) return toast.error('Не получилось создать ссылку')
 		setToken(data.token)
+	}
+
+	useEffect(() => {
+		libraryShareService
+			.getPageAllowCopy(pageId)
+			.then(setAllowCopy)
+			.catch(() => {})
+	}, [pageId])
+
+	const toggleAllowCopy = async () => {
+		const next = !allowCopy
+		setAllowCopy(next)
+		try {
+			await libraryShareService.setPageAllowCopy(pageId, next)
+		} catch {
+			setAllowCopy(!next)
+			toast.error('Эта настройка заработает после обновления базы данных')
+		}
 	}
 
 	const revoke = async () => {
@@ -635,6 +655,25 @@ export function ShareDialog({
 									</button>
 								))}
 							</div>
+							<button
+								type='button'
+								role='checkbox'
+								aria-checked={allowCopy}
+								onClick={toggleAllowCopy}
+								className='mt-3 flex w-full items-center gap-3 text-left text-sm text-fg'
+							>
+								<span
+									className={cn(
+										'grid h-4 w-4 shrink-0 place-items-center border',
+										allowCopy
+											? 'border-primary bg-primary text-white'
+											: 'border-white/25'
+									)}
+								>
+									{allowCopy && <Check size={11} />}
+								</span>
+								Разрешить добавить к себе
+							</button>
 							<button
 								type='button'
 								disabled={busy}

@@ -3,7 +3,14 @@
 import cn from 'clsx'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
-import { Eye, FileText, Layers, ListTree, Printer } from 'lucide-react'
+import {
+	Eye,
+	FileText,
+	FolderPlus,
+	Layers,
+	ListTree,
+	Printer
+} from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -11,7 +18,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { extractFlashcards } from '@/components/editor/study'
 import { ErrorScreen } from '@/components/ui/ErrorScreen'
 
+import { AddToLibraryDialog } from '../AddToLibraryDialog'
+
 import { SharedCards } from './SharedCards'
+import { libraryShareService } from '@/services/library-share.service'
 import {
 	OutlineSheet,
 	PageOutline,
@@ -46,6 +56,8 @@ export function SharedPage({ token }: { token: string }) {
 	const [outlineOpen, setOutlineOpen] = useState(false)
 	// Лист или его карточки; ссылка с ?cards открывается сразу карточками
 	const [mode, setMode] = useState<'page' | 'cards'>('page')
+	const [allowCopy, setAllowCopy] = useState(false)
+	const [adding, setAdding] = useState(false)
 	const articleRef = useRef<HTMLElement>(null)
 	const headings = useHeadings(articleRef, Boolean(page) && mode === 'page')
 	const cards = useMemo(
@@ -57,7 +69,8 @@ export function SharedPage({ token }: { token: string }) {
 	useEffect(() => {
 		if (new URLSearchParams(window.location.search).has('cards'))
 			setMode('cards')
-	}, [])
+		libraryShareService.getSharedPageAllowCopy(token).then(setAllowCopy)
+	}, [token])
 
 	const switchMode = (next: 'page' | 'cards') => {
 		setMode(next)
@@ -108,6 +121,17 @@ export function SharedPage({ token }: { token: string }) {
 						</Link>
 					</div>
 					<div className='flex shrink-0 items-center gap-2'>
+						{allowCopy && page && (
+							<button
+								type='button'
+								onClick={() => setAdding(true)}
+								title='Добавить к себе'
+								className='flex h-9 items-center gap-2 bg-primary px-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover'
+							>
+								<FolderPlus size={15} />
+								<span className='hidden sm:inline'>Добавить к себе</span>
+							</button>
+						)}
 						{!showCards && (
 							<>
 								<button
@@ -250,6 +274,12 @@ export function SharedPage({ token }: { token: string }) {
 					Режим проверки: нажмите на размытое, чтобы открыть
 				</p>
 			)}
+			{adding && page && (
+				<AddToLibraryDialog
+					page={{ title: page.title, content: page.content }}
+					onClose={() => setAdding(false)}
+				/>
+			)}
 			{outlineOpen && (
 				<OutlineSheet
 					headings={headings}
@@ -260,7 +290,7 @@ export function SharedPage({ token }: { token: string }) {
 	)
 }
 
-function ModeSwitch({
+export function ModeSwitch({
 	mode,
 	count,
 	onChange
